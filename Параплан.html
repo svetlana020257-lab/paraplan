@@ -1,0 +1,2892 @@
+<!DOCTYPE html>
+<!-- saved from url=(0045)file:///C:/Users/vasil/Downloads/index_7.html -->
+<html lang="ru"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Параплан</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+<link href="./Параплан_files/css2" rel="stylesheet">
+<link rel="stylesheet" href="./Параплан_files/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --or:#E87A1E;--or-d:#B85C0A;--or-l:#F5A04A;--or-glow:rgba(232,122,30,0.25);
+  --bg:#0C0C0C;--s1:#161616;--s2:#1E1E1E;--s3:#272727;--s4:#313131;
+  --t1:#F2EDE6;--t2:#A09890;--t3:#6A6058;
+  --border:#2A2A2A;
+  --green:#4CAF50;--red:#E24B4A;--warn:#EFA027;--blue:#4A9EE2;
+  --font-head:'Unbounded',sans-serif;
+  --font-body:'Golos Text',sans-serif;
+}
+html,body{background:var(--bg);color:var(--t1);font-family:var(--font-body);max-width:430px;margin:0 auto;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+
+/* ─── SCREENS ─── */
+.screen{display:none;flex-direction:column;min-height:100vh}
+.screen.active{display:flex}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.screen.active{animation:fadeUp 0.22s ease}
+
+/* ─── HEADER ─── */
+.hdr{background:var(--s1);border-bottom:1px solid var(--border);padding:13px 16px;display:flex;align-items:center;gap:11px;position:sticky;top:0;z-index:20}
+.hdr-logo{width:36px;height:36px;background:var(--or);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:900;font-size:14px;color:#fff;flex-shrink:0;box-shadow:0 0 16px var(--or-glow)}
+.hdr h1{font-family:var(--font-head);font-size:14px;font-weight:700;color:var(--t1);letter-spacing:0.02em}
+.hdr p{font-size:11px;color:var(--t2);margin-top:1px}
+.back-btn{background:none;border:none;color:var(--or);font-size:22px;cursor:pointer;padding:4px;flex-shrink:0}
+.hdr-action{background:none;border:none;color:var(--t3);font-size:22px;cursor:pointer;padding:4px;margin-left:auto}
+
+/* ─── BODY ─── */
+.body{flex:1;overflow-y:auto;padding:14px 14px 88px;display:flex;flex-direction:column;gap:12px}
+
+/* ─── TAB BAR ─── */
+.tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--s1);border-top:1px solid var(--border);display:flex;padding:6px 0 env(safe-area-inset-bottom,10px);z-index:20}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:var(--t3);cursor:pointer;font-size:9.5px;font-family:var(--font-body);padding:4px 0;transition:color 0.15s;letter-spacing:0.02em}
+.tab.active{color:var(--or)}
+.tab i{font-size:21px}
+.tab-dot{width:4px;height:4px;border-radius:50%;background:var(--or);margin-top:1px;opacity:0}
+.tab.active .tab-dot{opacity:1}
+
+/* ─── CARDS ─── */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px}
+.card-tap{cursor:pointer;transition:background 0.12s,transform 0.1s}
+.card-tap:active{background:var(--s2);transform:scale(0.99)}
+
+/* ─── BADGES ─── */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;font-family:var(--font-body)}
+.b-or{background:rgba(232,122,30,0.18);color:var(--or-l)}
+.b-gr{background:rgba(76,175,80,0.18);color:#66BB6A}
+.b-re{background:rgba(226,75,74,0.18);color:#EF5350}
+.b-wn{background:rgba(239,160,39,0.18);color:var(--warn)}
+.b-gy{background:var(--s3);color:var(--t2)}
+.b-bl{background:rgba(74,158,226,0.18);color:#64B3F4}
+
+/* ─── PROGRESS ─── */
+.prog-wrap{background:var(--s3);border-radius:100px;height:7px;overflow:hidden;margin:8px 0}
+.prog-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--or-d),var(--or-l));transition:width 0.8s cubic-bezier(.34,1.2,.64,1)}
+
+/* ─── STAT GRID ─── */
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-card{background:var(--s2);border-radius:11px;padding:12px}
+.stat-lbl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px}
+.stat-val{font-family:var(--font-head);font-size:19px;font-weight:700;color:var(--t1)}
+.stat-sub{font-size:11px;color:var(--t2);margin-top:3px}
+
+/* ─── INPUTS ─── */
+.inp-grp{display:flex;flex-direction:column;gap:6px}
+.inp-grp label{font-size:12px;color:var(--t2);font-weight:500;letter-spacing:0.03em}
+.inp-grp input,.inp-grp select,.inp-grp textarea{
+  background:var(--s2);border:1px solid var(--border);border-radius:10px;
+  color:var(--t1);font-size:15px;font-family:var(--font-body);
+  padding:11px 13px;outline:none;width:100%;
+  -webkit-appearance:none;appearance:none;transition:border-color 0.15s}
+.inp-grp input:focus,.inp-grp select:focus,.inp-grp textarea:focus{border-color:var(--or)}
+.inp-grp select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236A6058' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.inp-grp select option{background:var(--s2)}
+
+/* ─── BUTTONS ─── */
+.btn{background:var(--or);color:#fff;border:none;border-radius:11px;padding:13px 20px;font-size:14px;font-weight:600;font-family:var(--font-body);cursor:pointer;width:100%;transition:background 0.15s,transform 0.1s;letter-spacing:0.02em}
+.btn:active{background:var(--or-d);transform:scale(0.98)}
+.btn-out{background:none;border:1.5px solid var(--or);color:var(--or);border-radius:11px;padding:11px 20px;font-size:14px;font-weight:600;font-family:var(--font-body);cursor:pointer;width:100%;transition:all 0.15s}
+.btn-out:active{background:var(--or-glow)}
+.btn-sm{padding:7px 13px;font-size:12px;width:auto;border-radius:8px}
+.btn-gr{background:var(--green) !important}
+.btn-re{background:var(--red) !important}
+.btn-gy{background:var(--s3) !important;color:var(--t2) !important}
+
+/* ─── DIVIDER ─── */
+.div{height:1px;background:var(--border);margin:2px 0}
+
+/* ─── SECTION TITLE ─── */
+.sec{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:0.09em;font-family:var(--font-head)}
+
+/* ─── LIST ITEMS ─── */
+.list-item{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:13px 14px;margin-bottom:7px;cursor:pointer;transition:background 0.12s}
+.list-item:active{background:var(--s2)}
+.li-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+
+/* ─── PRODUCT ROW ─── */
+.prod-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.prod-row:last-child{border-bottom:none}
+.prod-name{flex:1;font-size:13px;color:var(--t1)}
+.qty-ctrl{display:flex;align-items:center;gap:7px}
+.qty-btn{width:28px;height:28px;border-radius:7px;background:var(--s3);border:none;color:var(--t1);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-family:var(--font-body)}
+.qty-val{font-size:14px;font-weight:600;min-width:20px;text-align:center;color:var(--t1);font-family:var(--font-head)}
+
+/* ─── TOAST ─── */
+.toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--s3);color:var(--t1);padding:10px 20px;border-radius:12px;font-size:13px;z-index:999;opacity:0;transition:opacity 0.25s;pointer-events:none;border:1px solid var(--border);white-space:nowrap;max-width:90vw;font-family:var(--font-body)}
+.toast.show{opacity:1}
+
+/* ─── LOADER ─── */
+.loader{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:48px 0;color:var(--t3);font-size:13px}
+.spin{width:32px;height:32px;border:2.5px solid var(--s3);border-top-color:var(--or);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ─── EMPTY STATE ─── */
+.empty{text-align:center;color:var(--t3);font-size:13px;padding:40px 0}
+.empty i{font-size:36px;display:block;margin-bottom:10px;color:var(--s4)}
+
+/* ─── LOGIN ─── */
+.login-wrap{display:flex;flex-direction:column;justify-content:center;padding:40px 24px;min-height:100vh;background:var(--bg)}
+.login-logo{width:76px;height:76px;background:var(--or);border-radius:22px;display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:30px;font-weight:900;color:#fff;margin:0 auto 20px;box-shadow:0 0 50px var(--or-glow)}
+
+/* ─── FILTERS ─── */
+.filter-row{display:flex;gap:7px;flex-wrap:wrap}
+.flt-btn{padding:6px 12px;border-radius:20px;border:none;font-size:11px;font-weight:600;font-family:var(--font-body);cursor:pointer;transition:all 0.15s}
+.flt-btn.active{background:rgba(232,122,30,0.2);color:var(--or-l)}
+.flt-btn:not(.active){background:var(--s3);color:var(--t2)}
+
+/* ─── BALANCE CARD ─── */
+.bal-card{background:linear-gradient(135deg,var(--s2) 0%,var(--s1) 100%);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:8px}
+
+/* ─── FEED ─── */
+.feed-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.feed-item:last-child{border-bottom:none}
+.feed-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.feed-dot.gr{background:var(--green)}
+.feed-dot.or{background:var(--or)}
+.feed-dot.re{background:var(--red)}
+.feed-dot.bl{background:var(--blue)}
+
+/* ─── OWNER ANALYTICS ─── */
+.shop-row-an{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.shop-row-an:last-child{border-bottom:none}
+
+/* ─── SETUP SCREEN ─── */
+.setup-step{background:var(--s2);border-radius:12px;padding:14px;border-left:3px solid var(--or)}
+
+/* ─── CHIPS ─── */
+.chip-row{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:4px 10px;border-radius:20px;background:var(--s3);color:var(--t2);font-size:11px;border:none;cursor:pointer;font-family:var(--font-body)}
+.chip.sel{background:rgba(232,122,30,0.2);color:var(--or-l);border:1px solid rgba(232,122,30,0.3)}
+
+/* ─── ORANGE ACCENT ─── */
+.ac{color:var(--or)}
+.ac-gr{color:var(--green)}
+.ac-re{color:var(--red)}
+.ac-wn{color:var(--warn)}
+
+/* ─── SEARCH ─── */
+.search-wrap{position:relative}
+.search-wrap i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--t3);font-size:17px;pointer-events:none}
+.search-inp{background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--t1);font-size:14px;font-family:var(--font-body);padding:10px 12px 10px 36px;outline:none;width:100%;-webkit-appearance:none;transition:border-color 0.15s}
+.search-inp:focus{border-color:var(--or)}
+
+/* ─── ROLE CHIP ─── */
+.role-owner{color:#FFD700}
+.role-manager{color:var(--blue)}
+.role-seller{color:var(--t2)}
+
+/* ─── PULL REFRESH HINT ─── */
+.sync-bar{display:flex;align-items:center;justify-content:center;gap:8px;padding:8px;background:var(--s2);border-radius:10px;font-size:12px;color:var(--t2)}
+
+/* ─── DAY DETAIL ─── */
+.day-rev-row{display:flex;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.12s}
+.day-rev-row:last-child{border-bottom:none}
+.day-rev-row:active{background:var(--s2)}
+
+/* ─── BOTTOM SHEET ─── */
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:50;opacity:0;pointer-events:none;transition:opacity 0.25s}
+.sheet-overlay.show{opacity:1;pointer-events:all}
+.bottom-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--s1);border-radius:20px 20px 0 0;border-top:1px solid var(--border);z-index:51;transition:transform 0.3s cubic-bezier(.34,1.1,.64,1);padding:0 16px env(safe-area-inset-bottom,20px);max-height:88vh;overflow-y:auto}
+.bottom-sheet.show{transform:translateX(-50%) translateY(0)}
+.sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--s4);margin:10px auto 16px}
+.sheet-title{font-family:var(--font-head);font-size:14px;font-weight:700;color:var(--t1);margin-bottom:16px}
+
+/* ─── EDIT MOVE — product row in sheet ─── */
+.edit-prod-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.edit-prod-row:last-child{border-bottom:none}
+
+/* ─── CALENDAR STRIP ─── */
+.cal-strip{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.cal-strip::-webkit-scrollbar{display:none}
+.cal-day{flex-shrink:0;width:46px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:10px;cursor:pointer;transition:background 0.15s;border:1px solid transparent}
+.cal-day.active{background:rgba(232,122,30,0.2);border-color:var(--or)}
+.cal-day:not(.active):active{background:var(--s2)}
+.cal-day-name{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:0.05em}
+.cal-day-num{font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--t1)}
+.cal-day-dot{width:5px;height:5px;border-radius:50%;background:var(--or);opacity:0}
+.cal-day.has-data .cal-day-dot{opacity:1}
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+
+<!-- ─── BOTTOM SHEET ─── -->
+<div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet()"></div>
+<div class="bottom-sheet" id="bottom-sheet">
+  <div class="sheet-handle"></div>
+  <div id="sheet-content"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     DAY DETAIL SCREEN
+═══════════════════════════════════════════ -->
+<div id="sc-day-detail" class="screen">
+  <div class="hdr">
+    <button class="back-btn" onclick="goBack()"><i class="ti ti-arrow-left"></i></button>
+    <div style="flex:1"><h1 id="dd-title">День</h1><p id="dd-shop">точка</p></div>
+  </div>
+  <div class="body">
+    <!-- Calendar strip -->
+    <div class="cal-strip" id="dd-cal"></div>
+
+    <!-- Day stats -->
+    <div class="stat-row" id="dd-stats">
+      <div class="stat-card">
+        <div class="stat-lbl">Выручка</div>
+        <div class="stat-val" id="dd-rev">—</div>
+        <div class="stat-sub" id="dd-vs">vs план —</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl">Чеков</div>
+        <div class="stat-val" id="dd-chk">—</div>
+        <div class="stat-sub" id="dd-avg">ср. чек —</div>
+      </div>
+    </div>
+
+    <!-- Progress vs daily plan -->
+    <div class="card" style="cursor:default">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:13px;font-weight:600">Выполнение плана дня</span>
+        <span id="dd-pct" class="ac" style="font-family:var(--font-head);font-weight:700">—</span>
+      </div>
+      <div class="prog-wrap"><div class="prog-fill" id="dd-bar" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2)">
+        <span id="dd-cur-lbl">0 ₽</span><span id="dd-plan-lbl">план 0 ₽</span>
+      </div>
+    </div>
+
+    <!-- Moves on this day -->
+    <div>
+      <div class="sec" style="margin-bottom:8px">Перемещения в этот день</div>
+      <div id="dd-moves"></div>
+    </div>
+
+    <!-- Deliveries on this day -->
+    <div>
+      <div class="sec" style="margin-bottom:8px">Поставки в этот день</div>
+      <div id="dd-deliveries"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     LOGIN SCREEN
+═══════════════════════════════════════════ -->
+<div id="sc-login" class="screen active">
+  <div class="login-wrap">
+    <div class="login-logo">П</div>
+    <div style="text-align:center;margin-bottom:36px">
+      <div style="font-family:var(--font-head);font-size:24px;font-weight:900;letter-spacing:0.06em;color:var(--t1)">ПАРАПЛАН</div>
+      <div style="font-size:11px;color:var(--t3);letter-spacing:0.1em;text-transform:uppercase;margin-top:4px">Сеть вейп-шопов</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="inp-grp">
+        <label>ИМЯ</label>
+        <input type="text" id="li-name" placeholder="Введите ваше имя" autocomplete="off">
+      </div>
+      <div class="inp-grp">
+        <label>МАГАЗИН</label>
+        <select id="li-shop"><option value="">— Выберите точку —</option><option value="titova">Титова</option><option value="gromova">Громова</option><option value="korotaeva">Коротаева</option><option value="zorge">Зорге</option><option value="gorsky">Горский</option><option value="petukhova">Петухова</option><option value="plan">Планировочная</option><option value="shluz">Шлюз</option><option value="dynasty">Династия</option><option value="moskva">Москва</option><option value="nikitina">Никитина</option><option value="bogatk">Богаткова</option></select>
+      </div>
+      <div class="inp-grp">
+        <label>КОД ДОСТУПА</label>
+        <input type="password" id="li-pin" placeholder="Введите пароль">
+      </div>
+      <button class="btn" onclick="doLogin()" style="margin-top:4px">Войти</button>
+      <div id="login-status" style="text-align:center;font-size:12px;color:var(--t3)"></div>
+    </div>
+    <div style="margin-top:28px;text-align:center">
+      <button class="btn-out btn-sm" style="width:auto;padding:8px 18px;font-size:12px" onclick="showScreen(&#39;sc-setup&#39;)">⚙ Настройка подключения</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SETUP SCREEN
+═══════════════════════════════════════════ -->
+<div id="sc-setup" class="screen">
+  <div class="hdr">
+    <button class="back-btn" onclick="showScreen(&#39;sc-login&#39;)"><i class="ti ti-arrow-left"></i></button>
+    <div style="flex:1"><h1>Настройка</h1><p>Подключение к Google Таблицам</p></div>
+  </div>
+  <div class="body">
+    <div class="setup-step">
+      <div style="font-family:var(--font-head);font-size:12px;font-weight:700;color:var(--or);margin-bottom:8px">ШАГ 1 — Apps Script</div>
+      <div style="font-size:13px;color:var(--t2);line-height:1.6">Откройте Google Таблицу → меню <b style="color:var(--t1)">Расширения → Apps Script</b>. Вставьте код из файла <b style="color:var(--t1)">paraplan_script.gs</b> и нажмите <b style="color:var(--t1)">Развернуть → Новое развёртывание</b>.</div>
+    </div>
+    <div class="setup-step">
+      <div style="font-family:var(--font-head);font-size:12px;font-weight:700;color:var(--or);margin-bottom:8px">ШАГ 2 — Права доступа</div>
+      <div style="font-size:13px;color:var(--t2);line-height:1.6">При развёртывании выберите: <b style="color:var(--t1)">Выполнять от имени → Меня</b>, Доступ: <b style="color:var(--t1)">Все (включая анонимных)</b>. Скопируйте URL веб-приложения.</div>
+    </div>
+    <div class="setup-step">
+      <div style="font-family:var(--font-head);font-size:12px;font-weight:700;color:var(--or);margin-bottom:8px">ШАГ 3 — Вставьте URL</div>
+      <div class="inp-grp" style="margin-top:10px">
+        <label>URL ВЕТКОГО ПРИЛОЖЕНИЯ</label>
+        <input type="url" id="setup-url" placeholder="https://script.google.com/macros/s/.../exec">
+      </div>
+      <button class="btn" style="margin-top:10px" onclick="saveUrl()">Сохранить и подключить</button>
+    </div>
+    <div class="card" style="cursor:default">
+      <div style="font-size:12px;font-weight:600;color:var(--t2);margin-bottom:10px">СТРУКТУРА ТАБЛИЦЫ</div>
+      <div id="sheets-list" style="display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:12px;color:var(--t3);display:flex;gap:8px;align-items:center"><i class="ti ti-table" style="color:var(--or)"></i> <b style="color:var(--t1)">Магазины</b> — название, адрес, план, оклад</div>
+        <div style="font-size:12px;color:var(--t3);display:flex;gap:8px;align-items:center"><i class="ti ti-users" style="color:var(--or)"></i> <b style="color:var(--t1)">Сотрудники</b> — имя, магазин, роль, пароль</div>
+        <div style="font-size:12px;color:var(--t3);display:flex;gap:8px;align-items:center"><i class="ti ti-package" style="color:var(--or)"></i> <b style="color:var(--t1)">Каталог</b> — артикул, название, цена</div>
+        <div style="font-size:12px;color:var(--t3);display:flex;gap:8px;align-items:center"><i class="ti ti-chart-bar" style="color:var(--or)"></i> <b style="color:var(--t1)">Выручка</b> — дата, магазин, сумма, чеков</div>
+        <div style="font-size:12px;color:var(--t3);display:flex;gap:8px;align-items:center"><i class="ti ti-arrows-transfer-up" style="color:var(--or)"></i> <b style="color:var(--t1)">Перемещения</b> — авто-запись</div>
+        <div style="font-size:12px;color:var(--t3);display:flex;gap:8px;align-items:center"><i class="ti ti-truck" style="color:var(--or)"></i> <b style="color:var(--t1)">Поставки</b> — поставщик, сумма, статус</div>
+        <div style="font-size:12px;color:var(--t3);display:flex;gap:8px;align-items:center"><i class="ti ti-wallet" style="color:var(--or)"></i> <b style="color:var(--t1)">Балансы</b> — сотрудник, сумма, дата</div>
+      </div>
+    </div>
+    <button class="btn-out" onclick="testConnection()">Проверить соединение</button>
+    <div id="test-result" style="font-size:12px;text-align:center;color:var(--t3)"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MAIN / DASHBOARD — SELLER
+═══════════════════════════════════════════ -->
+<div id="sc-main" class="screen">
+  <div class="hdr">
+    <div class="hdr-logo">П</div>
+    <div style="flex:1">
+      <h1 id="m-shop">Параплан</h1>
+      <p id="m-user">...</p>
+    </div>
+    <button class="hdr-action" onclick="syncData()" id="sync-btn" title="Обновить данные"><i class="ti ti-refresh"></i></button>
+    <button class="hdr-action" onclick="doLogout()" title="Выйти"><i class="ti ti-logout"></i></button>
+  </div>
+  <div class="body">
+    <div id="sync-bar" class="sync-bar" style="display:none"><div class="spin" style="width:14px;height:14px;border-width:2px"></div> Загрузка данных...</div>
+
+    <div class="sec">Показатели сегодня</div>
+    <div class="stat-row" style="cursor:pointer" onclick="openDayDetail(today(), currentUser.shop)" title="Нажмите для деталей дня">
+      <div class="stat-card">
+        <div class="stat-lbl">Выручка <i class="ti ti-chevron-right" style="font-size:10px;vertical-align:middle;color:var(--t3)"></i></div>
+        <div class="stat-val" id="s-rev">—</div>
+        <div class="stat-sub">план/день: <span id="s-dayplan" class="ac">—</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl">Чеков</div>
+        <div class="stat-val" id="s-chk">—</div>
+        <div class="stat-sub">ср. чек: <span id="s-avg" class="ac">—</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="cursor:default">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:13px;font-weight:600">План на месяц</span>
+        <span id="m-pct" class="ac" style="font-family:var(--font-head);font-size:16px;font-weight:700">0%</span>
+      </div>
+      <div class="prog-wrap"><div class="prog-fill" id="m-bar" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2)">
+        <span id="m-cur">0 ₽</span><span id="m-tot">из 0 ₽</span>
+      </div>
+    </div>
+
+    <div class="card card-tap" onclick="openRealize()" style="border-color:rgba(76,175,80,0.35);background:linear-gradient(135deg,rgba(76,175,80,0.10),var(--s1))">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:42px;height:42px;background:var(--green);border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="ti ti-receipt" style="font-size:22px;color:#fff"></i>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700">Реализация за смену</div>
+          <div style="font-size:12px;color:var(--t3)">Внести продажи из каталога в конце смены</div>
+        </div>
+        <i class="ti ti-chevron-right" style="color:var(--t3);font-size:18px"></i>
+      </div>
+    </div>
+
+    <div class="card card-tap" onclick="switchTab(&#39;salary&#39;,5)" style="border-color:rgba(232,122,30,0.3)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="font-size:13px;font-weight:600">Заработная плата</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge b-or" id="m-sal-badge">расчёт...</span>
+          <i class="ti ti-chevron-right" style="color:var(--t3);font-size:16px"></i>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-lbl">Оклад</div>
+          <div class="stat-val" id="m-base">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Премия</div>
+          <div class="stat-val" id="m-bonus">—</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;padding:11px 13px;background:var(--s2);border-radius:10px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--t2)">Итого к выплате:</span>
+        <span style="font-family:var(--font-head);font-size:17px;font-weight:700;color:var(--or)" id="m-total">—</span>
+      </div>
+      <div style="margin-top:10px;padding:10px 13px;background:rgba(232,122,30,0.08);border-radius:10px;border:1px solid rgba(232,122,30,0.2)">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:3px">БЛИЖАЙШАЯ ВЫПЛАТА</div>
+        <div style="font-size:13px;font-weight:600;color:var(--t1)" id="m-next-pay">—</div>
+        <div style="font-size:11px;color:var(--t2);margin-top:1px" id="m-next-period">—</div>
+      </div>
+    </div>
+
+    <!-- SUPPLIER DEBTS for this shop -->
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
+        <div class="sec">Поставки / Долги</div>
+        <button class="btn-out btn-sm" onclick="switchTab(&#39;deliveries&#39;,3)">Все поставки</button>
+      </div>
+      <div id="m-deliveries"></div>
+    </div>
+
+    <!-- INCOMING MOVES -->
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
+        <div class="sec">Входящие перемещения</div>
+        <span class="badge b-wn" id="m-inc-cnt">0</span>
+      </div>
+      <div id="m-inc-list"></div>
+    </div>
+
+    <!-- FEED -->
+    <div class="sec">Лента событий</div>
+    <div class="card" style="cursor:default">
+      <div id="m-feed"><div class="empty" style="padding:16px 0"><i class="ti ti-clock" style="font-size:24px;display:block;margin-bottom:6px"></i>Нет событий</div></div>
+    </div>
+  </div>
+  <div class="tabs" id="tabs-main">
+    <button class="tab active" onclick="switchTab(&#39;main&#39;,0)"><i class="ti ti-layout-dashboard"></i>Главная<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;moves&#39;,1)"><i class="ti ti-arrows-transfer-up"></i>Переезды<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;new-move&#39;,2)"><i class="ti ti-circle-plus"></i>Создать<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;deliveries&#39;,3)"><i class="ti ti-truck"></i>Поставки<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;salary&#39;,4)"><i class="ti ti-cash"></i>ЗП<div class="tab-dot"></div></button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     REALIZE SCREEN — Реализация за смену
+═══════════════════════════════════════════ -->
+<div id="sc-realize" class="screen">
+  <div class="hdr">
+    <button class="back-btn" onclick="switchTab(&#39;main&#39;,0)"><i class="ti ti-arrow-left"></i></button>
+    <div style="flex:1"><h1>Реализация</h1><p id="rz-sub">продажи за смену</p></div>
+  </div>
+  <div class="body">
+
+    <!-- ДАТА РЕАЛИЗАЦИИ -->
+    <div class="card" style="cursor:default">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:13px;font-weight:600">Дата реализации</div>
+          <div style="font-size:11px;color:var(--t3)">по умолчанию — сегодня</div>
+        </div>
+        <input id="rz-date" type="date" onchange="renderRealizeTotals()" style="background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--t1);font-size:14px;padding:9px 11px;-webkit-appearance:none">
+      </div>
+    </div>
+
+    <!-- ИТОГ -->
+    <div class="card" style="cursor:default;background:linear-gradient(135deg,rgba(76,175,80,0.10),var(--s1));border-color:rgba(76,175,80,0.3)">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:0.06em">К сдаче (итого)</div>
+          <div style="font-family:var(--font-head);font-size:26px;font-weight:700;color:var(--green)" id="rz-total">0 ₽</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--t3)">Позиций</div>
+          <div style="font-family:var(--font-head);font-size:18px;font-weight:700;color:var(--t1)" id="rz-count">0</div>
+        </div>
+      </div>
+      <div id="rz-breakdown" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--t2)">
+        <div style="display:flex;justify-content:space-between;padding:2px 0"><span>Сумма позиций</span><span id="rz-gross">0 ₽</span></div>
+        <div style="display:flex;justify-content:space-between;padding:2px 0"><span>Скидка</span><span id="rz-disc-show" style="color:var(--red)">0 ₽</span></div>
+      </div>
+    </div>
+
+    <!-- ДОБАВИТЬ ТОВАР -->
+    <div class="sec" style="margin-top:4px">Добавить из каталога</div>
+    <div style="position:relative">
+      <input id="rz-search" oninput="filterRealizeCatalog(this.value)" placeholder="Поиск товара…" autocomplete="off" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--t1);font-size:14px;padding:12px 14px;-webkit-appearance:none">
+      <div id="rz-cat-results" style="display:none;position:absolute;z-index:20;left:0;right:0;top:52px;background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:260px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4)"></div>
+    </div>
+
+    <!-- СПИСОК -->
+    <div class="sec" style="margin-top:14px">Список реализации</div>
+    <div class="card" style="cursor:default;padding:6px 14px">
+      <div id="rz-items"></div>
+      <div id="rz-empty" class="empty" style="padding:18px 0"><i class="ti ti-receipt-off" style="font-size:24px;display:block;margin-bottom:6px"></i>Пока ничего не добавлено</div>
+    </div>
+
+    <!-- СКИДКА -->
+    <div class="card" style="cursor:default;margin-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-size:13px;font-weight:600">Скидка</div>
+          <div style="font-size:11px;color:var(--t3)">на весь чек</div>
+        </div>
+        <div class="filter-row">
+          <button class="flt-btn active" id="rz-dt-rub" onclick="setRzDiscType(&#39;rub&#39;)">₽</button>
+          <button class="flt-btn" id="rz-dt-pct" onclick="setRzDiscType(&#39;pct&#39;)">%</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input id="rz-disc" type="number" inputmode="decimal" value="0" min="0" oninput="renderRealizeTotals()" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--t1);font-size:15px;padding:11px 13px;-webkit-appearance:none">
+        <span id="rz-disc-unit" style="font-size:15px;color:var(--t3);width:18px;text-align:center">₽</span>
+      </div>
+    </div>
+
+    <!-- ОПЛАТА -->
+    <div class="card" style="cursor:default;margin-top:8px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px">Оплата</div>
+      <div class="filter-row">
+        <button class="flt-btn active" id="rz-pay-cash" onclick="setRzPay(&#39;cash&#39;)"><i class="ti ti-cash" style="vertical-align:-2px;margin-right:4px"></i>Наличными</button>
+        <button class="flt-btn" id="rz-pay-transfer" onclick="setRzPay(&#39;transfer&#39;)"><i class="ti ti-credit-card" style="vertical-align:-2px;margin-right:4px"></i>Переводом</button>
+        <button class="flt-btn" id="rz-pay-mixed" onclick="setRzPay(&#39;mixed&#39;)">Смешанно</button>
+      </div>
+      <div id="rz-split" style="display:none;margin-top:12px">
+        <div style="display:flex;gap:10px">
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--t3);margin-bottom:4px">Наличными</div>
+            <input id="rz-cash" type="number" inputmode="decimal" value="0" min="0" oninput="onCashInput()" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--t1);font-size:15px;padding:10px 12px;-webkit-appearance:none">
+          </div>
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--t3);margin-bottom:4px">Переводом</div>
+            <input id="rz-transfer" type="number" value="0" readonly="" style="width:100%;background:var(--s3);border:1px solid var(--border);border-radius:9px;color:var(--t2);font-size:15px;padding:10px 12px;-webkit-appearance:none">
+          </div>
+        </div>
+        <div id="rz-split-hint" style="font-size:11px;color:var(--t3);text-align:center;margin-top:8px">Введите сумму наличными — перевод посчитается сам</div>
+      </div>
+    </div>
+
+    <!-- ЧЕКИ -->
+    <div class="card" style="cursor:default;margin-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:13px;font-weight:600">Количество чеков</div>
+          <div style="font-size:11px;color:var(--t3)">по Z-отчёту кассы</div>
+        </div>
+        <div class="qty-ctrl">
+          <button class="qty-btn" onclick="chChecks(-1)">−</button>
+          <input id="rz-checks" type="number" inputmode="numeric" value="0" min="0" oninput="renderRealizeTotals()" style="width:54px;text-align:center;background:transparent;border:none;color:var(--t1);font-family:var(--font-head);font-size:16px;font-weight:700">
+          <button class="qty-btn" onclick="chChecks(1)">+</button>
+        </div>
+      </div>
+    </div>
+
+    <textarea id="rz-note" placeholder="Примечание (необязательно)" rows="2" style="width:100%;margin-top:8px;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--t1);font-size:13px;padding:11px 13px;-webkit-appearance:none;resize:none"></textarea>
+
+    <button class="btn btn-gr" style="margin-top:12px" onclick="submitRealize()">
+      <i class="ti ti-check" style="vertical-align:-2px;margin-right:5px"></i>Сдать реализацию
+    </button>
+    <div style="font-size:11px;color:var(--t3);text-align:center;margin-top:8px">Итог уйдёт в выручку дня и в расчёт ЗП</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SALARY SCREEN — Зарплата и памятки
+═══════════════════════════════════════════ -->
+<div id="sc-salary" class="screen">
+  <div class="hdr">
+    <button class="back-btn" onclick="switchTab(&#39;main&#39;,0)"><i class="ti ti-arrow-left"></i></button>
+    <div style="flex:1"><h1>Зарплата</h1><p id="sal-sub">периоды и памятки</p></div>
+  </div>
+  <div class="body">
+
+    <!-- ПЕРИОД ИНДИКАТОР -->
+    <div id="sal-period-card" class="card" style="cursor:default;background:linear-gradient(135deg,rgba(232,122,30,0.12),var(--s1));border-color:rgba(232,122,30,0.3)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:40px;height:40px;background:var(--or);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="ti ti-calendar-due" style="font-size:20px;color:#fff"></i>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:0.07em">Текущий расчётный период</div>
+          <div style="font-family:var(--font-head);font-size:14px;font-weight:700;color:var(--t1)" id="sal-cur-period">—</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:12px">
+        <div style="flex:1;background:var(--s2);border-radius:9px;padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--t3);margin-bottom:4px">Дней прошло</div>
+          <div style="font-family:var(--font-head);font-size:18px;font-weight:700;color:var(--or)" id="sal-days-passed">—</div>
+        </div>
+        <div style="flex:1;background:var(--s2);border-radius:9px;padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--t3);margin-bottom:4px">Осталось</div>
+          <div style="font-family:var(--font-head);font-size:18px;font-weight:700;color:var(--t1)" id="sal-days-left">—</div>
+        </div>
+        <div style="flex:1;background:var(--s2);border-radius:9px;padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--t3);margin-bottom:4px">Выплата</div>
+          <div style="font-family:var(--font-head);font-size:18px;font-weight:700;color:var(--green)" id="sal-pay-date">—</div>
+        </div>
+      </div>
+      <div class="prog-wrap" style="margin:0 0 8px"><div class="prog-fill" id="sal-period-bar" style="width:0%"></div></div>
+      <div style="font-size:11px;color:var(--t3);text-align:center" id="sal-period-hint">—</div>
+    </div>
+
+    <!-- СТАВКА И ПРОЦЕНТ -->
+    <div class="card" style="cursor:default">
+      <div style="display:flex;gap:10px">
+        <div style="flex:1;background:var(--s2);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">Ставка за смену</div>
+          <div style="font-family:var(--font-head);font-size:18px;font-weight:700;color:var(--t1)" id="sal-shift-rate">—</div>
+        </div>
+        <div style="flex:1;background:var(--s2);border-radius:10px;padding:12px;text-align:center;position:relative">
+          <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px">% с выручки</div>
+          <div style="font-family:var(--font-head);font-size:18px;font-weight:700;color:var(--or)" id="sal-rev-pct">—</div>
+          <span class="badge b-gr" id="sal-pct-boost" style="position:absolute;top:8px;right:8px;display:none">+1%</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--t3);text-align:center;margin-top:10px" id="sal-pct-hint">При выполнении плана месяца ставка % повышается 4% → 5%</div>
+    </div>
+
+    <!-- ДВА ПЕРИОДА -->
+    <div class="sec" style="margin-top:4px">Расчётные периоды</div>
+
+    <!-- Период 1: 1–15, выплата 30го -->
+    <div id="sal-p1" class="card" style="cursor:default">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-size:13px;font-weight:600">Аванс — 1 по 15</div>
+          <div style="font-size:11px;color:var(--t3)">Выплата 30го числа</div>
+        </div>
+        <span class="badge b-gy" id="sal-p1-badge">расчёт</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px" id="sal-p1-rows">
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--t2)">Смены (1–15)</span>
+          <span class="sal-shifts-1" style="font-weight:600">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--t2)">% с выручки <span id="sal-p1-rate" style="color:var(--t3);font-size:11px"></span></span>
+          <span id="sal-p1-pct" style="font-weight:600;color:var(--or)">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;padding:8px 0;font-weight:700">
+          <span>Итого аванс:</span>
+          <span id="sal-p1-total" style="color:var(--or)">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Период 2: 16–31, выплата 15го -->
+    <div id="sal-p2" class="card" style="cursor:default">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-size:13px;font-weight:600">Основная — 16 по 31</div>
+          <div style="font-size:11px;color:var(--t3)">Выплата 15го следующего месяца</div>
+        </div>
+        <span class="badge b-gy" id="sal-p2-badge">расчёт</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0" id="sal-p2-rows">
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--t2)">Смены (16–31)</span>
+          <span class="sal-shifts-2" style="font-weight:600">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--t2)">% с выручки <span id="sal-p2-rate" style="color:var(--t3);font-size:11px"></span></span>
+          <span id="sal-p2-pct" style="font-weight:600;color:var(--or)">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--t2)">НЛК</span>
+          <span id="sal-p2-nlk" style="font-weight:600;color:var(--green)">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--t2)">Премия за точку</span>
+          <span id="sal-p2-bonus" style="font-weight:600;color:var(--green)">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--t2)">Инвентура (вычет)</span>
+          <span id="sal-p2-inv" style="font-weight:600;color:var(--red)">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;padding:8px 0;font-weight:700">
+          <span>Итого основная:</span>
+          <span id="sal-p2-total" style="color:var(--or)">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ИТОГ -->
+    <div style="padding:14px 16px;background:linear-gradient(135deg,rgba(232,122,30,0.15),rgba(232,122,30,0.05));border-radius:14px;border:1px solid rgba(232,122,30,0.25);display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:11px;color:var(--t3)">ИТОГО ЗА МЕСЯЦ</div>
+        <div style="font-size:11px;color:var(--t2);margin-top:2px">аванс + основная</div>
+      </div>
+      <div style="font-family:var(--font-head);font-size:24px;font-weight:700;color:var(--or)" id="sal-grand-total">—</div>
+    </div>
+
+    <!-- ПАМЯТКИ -->
+    <div class="sec" style="margin-top:4px">Памятки</div>
+
+    <div id="hints-list">
+      <!-- Инвентура -->
+      <div class="card card-tap" onclick="openHint(&#39;inventory&#39;)" style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;background:rgba(74,158,226,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="ti ti-clipboard-list" style="font-size:20px;color:var(--blue)"></i>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:600">Проведение инвентуры</div>
+            <div style="font-size:12px;color:var(--t3)">Порядок пересчёта остатков</div>
+          </div>
+          <i class="ti ti-chevron-right" style="color:var(--t3)"></i>
+        </div>
+      </div>
+      <!-- Поставки -->
+      <div class="card card-tap" onclick="openHint(&#39;delivery&#39;)" style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;background:rgba(76,175,80,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="ti ti-truck-delivery" style="font-size:20px;color:var(--green)"></i>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:600">Приёмка поставки</div>
+            <div style="font-size:12px;color:var(--t3)">Как принять товар от поставщика</div>
+          </div>
+          <i class="ti ti-chevron-right" style="color:var(--t3)"></i>
+        </div>
+      </div>
+      <!-- Перемещения -->
+      <div class="card card-tap" onclick="openHint(&#39;transfer&#39;)" style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;background:rgba(232,122,30,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="ti ti-arrows-transfer-up" style="font-size:20px;color:var(--or)"></i>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:600">Перемещения между точками</div>
+            <div style="font-size:12px;color:var(--t3)">Создать и подтвердить</div>
+          </div>
+          <i class="ti ti-chevron-right" style="color:var(--t3)"></i>
+        </div>
+      </div>
+      <!-- Вечерний отчёт -->
+      <div class="card card-tap" onclick="openHint(&#39;evening&#39;)" style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;background:rgba(239,160,39,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="ti ti-moon" style="font-size:20px;color:var(--warn)"></i>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:600">Вечерний отчёт</div>
+            <div style="font-size:12px;color:var(--t3)">Что сдавать в конце смены</div>
+          </div>
+          <i class="ti ti-chevron-right" style="color:var(--t3)"></i>
+        </div>
+      </div>
+      <!-- Расчёт ЗП -->
+      <div class="card card-tap" onclick="openHint(&#39;salary&#39;)" style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;background:rgba(232,122,30,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="ti ti-cash" style="font-size:20px;color:var(--or)"></i>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:600">Как считается ЗП</div>
+            <div style="font-size:12px;color:var(--t3)">Периоды, формула, премии</div>
+          </div>
+          <i class="ti ti-chevron-right" style="color:var(--t3)"></i>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="tabs">
+    <button class="tab" onclick="switchTab(&#39;main&#39;,0)"><i class="ti ti-layout-dashboard"></i>Главная<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;moves&#39;,1)"><i class="ti ti-arrows-transfer-up"></i>Переезды<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;new-move&#39;,2)"><i class="ti ti-circle-plus"></i>Создать<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;deliveries&#39;,3)"><i class="ti ti-truck"></i>Поставки<div class="tab-dot"></div></button>
+    <button class="tab active" onclick="switchTab(&#39;salary&#39;,4)"><i class="ti ti-cash"></i>ЗП<div class="tab-dot"></div></button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     HINT DETAIL SCREEN — Памятка
+═══════════════════════════════════════════ -->
+<div id="sc-hint" class="screen">
+  <div class="hdr">
+    <button class="back-btn" onclick="showScreen(&#39;sc-salary&#39;)"><i class="ti ti-arrow-left"></i></button>
+    <div style="flex:1"><h1 id="hint-title">Памятка</h1><p>инструкция</p></div>
+  </div>
+  <div class="body" id="hint-body"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     OWNER DASHBOARD (аналитика по всем точкам)
+═══════════════════════════════════════════ -->
+<div id="sc-owner" class="screen">
+  <div class="hdr">
+    <div class="hdr-logo" style="background:linear-gradient(135deg,#B85C0A,#E87A1E)">П</div>
+    <div style="flex:1"><h1>Аналитика сети</h1><p id="ow-user">Владелец</p></div>
+    <button class="hdr-action" onclick="syncData()"><i class="ti ti-refresh"></i></button>
+    <button class="hdr-action" onclick="doLogout()"><i class="ti ti-logout"></i></button>
+  </div>
+  <div class="body">
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-lbl">Выручка сети</div>
+        <div class="stat-val" id="ow-rev">—</div>
+        <div class="stat-sub">сегодня</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl">Долги поставщикам</div>
+        <div class="stat-val ac-re" id="ow-debt">—</div>
+        <div class="stat-sub">всего</div>
+      </div>
+    </div>
+
+    <div class="card" style="cursor:default">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:13px;font-weight:600">Суммарный план</span>
+        <span id="ow-pct" class="ac" style="font-family:var(--font-head);font-size:16px;font-weight:700">0%</span>
+      </div>
+      <div class="prog-wrap"><div class="prog-fill" id="ow-bar" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2)">
+        <span id="ow-cur">0 ₽</span><span id="ow-tot">из 0 ₽</span>
+      </div>
+    </div>
+
+    <div class="sec">По точкам</div>
+    <div class="card" style="cursor:default">
+      <div id="ow-shops-list"></div>
+    </div>
+
+    <div class="sec">Балансы сотрудников</div>
+    <div id="ow-balances"></div>
+
+    <div class="sec">Последние перемещения</div>
+    <div id="ow-moves"></div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchOwnerTab(&#39;analytics&#39;,0)"><i class="ti ti-layout-dashboard"></i>Аналитика<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchOwnerTab(&#39;moves&#39;,1)"><i class="ti ti-arrows-transfer-up"></i>Переезды<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchOwnerTab(&#39;deliveries&#39;,2)"><i class="ti ti-truck"></i>Поставки<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchOwnerTab(&#39;balances&#39;,3)"><i class="ti ti-wallet"></i>Балансы<div class="tab-dot"></div></button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MOVES LIST
+═══════════════════════════════════════════ -->
+<div id="sc-moves" class="screen">
+  <div class="hdr">
+    <button class="back-btn" onclick="switchTab(&#39;main&#39;,0)"><i class="ti ti-arrow-left"></i></button>
+    <div style="flex:1"><h1>Перемещения</h1><p id="mv-sub">моя точка</p></div>
+  </div>
+  <div class="body">
+    <div class="filter-row">
+      <button class="flt-btn active" id="mf-all" onclick="filterMoves(&#39;all&#39;)">Все</button>
+      <button class="flt-btn" id="mf-pending" onclick="filterMoves(&#39;pending&#39;)">Ожидают</button>
+      <button class="flt-btn" id="mf-sent" onclick="filterMoves(&#39;sent&#39;)">В пути</button>
+      <button class="flt-btn" id="mf-done" onclick="filterMoves(&#39;done&#39;)">Выполнено</button>
+      <button class="flt-btn" id="mf-rejected" onclick="filterMoves(&#39;rejected&#39;)">Отклонено</button>
+    </div>
+    <div id="mv-list"></div>
+  </div>
+  <div class="tabs">
+    <button class="tab" onclick="switchTab(&#39;main&#39;,0)"><i class="ti ti-layout-dashboard"></i>Главная<div class="tab-dot"></div></button>
+    <button class="tab active" onclick="switchTab(&#39;moves&#39;,1)"><i class="ti ti-arrows-transfer-up"></i>Переезды<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;new-move&#39;,2)"><i class="ti ti-circle-plus"></i>Создать<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;deliveries&#39;,3)"><i class="ti ti-truck"></i>Поставки<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;salary&#39;,4)"><i class="ti ti-cash"></i>ЗП<div class="tab-dot"></div></button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MOVE DETAIL
+═══════════════════════════════════════════ -->
+<div id="sc-move-detail" class="screen">
+  <div class="hdr">
+    <button class="back-btn" onclick="goBack()"><i class="ti ti-arrow-left"></i></button>
+    <div style="flex:1"><h1>Перемещение</h1><p id="md-id">№...</p></div>
+    <button class="hdr-action" id="md-edit-btn" onclick="openEditMove()" style="color:var(--or)"><i class="ti ti-pencil"></i></button>
+    <span id="md-badge" class="badge">—</span>
+  </div>
+  <div class="body" id="md-body"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     NEW MOVE
+═══════════════════════════════════════════ -->
+<div id="sc-new-move" class="screen">
+  <div class="hdr">
+    <button class="back-btn" onclick="switchTab(&#39;moves&#39;,1)"><i class="ti ti-arrow-left"></i></button>
+    <div style="flex:1"><h1>Новое перемещение</h1><p>Создание заявки</p></div>
+  </div>
+  <div class="body">
+    <div class="inp-grp">
+      <label>ОТКУДА</label>
+      <select id="nm-from"><option value="">Выберите магазин</option></select>
+    </div>
+    <div class="inp-grp">
+      <label>КУДА</label>
+      <select id="nm-to"><option value="">Выберите магазин</option></select>
+    </div>
+    <div class="div"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="sec">Товары</div>
+      <button class="btn-out btn-sm" onclick="addProdRow()">+ Добавить</button>
+    </div>
+    <div class="search-wrap">
+      <i class="ti ti-search"></i>
+      <input class="search-inp" id="cat-search" placeholder="Поиск по каталогу..." oninput="filterCatalog(this.value)">
+    </div>
+    <div id="cat-results" style="display:none;background:var(--s2);border-radius:10px;max-height:160px;overflow-y:auto;border:1px solid var(--border)"></div>
+    <div id="nm-products"></div>
+    <div class="inp-grp">
+      <label>ПРИМЕЧАНИЕ</label>
+      <textarea id="nm-note" rows="2" placeholder="Необязательно..." style="resize:none"></textarea>
+    </div>
+    <button class="btn" onclick="submitMove()">Создать перемещение</button>
+  </div>
+  <div class="tabs">
+    <button class="tab" onclick="switchTab(&#39;main&#39;,0)"><i class="ti ti-layout-dashboard"></i>Главная<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;moves&#39;,1)"><i class="ti ti-arrows-transfer-up"></i>Переезды<div class="tab-dot"></div></button>
+    <button class="tab active" onclick="switchTab(&#39;new-move&#39;,2)"><i class="ti ti-circle-plus"></i>Создать<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;deliveries&#39;,3)"><i class="ti ti-truck"></i>Поставки<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;salary&#39;,4)"><i class="ti ti-cash"></i>ЗП<div class="tab-dot"></div></button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     DELIVERIES
+═══════════════════════════════════════════ -->
+<div id="sc-deliveries" class="screen">
+  <div class="hdr">
+    <button class="back-btn" onclick="switchTab(&#39;main&#39;,0)"><i class="ti ti-arrow-left"></i></button>
+    <div style="flex:1"><h1>Поставки</h1><p id="del-sub">долги поставщикам</p></div>
+    <button class="hdr-action" onclick="openNewDelivery()"><i class="ti ti-plus"></i></button>
+  </div>
+  <div class="body">
+    <div class="filter-row">
+      <button class="flt-btn active" id="df-all" onclick="filterDel(&#39;all&#39;)">Все</button>
+      <button class="flt-btn" id="df-debt" onclick="filterDel(&#39;debt&#39;)">Долг</button>
+      <button class="flt-btn" id="df-paid" onclick="filterDel(&#39;paid&#39;)">Оплачено</button>
+    </div>
+    <div id="del-list"></div>
+  </div>
+  <div class="tabs">
+    <button class="tab" onclick="switchTab(&#39;main&#39;,0)"><i class="ti ti-layout-dashboard"></i>Главная<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;moves&#39;,1)"><i class="ti ti-arrows-transfer-up"></i>Переезды<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;new-move&#39;,2)"><i class="ti ti-circle-plus"></i>Создать<div class="tab-dot"></div></button>
+    <button class="tab active" onclick="switchTab(&#39;deliveries&#39;,3)"><i class="ti ti-truck"></i>Поставки<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;salary&#39;,4)"><i class="ti ti-cash"></i>ЗП<div class="tab-dot"></div></button>
+  </div>
+</div>
+
+<!-- NEW DELIVERY FORM (popup style) -->
+<div id="sc-new-delivery" class="screen">
+  <div class="hdr">
+    <button class="back-btn" onclick="goBack()"><i class="ti ti-arrow-left"></i></button>
+    <div style="flex:1"><h1>Новая поставка</h1><p>Запись долга</p></div>
+  </div>
+  <div class="body">
+    <div class="inp-grp">
+      <label>ПОСТАВЩИК</label>
+      <input type="text" id="nd-supplier" placeholder="Название поставщика">
+    </div>
+    <div class="inp-grp">
+      <label>МАГАЗИН</label>
+      <select id="nd-shop"><option value="">Выберите...</option></select>
+    </div>
+    <div class="inp-grp">
+      <label>СУММА ПОСТАВКИ (₽)</label>
+      <input type="number" id="nd-amount" placeholder="0">
+    </div>
+    <div class="inp-grp">
+      <label>СУММА ДОЛГА (₽)</label>
+      <input type="number" id="nd-debt" placeholder="0 — если уже оплачено">
+    </div>
+    <div class="inp-grp">
+      <label>ДАТА ПОСТАВКИ</label>
+      <input type="date" id="nd-date">
+    </div>
+    <div class="inp-grp">
+      <label>ПРИМЕЧАНИЕ</label>
+      <input type="text" id="nd-note" placeholder="Необязательно">
+    </div>
+    <button class="btn" onclick="submitDelivery()">Сохранить поставку</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     BALANCES
+═══════════════════════════════════════════ -->
+<div id="sc-balances" class="screen">
+  <div class="hdr">
+    <button class="back-btn" onclick="switchTab(&#39;main&#39;,0)"><i class="ti ti-arrow-left"></i></button>
+    <div style="flex:1"><h1>Балансы</h1><p>Переводы сотрудников</p></div>
+    <button class="hdr-action" onclick="openNewBalance()"><i class="ti ti-plus"></i></button>
+  </div>
+  <div class="body">
+    <div class="card" style="cursor:default;background:linear-gradient(135deg,rgba(232,122,30,0.1),var(--s1))">
+      <div class="stat-lbl">ОБЩАЯ СУММА НА РУКАХ</div>
+      <div style="font-family:var(--font-head);font-size:28px;font-weight:700;color:var(--or)" id="bal-total">0 ₽</div>
+      <div style="font-size:12px;color:var(--t3);margin-top:4px">по всем сотрудникам</div>
+    </div>
+    <div id="bal-list"></div>
+  </div>
+  <div class="tabs">
+    <button class="tab" onclick="switchTab(&#39;main&#39;,0)"><i class="ti ti-layout-dashboard"></i>Главная<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;moves&#39;,1)"><i class="ti ti-arrows-transfer-up"></i>Переезды<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;new-move&#39;,2)"><i class="ti ti-circle-plus"></i>Создать<div class="tab-dot"></div></button>
+    <button class="tab" onclick="switchTab(&#39;deliveries&#39;,3)"><i class="ti ti-truck"></i>Поставки<div class="tab-dot"></div></button>
+    <button class="tab active" onclick="switchTab(&#39;salary&#39;,4)"><i class="ti ti-cash"></i>ЗП<div class="tab-dot"></div></button>
+  </div>
+</div>
+
+<!-- NEW BALANCE FORM -->
+<div id="sc-new-balance" class="screen">
+  <div class="hdr">
+    <button class="back-btn" onclick="goBack()"><i class="ti ti-arrow-left"></i></button>
+    <div style="flex:1"><h1>Обновить баланс</h1><p>Запись суммы</p></div>
+  </div>
+  <div class="body">
+    <div class="inp-grp">
+      <label>СОТРУДНИК</label>
+      <select id="nb-emp"><option value="">Выберите...</option></select>
+    </div>
+    <div class="inp-grp">
+      <label>СУММА НА РУКАХ (₽)</label>
+      <input type="number" id="nb-amount" placeholder="0">
+    </div>
+    <div class="inp-grp">
+      <label>ПРИМЕЧАНИЕ</label>
+      <input type="text" id="nb-note" placeholder="Необязательно">
+    </div>
+    <button class="btn" onclick="submitBalance()">Сохранить</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     OWNER MOVES / DELIVERIES / BALANCES
+     (reuse sc-moves, sc-deliveries, sc-balances with owner tabs)
+═══════════════════════════════════════════ -->
+
+<script>
+// ═══════════════════════════════════
+// STATE
+// ═══════════════════════════════════
+let GAS_URL = localStorage.getItem('paraplan_url') || 'https://script.google.com/macros/s/AKfycbwzPLDPz5iOjf6WCig46FRPoTzHo99Vw_vWR1nx7QpCWCIS39TJJcwUFnCfxnlvJVhp/exec';
+let currentUser = null; // {name, shop, shopName, role, pin}
+let appData = {
+  shops: [], employees: [], catalog: [], revenue: [],
+  moves: [], deliveries: [], balances: [], feed: []
+};
+let moveFilter = 'all', delFilter = 'all';
+let backTo = 'main';
+let rowId = 0;
+let realizeItems = [];
+let rzDiscType = 'rub';
+let rzPay = 'cash';
+const ROLES = { owner: 'Владелец', manager: 'Управляющий', seller: 'Продавец' };
+const STATUS_MAP = {
+  pending: { l: 'Ожидает', cl: 'b-wn' },
+  sent:    { l: 'В пути',  cl: 'b-or' },
+  done:    { l: 'Выполнено', cl: 'b-gr' },
+  rejected:{ l: 'Отклонено', cl: 'b-re' }
+};
+
+// ═══════════════════════════════════
+// FORMATTING
+// ═══════════════════════════════════
+function fmt(n) {
+  if (n === undefined || n === null || isNaN(n)) return '—';
+  return Number(n).toLocaleString('ru-RU') + ' ₽';
+}
+function today() {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+}
+function todayISO() {
+  return new Date().toISOString().split('T')[0];
+}
+function nowTime() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// ═══════════════════════════════════
+// TOAST
+// ═══════════════════════════════════
+function toast(msg, dur = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ═══════════════════════════════════
+// SCREEN NAVIGATION
+// ═══════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('sc-' + id).classList.add('active');
+}
+
+function switchTab(tab, idx) {
+  showScreen(tab);
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', false);
+  });
+  const activeTabBar = document.querySelector('#sc-' + tab + ' .tabs') ||
+                       document.querySelector('.tabs');
+  if (activeTabBar) {
+    const tabs = activeTabBar.querySelectorAll('.tab');
+    tabs.forEach((t, i) => t.classList.toggle('active', i === idx));
+  }
+  if (tab === 'moves') renderMoves();
+  if (tab === 'deliveries') renderDeliveries();
+  if (tab === 'balances') renderBalances();
+  if (tab === 'new-move') initNewMove();
+  if (tab === 'main') renderMain();
+  if (tab === 'salary') renderSalary();
+}
+
+function switchOwnerTab(tab, idx) {
+  showScreen('owner');
+  const tabs = document.querySelector('#sc-owner .tabs').querySelectorAll('.tab');
+  tabs.forEach((t, i) => t.classList.toggle('active', i === idx));
+  // For owner, show appropriate content
+  if (tab === 'moves') { renderOwnerMoves(); }
+  else if (tab === 'deliveries') { renderDeliveries(); }
+  else if (tab === 'balances') { renderBalances(); }
+  else { renderOwner(); }
+}
+
+function goBack() {
+  if (backTo === 'day-detail') {
+    showScreen('day-detail');
+    renderDayDetail(currentDayDate, currentDayShop);
+  } else {
+    showScreen(backTo);
+    if (backTo === 'moves') renderMoves();
+    else if (backTo === 'main') renderMain();
+    else if (backTo === 'deliveries') renderDeliveries();
+  }
+}
+
+// ═══════════════════════════════════
+// SETUP
+// ═══════════════════════════════════
+function saveUrl() {
+  const url = document.getElementById('setup-url').value.trim();
+  if (!url.startsWith('https://script.google.com')) {
+    toast('⚠ Некорректный URL Apps Script');
+    return;
+  }
+  GAS_URL = url;
+  localStorage.setItem('paraplan_url', url);
+  toast('✓ URL сохранён');
+  testConnection();
+}
+
+async function testConnection() {
+  const el = document.getElementById('test-result');
+  if (!GAS_URL) { el.textContent = '⚠ URL не задан'; el.style.color = 'var(--warn)'; return; }
+  el.textContent = 'Проверяю соединение...'; el.style.color = 'var(--t2)';
+  try {
+    const r = await gasGet({ action: 'ping' });
+    if (r.ok) {
+      el.textContent = '✓ Соединение успешно! Данные загружены.';
+      el.style.color = 'var(--green)';
+    } else {
+      el.textContent = '✗ Ошибка: ' + (r.error || 'нет ответа');
+      el.style.color = 'var(--red)';
+    }
+  } catch(e) {
+    el.textContent = '✗ Не удалось подключиться: ' + e.message;
+    el.style.color = 'var(--red)';
+  }
+}
+
+// ═══════════════════════════════════
+// GAS API
+// ═══════════════════════════════════
+async function gasGet(params) {
+  if (!GAS_URL) throw new Error('URL не настроен');
+  const qs = Object.entries(params).map(([k,v]) => k + '=' + encodeURIComponent(typeof v === 'object' ? JSON.stringify(v) : v)).join('&');
+  const r = await fetch(GAS_URL + '?' + qs);
+  return r.json();
+}
+
+async function gasPost(data) {
+  if (!GAS_URL) throw new Error('URL не настроен');
+  const r = await fetch(GAS_URL, {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: { 'Content-Type': 'text/plain' }
+  });
+  return r.json();
+}
+
+// ═══════════════════════════════════
+// SYNC / LOAD DATA
+// ═══════════════════════════════════
+async function syncData() {
+  const bar = document.getElementById('sync-bar');
+  if (bar) { bar.style.display = 'flex'; }
+  const btn = document.getElementById('sync-btn');
+  if (btn) btn.style.animation = 'spin 0.8s linear infinite';
+
+  // If no GAS URL — use demo data
+  if (!GAS_URL) {
+    loadDemoData();
+    if (bar) bar.style.display = 'none';
+    if (btn) btn.style.animation = '';
+    renderAll();
+    return;
+  }
+
+  try {
+    const r = await gasGet({ action: 'getAllData', shop: currentUser ? currentUser.shop : '' });
+    if (r.ok) {
+      appData = { ...appData, ...r.data };
+      toast('✓ Данные обновлены');
+    } else {
+      toast('⚠ ' + (r.error || 'Ошибка синхронизации'));
+    }
+  } catch(e) {
+    toast('⚠ Нет связи. Показаны кэшированные данные.');
+  }
+
+  if (bar) bar.style.display = 'none';
+  if (btn) btn.style.animation = '';
+  renderAll();
+}
+
+function renderAll() {
+  if (!currentUser) return;
+  normalizeData();
+  if (currentUser.role === 'owner') {
+    renderOwner();
+  } else {
+    renderMain();
+    renderMoves();
+    renderDeliveries();
+    renderBalances();
+    renderSalary();
+  }
+}
+
+// ─── DEMO DATA ───
+function loadDemoData() {
+  appData.shops = [
+    { id: 'titova',   name: 'Титова',       addr: 'ул. Титова, 1',       plan: 350000, base: 30000 },
+    { id: 'gromova',  name: 'Громова',       addr: 'ул. Громова, 5',       plan: 280000, base: 28000 },
+    { id: 'korotaeva',name: 'Коротаева',    addr: 'ул. Коротаева, 10',   plan: 300000, base: 28000 },
+    { id: 'zorge',    name: 'Зорге',         addr: 'ул. Зорге, 15',        plan: 250000, base: 26000 },
+    { id: 'gorsky',   name: 'Горский',       addr: 'мкр. Горский',         plan: 220000, base: 25000 },
+    { id: 'petukhova',name: 'Петухова',      addr: 'ул. Петухова, 20',     plan: 260000, base: 27000 },
+    { id: 'plan',     name: 'Планировочная', addr: 'ул. Планировочная, 3', plan: 230000, base: 25000 },
+    { id: 'shluz',    name: 'Шлюз',          addr: 'р-н Шлюз',             plan: 200000, base: 24000 },
+    { id: 'dynasty',  name: 'Династия',      addr: 'ТЦ Династия',          plan: 320000, base: 29000 },
+    { id: 'moskva',   name: 'Москва',        addr: 'ТЦ Москва',            plan: 380000, base: 32000 },
+    { id: 'nikitina', name: 'Никитина',      addr: 'ул. Никитина, 8',      plan: 240000, base: 26000 },
+    { id: 'bogatk',   name: 'Богаткова',     addr: 'ул. Богаткова, 25',    plan: 210000, base: 24000 },
+  ];
+  appData.catalog = [
+    { id: '001', name: 'VAAL Max 8000', price: 590 },
+    { id: '002', name: 'Lost Mary 5000', price: 490 },
+    { id: '003', name: 'Elf Bar 1500', price: 290 },
+    { id: '004', name: 'Geek Bar Pro', price: 650 },
+    { id: '005', name: 'HQD Cuvie', price: 380 },
+    { id: '006', name: 'VOZOL 10000', price: 780 },
+    { id: '007', name: 'Жидкость Mango Ice 30мл', price: 450 },
+    { id: '008', name: 'Жидкость Strawberry 30мл', price: 450 },
+    { id: '009', name: 'POD Caliburn G3', price: 2490 },
+    { id: '010', name: 'SMOK Nord 5', price: 3200 },
+    { id: '011', name: 'Сменник Caliburn G3', price: 590 },
+    { id: '012', name: 'Зарядное USB-C 2A', price: 290 },
+    { id: '013', name: 'Ватные сменки (уп.)', price: 120 },
+    { id: '014', name: 'Жидкость Black Currant', price: 420 },
+    { id: '015', name: 'Lost Mary BM5000', price: 510 },
+  ];
+  const shop = currentUser ? currentUser.shop : 'titova';
+  appData.revenue = [
+    { date: today(), shop: shop, amount: 87400, checks: 43 },
+    { date: today(), shop: 'gromova', amount: 54200, checks: 28 },
+    { date: today(), shop: 'moskva', amount: 112000, checks: 67 },
+  ];
+  appData.moves = [
+    { id: 'ПРМ-001', from: 'gromova', to: shop, products: [{ name: 'VAAL Max 8000', qty: 20 }, { name: 'Elf Bar 1500', qty: 15 }], status: 'pending', date: today(), note: '' },
+    { id: 'ПРМ-002', from: 'korotaeva', to: shop, products: [{ name: 'HQD Cuvie', qty: 30 }], status: 'pending', date: today(), note: '' },
+    { id: 'ПРМ-003', from: shop, to: 'zorge', products: [{ name: 'POD Caliburn G3', qty: 5 }], status: 'sent', date: today(), note: '' },
+    { id: 'ПРМ-004', from: 'gromova', to: 'korotaeva', products: [{ name: 'Geek Bar Pro', qty: 25 }], status: 'done', date: today(), note: 'Получено 24 шт.' },
+  ];
+  appData.deliveries = [
+    { id: 'ПСТ-001', supplier: 'ООО АромаВейп', shop: shop, amount: 120000, debt: 45000, date: today(), status: 'debt', note: '' },
+    { id: 'ПСТ-002', supplier: 'ИП Снежков', shop: shop, amount: 67000, debt: 0, date: today(), status: 'paid', note: 'Оплачено наличкой' },
+    { id: 'ПСТ-003', supplier: 'CloudVape RU', shop: 'gromova', amount: 89000, debt: 89000, date: today(), status: 'debt', note: '' },
+  ];
+  appData.balances = [
+    { employee: 'Алина К.', shop: shop, amount: 15000, date: today(), note: 'Инкассация пятница' },
+    { employee: 'Сергей М.', shop: 'gromova', amount: 23500, date: today(), note: '' },
+    { employee: 'Дарья Н.', shop: 'korotaeva', amount: 8700, date: today(), note: '' },
+    { employee: 'Иван Р.', shop: 'moskva', amount: 42000, date: today(), note: 'Крупная выручка' },
+  ];
+  appData.feed = [
+    { type: 'or', time: nowTime(), text: 'Перемещение ПРМ-003 отправлено на Зорге' },
+    { type: 'bl', time: nowTime(), text: 'Поставка ООО АромаВейп — долг 45 000 ₽' },
+    { type: 'gr', time: nowTime(), text: 'ПРМ-004 подтверждено на Коротаева' },
+  ];
+}
+
+// ═══════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════
+async function loadShopsForLogin() {
+  const sel = document.getElementById('li-shop');
+  if (!GAS_URL) {
+    loadDemoData();
+    sel.innerHTML = '<option value="">— Выберите точку —</option>';
+    appData.shops.forEach(s => sel.innerHTML += `<option value="${s.id}">${s.name}</option>`);
+    return;
+  }
+  try {
+    const r = await gasGet({ action: 'getShops' });
+    if (r.ok) {
+      appData.shops = r.data;
+      sel.innerHTML = '<option value="">— Выберите точку —</option>';
+      r.data.forEach(s => sel.innerHTML += `<option value="${s.id}">${s.name}</option>`);
+    }
+  } catch(e) {
+    loadDemoData();
+    sel.innerHTML = '<option value="">— Выберите точку —</option>';
+    appData.shops.forEach(s => sel.innerHTML += `<option value="${s.id}">${s.name}</option>`);
+    document.getElementById('login-status').textContent = '⚠ Демо-режим (нет подключения)';
+  }
+}
+
+async function doLogin() {
+  const name = document.getElementById('li-name').value.trim();
+  const shopId = document.getElementById('li-shop').value;
+  const pin = document.getElementById('li-pin').value.trim();
+  const status = document.getElementById('login-status');
+
+  if (!name) { toast('Введите имя'); return; }
+  if (!shopId) { toast('Выберите магазин'); return; }
+
+  // Demo mode — any pin accepted, role by name
+  if (!GAS_URL || GAS_URL === '') {
+    const shop = appData.shops.find(s => s.id === shopId);
+    const role = name.toLowerCase().includes('свет') || name.toLowerCase() === 'owner' ? 'owner' : 'seller';
+    currentUser = { name, shop: shopId, shopName: shop ? shop.name : shopId, role };
+    finishLogin();
+    return;
+  }
+
+  status.textContent = 'Проверяю...';
+  try {
+    const r = await gasGet({ action: 'login', name, shop: shopId, pin });
+    if (r.ok) {
+      currentUser = r.user;
+      finishLogin();
+    } else {
+      status.textContent = '✗ ' + (r.error || 'Неверный код доступа');
+      status.style.color = 'var(--red)';
+    }
+  } catch(e) {
+    // Fallback demo
+    const shop = appData.shops.find(s => s.id === shopId);
+    currentUser = { name, shop: shopId, shopName: shop ? shop.name : shopId, role: 'seller' };
+    status.textContent = '⚠ Демо-режим';
+    finishLogin();
+  }
+}
+
+function finishLogin() {
+  document.getElementById('login-status').textContent = '';
+  loadDemoData();
+  populateShopSelects();
+  populateEmployeeSelect();
+  if (currentUser.role === 'owner') {
+    showScreen('owner');
+    renderOwner();
+  } else {
+    switchTab('main', 0);
+    renderMain();
+    renderMoves();
+    renderDeliveries();
+    renderBalances();
+    renderSalary();
+  }
+  syncData();
+}
+
+function doLogout() {
+  currentUser = null;
+  showScreen('login');
+}
+
+// ═══════════════════════════════════
+// POPULATE SELECTS
+// ═══════════════════════════════════
+function populateShopSelects() {
+  ['nm-from', 'nm-to', 'nd-shop'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Выберите магазин</option>';
+    appData.shops.forEach(s => sel.innerHTML += `<option value="${s.id}">${s.name}</option>`);
+  });
+  // Pre-set nm-from to current shop
+  const nmFrom = document.getElementById('nm-from');
+  if (nmFrom && currentUser) nmFrom.value = currentUser.shop;
+  // nd-shop
+  const ndShop = document.getElementById('nd-shop');
+  if (ndShop && currentUser) ndShop.value = currentUser.shop;
+  // default date
+  const ndDate = document.getElementById('nd-date');
+  if (ndDate) ndDate.value = todayISO();
+}
+
+function populateEmployeeSelect() {
+  const sel = document.getElementById('nb-emp');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Выберите сотрудника</option>';
+  // Add balances employees + current user
+  const names = [...new Set(appData.balances.map(b => b.employee))];
+  if (currentUser && !names.includes(currentUser.name)) names.push(currentUser.name);
+  names.forEach(n => sel.innerHTML += `<option value="${n}">${n}</option>`);
+}
+
+// ═══════════════════════════════════
+// MAIN DASHBOARD
+// ═══════════════════════════════════
+function renderMain() {
+  if (!currentUser) return;
+  const shop = appData.shops.find(s => s.id === currentUser.shop) || {};
+  document.getElementById('m-shop').textContent = shop.name || currentUser.shopName || 'Параплан';
+  const roleLabel = ROLES[currentUser.role] || 'Продавец';
+  document.getElementById('m-user').textContent = currentUser.name + ' · ' + roleLabel;
+
+  // Revenue today for this shop
+  const todayRevs = appData.revenue.filter(r => r.shop === currentUser.shop && r.date === today());
+  const rev = todayRevs.reduce((a, r) => a + (Number(r.amount) || 0), 0);
+  const checks = todayRevs.reduce((a, r) => a + (Number(r.checks) || 0), 0);
+  const plan = Number(shop.plan) || 0;
+  const base = Number(shop.base) || 0;
+  const dayPlan = Math.round(plan / 30);
+
+  document.getElementById('s-rev').textContent = fmt(rev);
+  document.getElementById('s-dayplan').textContent = fmt(dayPlan);
+  document.getElementById('s-chk').textContent = checks || '—';
+  document.getElementById('s-avg').textContent = checks ? fmt(Math.round(rev / checks)) : '—';
+
+  // Monthly revenue
+  const monthRevs = appData.revenue.filter(r => r.shop === currentUser.shop);
+  const monthRev = monthRevs.reduce((a, r) => a + (Number(r.amount) || 0), 0);
+  const pct = plan ? Math.min(100, Math.round(monthRev / plan * 100)) : 0;
+  setTimeout(() => { document.getElementById('m-bar').style.width = pct + '%'; }, 100);
+  document.getElementById('m-pct').textContent = pct + '%';
+  document.getElementById('m-cur').textContent = fmt(monthRev);
+  document.getElementById('m-tot').textContent = 'из ' + fmt(plan);
+
+  // Salary
+  const bonus = pct >= 100 ? base * 0.5 : pct >= 80 ? base * 0.25 : pct >= 60 ? base * 0.1 : 0;
+  const bonusLabel = pct >= 100 ? 'Полная премия' : pct >= 80 ? 'Премия 25%' : pct >= 60 ? 'Премия 10%' : 'Без премии';
+  document.getElementById('m-base').textContent = fmt(base);
+  document.getElementById('m-bonus').textContent = fmt(Math.round(bonus));
+  document.getElementById('m-total').textContent = fmt(Math.round(base + bonus));
+  document.getElementById('m-sal-badge').textContent = bonusLabel;
+  document.getElementById('m-sal-badge').className = 'badge ' + (pct >= 100 ? 'b-gr' : pct >= 80 ? 'b-or' : pct >= 60 ? 'b-wn' : 'b-gy');
+
+  // Deliveries for this shop (debts only)
+  const myDels = appData.deliveries.filter(d => d.shop === currentUser.shop && d.status === 'debt');
+  const delEl = document.getElementById('m-deliveries');
+  if (myDels.length === 0) {
+    delEl.innerHTML = '<div class="empty" style="padding:12px 0;font-size:12px"><i class="ti ti-check" style="font-size:20px;display:block;margin-bottom:4px;color:var(--green)"></i>Нет долгов</div>';
+  } else {
+    delEl.innerHTML = myDels.slice(0, 3).map(d => `
+      <div class="bal-card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:13px;font-weight:600">${d.supplier}</span>
+          <span class="badge b-re">${fmt(d.debt)}</span>
+        </div>
+        <div style="font-size:11px;color:var(--t3);margin-top:4px">${d.date}</div>
+      </div>`).join('');
+  }
+
+  // Incoming moves (ожидающие отправки + уже в пути)
+  const inc = appData.moves.filter(m => m.to === currentUser.shop && (m.status === 'pending' || m.status === 'sent'));
+  document.getElementById('m-inc-cnt').textContent = inc.length;
+  const incEl = document.getElementById('m-inc-list');
+  if (inc.length === 0) {
+    incEl.innerHTML = '<div class="empty" style="padding:12px 0"><i class="ti ti-check" style="font-size:24px;display:block;margin-bottom:6px;color:var(--green)"></i>Нет входящих</div>';
+  } else {
+    incEl.innerHTML = inc.map(m => {
+      const sent = m.status === 'sent';
+      const badge = sent
+        ? '<span class="badge b-or">едет к вам</span>'
+        : '<span class="badge b-wn">ожидает отправки</span>';
+      const icCol = sent ? 'var(--or)' : 'var(--warn)';
+      return `
+      <div class="list-item">
+        <div class="li-row">
+          <i class="ti ti-truck-delivery" style="color:${icCol};font-size:20px"></i>
+          <span style="font-size:13px;font-weight:700;flex:1">${m.id}</span>
+          ${badge}
+        </div>
+        <div style="font-size:12px;color:var(--t2);margin-bottom:6px">Из: <b style="color:var(--t1)">${shopName(m.from)}</b> · ${m.date || ''}</div>
+        <div style="font-size:12px;color:var(--t3)">${m.products.map(p => p.name + ' × ' + p.qty).join(', ')}</div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-gr btn-sm" onclick="confirmMove('${m.id}','main')">✓ Получено</button>
+          <button class="btn btn-re btn-sm" onclick="rejectMove('${m.id}','main')">✗ Нет</button>
+          <button class="btn btn-gy btn-sm" onclick="openMove('${m.id}','main')">Подробнее</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Feed
+  const feedEl = document.getElementById('m-feed');
+  if (!appData.feed || appData.feed.length === 0) {
+    feedEl.innerHTML = '<div class="empty" style="padding:12px 0;font-size:12px">Нет событий</div>';
+  } else {
+    feedEl.innerHTML = appData.feed.slice(0, 8).map(f => `
+      <div class="feed-item">
+        <div class="feed-dot ${f.type}"></div>
+        <div style="flex:1">
+          <div style="font-size:13px;color:var(--t1)">${f.text}</div>
+          <div style="font-size:11px;color:var(--t3);margin-top:2px">${f.time || ''}</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+// ═══════════════════════════════════
+// OWNER DASHBOARD
+// ═══════════════════════════════════
+function renderOwner() {
+  if (!currentUser) return;
+  document.getElementById('ow-user').textContent = currentUser.name + ' · Владелец';
+
+  const allRevToday = appData.revenue.filter(r => r.date === today());
+  const totalRev = allRevToday.reduce((a, r) => a + (Number(r.amount) || 0), 0);
+  const totalDebt = appData.deliveries.filter(d => d.status === 'debt').reduce((a, d) => a + (Number(d.debt) || 0), 0);
+  document.getElementById('ow-rev').textContent = fmt(totalRev);
+  document.getElementById('ow-debt').textContent = fmt(totalDebt);
+
+  const totalPlan = appData.shops.reduce((a, s) => a + (Number(s.plan) || 0), 0);
+  const totalMonthRev = appData.revenue.reduce((a, r) => a + (Number(r.amount) || 0), 0);
+  const pct = totalPlan ? Math.min(100, Math.round(totalMonthRev / totalPlan * 100)) : 0;
+  setTimeout(() => { document.getElementById('ow-bar').style.width = pct + '%'; }, 100);
+  document.getElementById('ow-pct').textContent = pct + '%';
+  document.getElementById('ow-cur').textContent = fmt(totalMonthRev);
+  document.getElementById('ow-tot').textContent = 'из ' + fmt(totalPlan);
+
+  // Shops breakdown
+  const shopEl = document.getElementById('ow-shops-list');
+  shopEl.innerHTML = appData.shops.map(s => {
+    const rev = appData.revenue.filter(r => r.shop === s.id && r.date === today()).reduce((a, r) => a + Number(r.amount || 0), 0);
+    const plan = Number(s.plan) || 0;
+    const pct = plan ? Math.min(100, Math.round(rev / plan * 100 * 30)) : 0; // rough monthly
+    const cl = pct >= 100 ? 'ac-gr' : pct >= 60 ? 'ac' : 'ac-re';
+    return `<div class="shop-row-an" style="cursor:pointer" onclick="openDayDetail('${today()}','${s.id}')">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${s.name}</div>
+        <div style="font-size:11px;color:var(--t3)">${s.addr || ''}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--font-head);font-size:14px;font-weight:700" class="${cl}">${fmt(rev)}</div>
+        <div style="font-size:10px;color:var(--t3)">план ${fmt(Math.round(plan/30))}/день</div>
+      </div>
+      <i class="ti ti-chevron-right" style="color:var(--t3);font-size:16px;margin-left:4px"></i>
+    </div>`;
+  }).join('');
+
+  // Balances
+  renderBalances('ow-balances');
+
+  // Recent moves
+  const owMoves = document.getElementById('ow-moves');
+  const recent = appData.moves.slice(-5).reverse();
+  if (!recent.length) {
+    owMoves.innerHTML = '<div class="empty">Нет перемещений</div>';
+  } else {
+    owMoves.innerHTML = recent.map(m => {
+      const st = STATUS_MAP[m.status] || { l: m.status, cl: 'b-gy' };
+      return `<div class="list-item" style="margin-bottom:6px">
+        <div class="li-row">
+          <span style="font-size:13px;font-weight:700;flex:1">${m.id}</span>
+          <span class="badge ${st.cl}">${st.l}</span>
+        </div>
+        <div style="font-size:12px;color:var(--t2)">${shopName(m.from)} → ${shopName(m.to)}</div>
+        <div style="font-size:11px;color:var(--t3)">${m.products.map(p => p.name + ' × ' + p.qty).join(', ')}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function renderOwnerMoves() {
+  // Show all moves in owner view — reuse moves screen
+  showScreen('owner');
+  const owMoves = document.getElementById('ow-moves');
+  owMoves.innerHTML = appData.moves.reverse().map(m => {
+    const st = STATUS_MAP[m.status] || { l: m.status, cl: 'b-gy' };
+    return `<div class="list-item">
+      <div class="li-row">
+        <i class="ti ti-arrows-transfer-up" style="color:var(--or);font-size:18px"></i>
+        <span style="font-size:13px;font-weight:700;flex:1">${m.id}</span>
+        <span class="badge ${st.cl}">${st.l}</span>
+      </div>
+      <div style="font-size:12px;color:var(--t2)">${shopName(m.from)} → ${shopName(m.to)}</div>
+      <div style="font-size:12px;color:var(--t3);margin-top:3px">${m.products.map(p => p.name + ' × ' + p.qty).join(', ')}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════
+function shopName(id) {
+  const s = appData.shops.find(s => s.id === id);
+  return s ? s.name : id;
+}
+
+// ═══════════════════════════════════
+// НОРМАЛИЗАЦИЯ ДАННЫХ ИЗ ТАБЛИЦЫ
+// Делает перемещения «адекватными» независимо от того,
+// как именно Google-таблица хранит товары/точки/статусы.
+// ═══════════════════════════════════
+function resolveShopId(x) {
+  if (x === undefined || x === null) return x;
+  const s = String(x).trim();
+  if (!s) return s;
+  let hit = appData.shops.find(sh => String(sh.id).toLowerCase() === s.toLowerCase());
+  if (hit) return hit.id;
+  hit = appData.shops.find(sh => String(sh.name).toLowerCase() === s.toLowerCase());
+  if (hit) return hit.id;
+  return x;
+}
+
+function parseProducts(p) {
+  // уже массив объектов
+  if (Array.isArray(p)) {
+    return p.map(it => {
+      if (it && typeof it === 'object') {
+        return {
+          name: String(it.name ?? it.Название ?? it.title ?? it.tovar ?? '').trim(),
+          qty: Number(it.qty ?? it.Кол ?? it.count ?? it.q ?? 1) || 0
+        };
+      }
+      return { name: String(it).trim(), qty: 1 };
+    }).filter(x => x.name);
+  }
+  // строка: JSON или «Название ×3, Название2 ×2»
+  if (typeof p === 'string') {
+    const t = p.trim();
+    if (!t || t === '[object Object]') return [];
+    try {
+      const j = JSON.parse(t);
+      return parseProducts(j);
+    } catch (e) {}
+    return t.split(/[,;\n]+/).map(s => {
+      const mm = s.match(/(.+?)[×x*]\s*(\d+)\s*$/i);
+      if (mm) return { name: mm[1].trim(), qty: Number(mm[2]) || 0 };
+      return { name: s.trim(), qty: 1 };
+    }).filter(x => x.name);
+  }
+  return [];
+}
+
+function normalizeStatus(st) {
+  const s = String(st || '').trim().toLowerCase();
+  const map = {
+    'ожидает': 'pending', 'ожидание': 'pending', 'новое': 'pending', 'создано': 'pending', 'pending': 'pending',
+    'в пути': 'sent', 'отправлено': 'sent', 'отправлен': 'sent', 'sent': 'sent',
+    'выполнено': 'done', 'получено': 'done', 'готово': 'done', 'done': 'done',
+    'отклонено': 'rejected', 'не прибыло': 'rejected', 'отказ': 'rejected', 'rejected': 'rejected'
+  };
+  return map[s] || (s || 'pending');
+}
+
+function normalizeData() {
+  // Перемещения
+  if (Array.isArray(appData.moves)) {
+    appData.moves = appData.moves.map(m => {
+      if (!m || typeof m !== 'object') return m;
+      return {
+        ...m,
+        from: resolveShopId(m.from),
+        to: resolveShopId(m.to),
+        status: normalizeStatus(m.status),
+        products: parseProducts(m.products),
+        date: m.date ? String(m.date).trim() : ''
+      };
+    });
+  }
+  // Поставки/Балансы — приводим точку к id
+  if (Array.isArray(appData.deliveries)) {
+    appData.deliveries.forEach(d => { if (d) d.shop = resolveShopId(d.shop); });
+  }
+  if (Array.isArray(appData.balances)) {
+    appData.balances.forEach(b => { if (b) b.shop = resolveShopId(b.shop); });
+  }
+  // Выручка — точку к id
+  if (Array.isArray(appData.revenue)) {
+    appData.revenue.forEach(r => { if (r) r.shop = resolveShopId(r.shop); });
+  }
+}
+
+// ═══════════════════════════════════
+// MOVES
+// ═══════════════════════════════════
+function renderMoves() {
+  if (!currentUser) return;
+  document.getElementById('mv-sub').textContent = shopName(currentUser.shop);
+  let list = currentUser.role === 'owner'
+    ? appData.moves
+    : appData.moves.filter(m => m.from === currentUser.shop || m.to === currentUser.shop);
+  if (moveFilter !== 'all') list = list.filter(m => m.status === moveFilter);
+  const el = document.getElementById('mv-list');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty"><i class="ti ti-inbox"></i>Нет перемещений</div>';
+    return;
+  }
+  el.innerHTML = list.slice().reverse().map(m => {
+    const isIn = m.to === currentUser.shop;
+    const st = STATUS_MAP[m.status] || { l: m.status, cl: 'b-gy' };
+    const ic = isIn ? 'arrow-down-circle' : 'arrow-up-circle';
+    const col = isIn ? 'var(--green)' : 'var(--or)';
+    return `<div class="list-item" onclick="openMove('${m.id}','moves')">
+      <div class="li-row">
+        <i class="ti ti-${ic}" style="color:${col};font-size:20px"></i>
+        <div style="flex:1">
+          <span style="font-size:13px;font-weight:700">${m.id}</span>
+          <span style="font-size:11px;color:var(--t3);margin-left:7px">${m.date}</span>
+        </div>
+        <span class="badge ${st.cl}">${st.l}</span>
+      </div>
+      <div style="font-size:12px;color:var(--t2)">${shopName(m.from)} → ${shopName(m.to)}</div>
+      <div style="font-size:12px;color:var(--t3);margin-top:3px">${m.products.map(p => p.name + ' × ' + p.qty).join(', ')}</div>
+    </div>`;
+  }).join('');
+}
+
+function filterMoves(f) {
+  moveFilter = f;
+  ['all', 'pending', 'sent', 'done', 'rejected'].forEach(x => {
+    const el = document.getElementById('mf-' + x);
+    if (el) el.classList.toggle('active', x === f);
+  });
+  renderMoves();
+}
+
+function openMove(id, from) {
+  backTo = from;
+  editingMoveId = id;
+  const m = appData.moves.find(x => x.id === id);
+  if (!m) return;
+  const isIn = m.to === currentUser.shop;
+  const st = STATUS_MAP[m.status] || { l: m.status, cl: 'b-gy' };
+  document.getElementById('md-id').textContent = m.id + ' · ' + m.date;
+  document.getElementById('md-badge').className = 'badge ' + st.cl;
+  document.getElementById('md-badge').textContent = st.l;
+
+  // Show/hide edit button depending on status
+  const editBtn = document.getElementById('md-edit-btn');
+  if (editBtn) editBtn.style.display = m.status === 'done' ? 'none' : '';
+
+  let actions = '';
+  if (isIn && m.status === 'pending') {
+    actions = `<div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+      <button class="btn btn-gr" onclick="confirmMove('${m.id}','move-detail')">✓ Подтвердить получение</button>
+      <button class="btn btn-re" onclick="rejectMove('${m.id}','move-detail')">✗ Не прибыло</button>
+    </div>`;
+  } else if (!isIn && m.status === 'pending') {
+    actions = `<button class="btn" onclick="markSent('${m.id}')">Отметить как отправлено</button>`;
+  } else if (m.status === 'sent' && isIn) {
+    actions = `<div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+      <button class="btn btn-gr" onclick="confirmMove('${m.id}','move-detail')">✓ Подтвердить получение</button>
+      <button class="btn btn-re" onclick="rejectMove('${m.id}','move-detail')">✗ Не прибыло</button>
+    </div>`;
+  }
+
+  document.getElementById('md-body').innerHTML = `
+    <div class="card" style="cursor:default">
+      <div class="sec" style="margin-bottom:10px">Маршрут</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;background:var(--s2);border-radius:9px;padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--t3);margin-bottom:3px">ОТКУДА</div>
+          <div style="font-size:13px;font-weight:600">${shopName(m.from)}</div>
+        </div>
+        <i class="ti ti-arrow-right" style="font-size:20px;color:var(--or);flex-shrink:0"></i>
+        <div style="flex:1;background:var(--s2);border-radius:9px;padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--t3);margin-bottom:3px">КУДА</div>
+          <div style="font-size:13px;font-weight:600">${shopName(m.to)}</div>
+        </div>
+      </div>
+    </div>
+    <div class="sec" style="margin-top:4px;margin-bottom:8px">Товары (${m.products.reduce((a,p)=>a+p.qty,0)} шт.)</div>
+    <div class="card" style="cursor:default">
+      ${m.products.map(p => `<div class="prod-row"><span class="prod-name">${p.name}</span><span style="font-family:var(--font-head);font-weight:700;color:var(--or)">${p.qty} шт.</span></div>`).join('')}
+    </div>
+    ${m.note ? `<div style="padding:10px 13px;background:var(--s2);border-radius:9px;font-size:13px;color:var(--t2)"><i class="ti ti-notes" style="vertical-align:-2px;margin-right:6px"></i>${m.note}</div>` : ''}
+    ${actions}`;
+  showScreen('move-detail');
+}
+
+function confirmMove(id, from) {
+  const m = appData.moves.find(x => x.id === id);
+  if (!m) return;
+  m.status = 'done';
+  addFeed('gr', 'Получено: ' + id + ' (' + shopName(m.to) + ')');
+  gasPost({ action: 'updateMove', id, status: 'done', note: m.note });
+  toast('✓ ' + id + ' — получение подтверждено');
+  if (from === 'move-detail') goBack(); else { renderMain(); renderMoves(); }
+}
+function rejectMove(id, from) {
+  const m = appData.moves.find(x => x.id === id);
+  if (!m) return;
+  m.status = 'rejected';
+  addFeed('re', 'Отклонено: ' + id);
+  gasPost({ action: 'updateMove', id, status: 'rejected', note: m.note });
+  toast('✗ ' + id + ' — отмечено как не прибывшее');
+  if (from === 'move-detail') goBack(); else { renderMain(); renderMoves(); }
+}
+function markSent(id) {
+  const m = appData.moves.find(x => x.id === id);
+  if (!m) return;
+  m.status = 'sent';
+  addFeed('or', 'Отправлено: ' + id + ' → ' + shopName(m.to));
+  gasPost({ action: 'updateMove', id, status: 'sent', note: m.note });
+  toast('Перемещение ' + id + ' отправлено');
+  goBack();
+}
+
+function addFeed(type, text) {
+  appData.feed.unshift({ type, text, time: nowTime() });
+  if (appData.feed.length > 20) appData.feed.pop();
+}
+
+// ─── NEW MOVE ───
+function initNewMove() {
+  populateShopSelects();
+  document.getElementById('nm-products').innerHTML = '';
+  document.getElementById('cat-results').style.display = 'none';
+  document.getElementById('cat-search').value = '';
+  document.getElementById('nm-note').value = '';
+  rowId = 0;
+}
+
+function filterCatalog(q) {
+  const res = document.getElementById('cat-results');
+  if (!q) { res.style.display = 'none'; return; }
+  const matches = appData.catalog.filter(p => p.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8);
+  if (!matches.length) { res.style.display = 'none'; return; }
+  res.style.display = 'block';
+  res.innerHTML = matches.map(p => `
+    <div onclick="selectCatalogItem('${p.id}')" style="padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;display:flex;justify-content:space-between;align-items:center">
+      <span>${p.name}</span>
+      <span style="color:var(--or);font-size:12px">${fmt(p.price)}</span>
+    </div>`).join('');
+}
+
+function selectCatalogItem(id) {
+  const p = appData.catalog.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('cat-search').value = '';
+  document.getElementById('cat-results').style.display = 'none';
+  addProdRow(p.name);
+}
+
+function addProdRow(presetName = '') {
+  const r = rowId++;
+  const div = document.createElement('div');
+  div.id = 'prow-' + r;
+  div.style.cssText = 'display:flex;align-items:center;gap:7px;padding:9px 0;border-bottom:1px solid var(--border)';
+  const options = appData.catalog.map(p => `<option${p.name === presetName ? ' selected' : ''}>${p.name}</option>`).join('');
+  div.innerHTML = `
+    <select style="flex:2;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-size:12px;padding:8px 10px;-webkit-appearance:none">
+      <option value="">Выберите товар</option>${options}
+    </select>
+    <div class="qty-ctrl">
+      <button class="qty-btn" onclick="chQty(${r},-1)">−</button>
+      <span class="qty-val" id="qv-${r}">1</span>
+      <button class="qty-btn" onclick="chQty(${r},1)">+</button>
+    </div>
+    <button class="qty-btn" style="background:rgba(226,75,74,0.15);color:var(--red)" onclick="document.getElementById('prow-${r}').remove()">
+      <i class="ti ti-x" style="font-size:14px"></i>
+    </button>`;
+  document.getElementById('nm-products').appendChild(div);
+}
+
+function chQty(r, d) {
+  const el = document.getElementById('qv-' + r);
+  el.textContent = Math.max(1, parseInt(el.textContent) + d);
+}
+
+async function submitMove() {
+  const from = document.getElementById('nm-from').value;
+  const to = document.getElementById('nm-to').value;
+  if (!from || !to) { toast('Выберите откуда и куда'); return; }
+  if (from === to) { toast('Откуда и куда не могут совпадать'); return; }
+  const rows = document.querySelectorAll('#nm-products > div');
+  if (!rows.length) { toast('Добавьте хотя бы один товар'); return; }
+  const products = Array.from(rows).map(r => ({
+    name: r.querySelector('select').value,
+    qty: parseInt(r.querySelector('.qty-val').textContent)
+  })).filter(p => p.name);
+  if (!products.length) { toast('Выберите товары'); return; }
+
+  const id = 'ПРМ-' + String(appData.moves.length + 1).padStart(3, '0');
+  const note = document.getElementById('nm-note').value.trim();
+  const move = { id, from, to, products, status: 'pending', date: today(), note, createdBy: currentUser.name };
+  appData.moves.push(move);
+  addFeed('or', 'Создано ' + id + ': ' + shopName(from) + ' → ' + shopName(to));
+
+  // Save to Google Sheets
+  try {
+    await gasPost({ action: 'addMove', move });
+    toast('✓ ' + id + ' создано и сохранено!');
+  } catch(e) {
+    toast('✓ ' + id + ' создано (сохранение при синхронизации)');
+  }
+  initNewMove();
+  switchTab('moves', 1);
+  renderMoves();
+}
+
+// ═══════════════════════════════════
+// РЕАЛИЗАЦИЯ ЗА СМЕНУ
+// ═══════════════════════════════════
+function todayISOInput() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function isoToRu(iso) {
+  if (!iso) return today();
+  const p = String(iso).split('-');
+  if (p.length !== 3) return today();
+  return `${p[2]}.${p[1]}.${p[0]}`;
+}
+
+function openRealize() {
+  realizeItems = [];
+  rzDiscType = 'rub';
+  rzPay = 'cash';
+  document.getElementById('rz-sub').textContent = shopName(currentUser.shop);
+  document.getElementById('rz-search').value = '';
+  document.getElementById('rz-cat-results').style.display = 'none';
+  document.getElementById('rz-checks').value = 0;
+  document.getElementById('rz-note').value = '';
+  document.getElementById('rz-date').value = todayISOInput();
+  document.getElementById('rz-disc').value = 0;
+  document.getElementById('rz-cash').value = 0;
+  document.getElementById('rz-transfer').value = 0;
+  setRzDiscType('rub');
+  setRzPay('cash');
+  renderRealizeItems();
+  showScreen('realize');
+}
+
+function filterRealizeCatalog(q) {
+  const res = document.getElementById('rz-cat-results');
+  const query = (q || '').trim().toLowerCase();
+  if (!query) { res.style.display = 'none'; return; }
+  const matches = appData.catalog.filter(p =>
+    p.name.toLowerCase().includes(query) || String(p.id).includes(query)
+  ).slice(0, 12);
+  if (!matches.length) {
+    res.style.display = 'block';
+    res.innerHTML = '<div style="padding:11px 13px;font-size:13px;color:var(--t3)">Ничего не найдено</div>';
+    return;
+  }
+  res.style.display = 'block';
+  res.innerHTML = matches.map(p => `
+    <div onclick="addRealizeItem('${p.id}')" style="padding:10px 13px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;display:flex;justify-content:space-between;align-items:center">
+      <span>${p.name}</span>
+      <span style="color:var(--green);font-size:12px;font-weight:600;white-space:nowrap;margin-left:10px">${fmt(p.price)}</span>
+    </div>`).join('');
+}
+
+function addRealizeItem(id) {
+  const p = appData.catalog.find(x => String(x.id) === String(id));
+  if (!p) return;
+  const ex = realizeItems.find(i => String(i.id) === String(id));
+  if (ex) { ex.qty++; }
+  else { realizeItems.push({ id: p.id, name: p.name, price: Number(p.price) || 0, qty: 1 }); }
+  document.getElementById('rz-search').value = '';
+  document.getElementById('rz-cat-results').style.display = 'none';
+  renderRealizeItems();
+}
+
+function chRealizeQty(id, d) {
+  const it = realizeItems.find(i => String(i.id) === String(id));
+  if (!it) return;
+  it.qty += d;
+  if (it.qty <= 0) realizeItems = realizeItems.filter(i => String(i.id) !== String(id));
+  renderRealizeItems();
+}
+
+function removeRealizeItem(id) {
+  realizeItems = realizeItems.filter(i => String(i.id) !== String(id));
+  renderRealizeItems();
+}
+
+function renderRealizeItems() {
+  const wrap = document.getElementById('rz-items');
+  const empty = document.getElementById('rz-empty');
+  if (!realizeItems.length) {
+    wrap.innerHTML = '';
+    empty.style.display = '';
+  } else {
+    empty.style.display = 'none';
+    wrap.innerHTML = realizeItems.map(i => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i.name}</div>
+          <div style="font-size:11px;color:var(--t3)">${fmt(i.price)} × ${i.qty} = <span style="color:var(--green)">${fmt(i.price * i.qty)}</span></div>
+        </div>
+        <div class="qty-ctrl">
+          <button class="qty-btn" onclick="chRealizeQty('${i.id}',-1)">−</button>
+          <span class="qty-val">${i.qty}</span>
+          <button class="qty-btn" onclick="chRealizeQty('${i.id}',1)">+</button>
+        </div>
+        <button class="qty-btn" style="background:rgba(226,75,74,0.15);color:var(--red)" onclick="removeRealizeItem('${i.id}')">
+          <i class="ti ti-x" style="font-size:14px"></i>
+        </button>
+      </div>`).join('');
+  }
+  renderRealizeTotals();
+}
+
+// Возвращает {gross, discRub, net}
+function rzNet() {
+  const gross = realizeItems.reduce((a, i) => a + i.price * i.qty, 0);
+  let disc = parseFloat(document.getElementById('rz-disc').value) || 0;
+  if (disc < 0) disc = 0;
+  let discRub = rzDiscType === 'pct'
+    ? Math.round(gross * Math.min(disc, 100) / 100)
+    : Math.round(disc);
+  if (discRub > gross) discRub = gross;
+  return { gross, discRub, net: gross - discRub };
+}
+
+function setRzDiscType(t) {
+  rzDiscType = t;
+  document.getElementById('rz-dt-rub').classList.toggle('active', t === 'rub');
+  document.getElementById('rz-dt-pct').classList.toggle('active', t === 'pct');
+  document.getElementById('rz-disc-unit').textContent = t === 'pct' ? '%' : '₽';
+  renderRealizeTotals();
+}
+
+function setRzPay(p) {
+  rzPay = p;
+  ['cash', 'transfer', 'mixed'].forEach(x => {
+    const el = document.getElementById('rz-pay-' + x);
+    if (el) el.classList.toggle('active', x === p);
+  });
+  document.getElementById('rz-split').style.display = p === 'mixed' ? '' : 'none';
+  if (p === 'mixed') {
+    const { net } = rzNet();
+    document.getElementById('rz-cash').value = net; // по умолчанию всё наличными, перевод 0
+  }
+  renderRealizeTotals();
+}
+
+function onCashInput() {
+  renderRealizeTotals();
+}
+
+function renderRealizeTotals() {
+  const { gross, discRub, net } = rzNet();
+  const positions = realizeItems.reduce((a, i) => a + i.qty, 0);
+  document.getElementById('rz-total').textContent = fmt(net);
+  document.getElementById('rz-count').textContent = positions;
+
+  const bd = document.getElementById('rz-breakdown');
+  if (discRub > 0) {
+    bd.style.display = '';
+    document.getElementById('rz-gross').textContent = fmt(gross);
+    document.getElementById('rz-disc-show').textContent = '− ' + fmt(discRub);
+  } else {
+    bd.style.display = 'none';
+  }
+
+  // Разбивка оплаты
+  const cashEl = document.getElementById('rz-cash');
+  const transEl = document.getElementById('rz-transfer');
+  if (rzPay === 'cash') {
+    cashEl.value = net; transEl.value = 0;
+  } else if (rzPay === 'transfer') {
+    cashEl.value = 0; transEl.value = net;
+  } else {
+    let cash = parseFloat(cashEl.value) || 0;
+    if (cash > net) { cash = net; cashEl.value = cash; }
+    if (cash < 0) { cash = 0; cashEl.value = 0; }
+    transEl.value = net - cash;
+    const hint = document.getElementById('rz-split-hint');
+    if (hint) hint.textContent = 'Наличные ' + fmt(cash) + ' + перевод ' + fmt(net - cash) + ' = ' + fmt(net);
+  }
+}
+
+function chChecks(d) {
+  const el = document.getElementById('rz-checks');
+  el.value = Math.max(0, (parseInt(el.value) || 0) + d);
+}
+
+async function submitRealize() {
+  if (!realizeItems.length) { toast('Добавьте хотя бы одну позицию'); return; }
+  const { gross, discRub, net } = rzNet();
+  const checks = parseInt(document.getElementById('rz-checks').value) || 0;
+  const note = document.getElementById('rz-note').value.trim();
+  const dateRu = isoToRu(document.getElementById('rz-date').value);
+
+  // Разбивка оплаты
+  let cash = 0, transfer = 0;
+  if (rzPay === 'cash') { cash = net; }
+  else if (rzPay === 'transfer') { transfer = net; }
+  else {
+    cash = parseFloat(document.getElementById('rz-cash').value) || 0;
+    if (cash > net) cash = net;
+    if (cash < 0) cash = 0;
+    transfer = net - cash;
+  }
+  const payLabel = rzPay === 'cash' ? 'Наличные' : rzPay === 'transfer' ? 'Перевод' : 'Смешанно';
+
+  const payload = {
+    action: 'addSales',
+    shop: currentUser.shop,
+    shopName: shopName(currentUser.shop),
+    date: dateRu,
+    employee: currentUser.name,
+    checks,
+    total: net,
+    gross,
+    discount: discRub,
+    discountType: rzDiscType,
+    payment: payLabel,
+    cash,
+    transfer,
+    items: realizeItems.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+    note
+  };
+
+  // Локально отражаем в выручке выбранного дня сразу (итог после скидки)
+  appData.revenue.push({ date: dateRu, shop: currentUser.shop, amount: net, checks });
+  addFeed('gr', 'Реализация ' + dateRu + ': ' + fmt(net) + ' · ' + payLabel);
+
+  try {
+    await gasPost(payload);
+    toast('✓ Реализация на ' + fmt(net) + ' сохранена');
+  } catch (e) {
+    toast('✓ Реализация записана (сохранение при синхронизации)');
+  }
+
+  realizeItems = [];
+  switchTab('main', 0);
+  renderMain();
+  renderSalary();
+}
+
+// ═══════════════════════════════════
+// DELIVERIES
+// ═══════════════════════════════════
+function renderDeliveries(targetId = 'del-list') {
+  let list = currentUser && currentUser.role !== 'owner'
+    ? appData.deliveries.filter(d => d.shop === currentUser.shop)
+    : appData.deliveries;
+  if (delFilter === 'debt') list = list.filter(d => d.status === 'debt');
+  if (delFilter === 'paid') list = list.filter(d => d.status === 'paid');
+
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  if (!list.length) {
+    el.innerHTML = '<div class="empty"><i class="ti ti-truck-off"></i>Нет поставок</div>';
+    return;
+  }
+  el.innerHTML = list.map(d => `
+    <div class="bal-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div>
+          <div style="font-size:14px;font-weight:600">${d.supplier}</div>
+          <div style="font-size:11px;color:var(--t3)">${shopName(d.shop)} · ${d.date}</div>
+        </div>
+        <span class="badge ${d.status === 'debt' ? 'b-re' : 'b-gr'}">${d.status === 'debt' ? 'Долг' : 'Оплачено'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+        <div>
+          <div style="font-size:11px;color:var(--t3)">Сумма поставки</div>
+          <div style="font-size:14px;font-weight:600">${fmt(d.amount)}</div>
+        </div>
+        ${d.status === 'debt' ? `<div style="text-align:right">
+          <div style="font-size:11px;color:var(--t3)">Долг</div>
+          <div style="font-family:var(--font-head);font-size:16px;font-weight:700;color:var(--red)">${fmt(d.debt)}</div>
+        </div>` : ''}
+      </div>
+      ${d.note ? `<div style="margin-top:8px;font-size:12px;color:var(--t2)">${d.note}</div>` : ''}
+      ${d.status === 'debt' ? `<button class="btn btn-gr btn-sm" style="margin-top:10px;width:auto" onclick="markDeliveryPaid('${d.id}')">✓ Отметить оплаченным</button>` : ''}
+    </div>`).join('');
+}
+
+function filterDel(f) {
+  delFilter = f;
+  ['all', 'debt', 'paid'].forEach(x => {
+    const el = document.getElementById('df-' + x);
+    if (el) el.classList.toggle('active', x === f);
+  });
+  renderDeliveries();
+}
+
+function openNewDelivery() {
+  backTo = 'deliveries';
+  populateShopSelects();
+  showScreen('new-delivery');
+}
+
+async function submitDelivery() {
+  const supplier = document.getElementById('nd-supplier').value.trim();
+  const shop = document.getElementById('nd-shop').value;
+  const amount = Number(document.getElementById('nd-amount').value) || 0;
+  const debt = Number(document.getElementById('nd-debt').value) || 0;
+  const date = document.getElementById('nd-date').value || todayISO();
+  const note = document.getElementById('nd-note').value.trim();
+  if (!supplier) { toast('Введите поставщика'); return; }
+  if (!shop) { toast('Выберите магазин'); return; }
+
+  const fmtDate = date.split('-').reverse().join('.');
+  const id = 'ПСТ-' + String(appData.deliveries.length + 1).padStart(3, '0');
+  const del = { id, supplier, shop, amount, debt, date: fmtDate, status: debt > 0 ? 'debt' : 'paid', note, createdBy: currentUser.name };
+  appData.deliveries.push(del);
+  addFeed('bl', 'Поставка от ' + supplier + ' — ' + fmt(amount));
+
+  try {
+    await gasPost({ action: 'addDelivery', delivery: del });
+    toast('✓ Поставка сохранена!');
+  } catch(e) {
+    toast('✓ Поставка добавлена');
+  }
+  goBack();
+  renderDeliveries();
+}
+
+async function markDeliveryPaid(id) {
+  const d = appData.deliveries.find(x => x.id === id);
+  if (!d) return;
+  d.status = 'paid'; d.debt = 0;
+  addFeed('gr', 'Долг погашен: ' + d.supplier);
+  try {
+    await gasPost({ action: 'updateDelivery', id, status: 'paid' });
+  } catch(e) {}
+  toast('✓ Отмечено оплаченным');
+  renderDeliveries();
+  renderMain();
+}
+
+// ═══════════════════════════════════
+// BALANCES
+// ═══════════════════════════════════
+function renderBalances(targetId = 'bal-list') {
+  const list = currentUser && currentUser.role !== 'owner'
+    ? appData.balances.filter(b => b.shop === currentUser.shop)
+    : appData.balances;
+
+  const total = list.reduce((a, b) => a + (Number(b.amount) || 0), 0);
+  const totalEl = document.getElementById('bal-total');
+  if (totalEl) totalEl.textContent = fmt(total);
+
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  if (!list.length) {
+    el.innerHTML = '<div class="empty"><i class="ti ti-wallet-off"></i>Нет данных</div>';
+    return;
+  }
+  el.innerHTML = list.map(b => `
+    <div class="bal-card">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:38px;height:38px;border-radius:50%;background:var(--s3);display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:14px;font-weight:700;color:var(--or);flex-shrink:0">${b.employee.charAt(0)}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600">${b.employee}</div>
+          <div style="font-size:11px;color:var(--t3)">${shopName(b.shop)} · ${b.date}</div>
+          ${b.note ? `<div style="font-size:11px;color:var(--t2);margin-top:2px">${b.note}</div>` : ''}
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--font-head);font-size:18px;font-weight:700;color:var(--or)">${fmt(b.amount)}</div>
+          <div style="font-size:10px;color:var(--t3)">наличные</div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function openNewBalance() {
+  backTo = 'balances';
+  populateEmployeeSelect();
+  showScreen('new-balance');
+}
+
+async function submitBalance() {
+  const employee = document.getElementById('nb-emp').value;
+  const amount = Number(document.getElementById('nb-amount').value) || 0;
+  const note = document.getElementById('nb-note').value.trim();
+  if (!employee) { toast('Выберите сотрудника'); return; }
+
+  // Update or add
+  const existing = appData.balances.find(b => b.employee === employee);
+  if (existing) {
+    existing.amount = amount; existing.date = today(); existing.note = note;
+  } else {
+    appData.balances.push({ employee, shop: currentUser.shop, amount, date: today(), note });
+  }
+  addFeed('bl', 'Баланс обновлён: ' + employee + ' — ' + fmt(amount));
+
+  try {
+    await gasPost({ action: 'updateBalance', employee, amount, note, shop: currentUser.shop, date: today() });
+    toast('✓ Баланс сохранён!');
+  } catch(e) {
+    toast('✓ Баланс обновлён');
+  }
+  goBack();
+  renderBalances();
+}
+
+// ═══════════════════════════════════
+// BOTTOM SHEET
+// ═══════════════════════════════════
+function openSheet(html) {
+  document.getElementById('sheet-content').innerHTML = html;
+  document.getElementById('sheet-overlay').classList.add('show');
+  document.getElementById('bottom-sheet').classList.add('show');
+}
+function closeSheet() {
+  document.getElementById('sheet-overlay').classList.remove('show');
+  document.getElementById('bottom-sheet').classList.remove('show');
+}
+
+// ═══════════════════════════════════
+// DAY DETAIL
+// ═══════════════════════════════════
+let currentDayDate = '';
+let currentDayShop = '';
+
+function openDayDetail(date, shopId) {
+  backTo = currentUser.role === 'owner' ? 'owner' : 'main';
+  currentDayDate = date;
+  currentDayShop = shopId;
+  renderDayDetail(date, shopId);
+  showScreen('day-detail');
+}
+
+function renderDayDetail(date, shopId) {
+  const shop = appData.shops.find(s => s.id === shopId) || {};
+  document.getElementById('dd-title').textContent = date;
+  document.getElementById('dd-shop').textContent = shop.name || shopId;
+
+  // Build calendar strip — last 14 days
+  const cal = document.getElementById('dd-cal');
+  const days = [];
+  const dayNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dd = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+    const hasData = appData.revenue.some(r => r.shop === shopId && r.date === dd);
+    days.push({ date: dd, day: d.getDate(), name: dayNames[d.getDay()], hasData });
+  }
+  cal.innerHTML = days.map(d => `
+    <div class="cal-day ${d.date === date ? 'active' : ''} ${d.hasData ? 'has-data' : ''}"
+         onclick="renderDayDetail('${d.date}','${shopId}');currentDayDate='${d.date}'">
+      <div class="cal-day-name">${d.name}</div>
+      <div class="cal-day-num">${d.day}</div>
+      <div class="cal-day-dot"></div>
+    </div>`).join('');
+  // Scroll to end (today)
+  cal.scrollLeft = cal.scrollWidth;
+
+  // Revenue for selected day
+  const revs = appData.revenue.filter(r => r.shop === shopId && r.date === date);
+  const rev = revs.reduce((a, r) => a + (Number(r.amount) || 0), 0);
+  const checks = revs.reduce((a, r) => a + (Number(r.checks) || 0), 0);
+  const dayPlan = Math.round((Number(shop.plan) || 0) / 30);
+  const pct = dayPlan ? Math.min(150, Math.round(rev / dayPlan * 100)) : 0;
+  const pctColor = pct >= 100 ? 'var(--green)' : pct >= 60 ? 'var(--or)' : 'var(--red)';
+
+  document.getElementById('dd-rev').textContent = fmt(rev);
+  document.getElementById('dd-rev').style.color = rev ? pctColor : 'var(--t1)';
+  document.getElementById('dd-vs').textContent = dayPlan ? `${pct}% от плана дня` : 'план не задан';
+  document.getElementById('dd-chk').textContent = checks || '—';
+  document.getElementById('dd-avg').textContent = checks ? 'ср. ' + fmt(Math.round(rev / checks)) : 'нет данных';
+
+  setTimeout(() => {
+    document.getElementById('dd-bar').style.width = Math.min(100, pct) + '%';
+    document.getElementById('dd-bar').style.background = pct >= 100
+      ? 'linear-gradient(90deg,#388E3C,#66BB6A)'
+      : pct >= 60 ? 'linear-gradient(90deg,var(--or-d),var(--or-l))'
+      : 'linear-gradient(90deg,#B71C1C,#EF5350)';
+  }, 80);
+  document.getElementById('dd-pct').textContent = pct + '%';
+  document.getElementById('dd-pct').style.color = pctColor;
+  document.getElementById('dd-cur-lbl').textContent = fmt(rev);
+  document.getElementById('dd-plan-lbl').textContent = 'план ' + fmt(dayPlan);
+
+  // Moves on this day
+  const dayMoves = appData.moves.filter(m => m.date === date && (m.from === shopId || m.to === shopId));
+  const dmEl = document.getElementById('dd-moves');
+  if (!dayMoves.length) {
+    dmEl.innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px 0">Нет перемещений в этот день</div>';
+  } else {
+    dmEl.innerHTML = dayMoves.map(m => {
+      const st = STATUS_MAP[m.status] || { l: m.status, cl: 'b-gy' };
+      const isIn = m.to === shopId;
+      return `<div class="list-item" onclick="openMove('${m.id}','day-detail')" style="margin-bottom:6px">
+        <div class="li-row">
+          <i class="ti ti-${isIn ? 'arrow-down-circle' : 'arrow-up-circle'}" style="color:${isIn ? 'var(--green)' : 'var(--or)'};font-size:18px"></i>
+          <span style="font-size:13px;font-weight:700;flex:1">${m.id}</span>
+          <span class="badge ${st.cl}">${st.l}</span>
+        </div>
+        <div style="font-size:12px;color:var(--t2)">${shopName(m.from)} → ${shopName(m.to)}</div>
+        <div style="font-size:11px;color:var(--t3);margin-top:2px">${m.products.map(p => p.name + ' × ' + p.qty).join(', ')}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Deliveries on this day
+  const dayDels = appData.deliveries.filter(d => d.date === date && d.shop === shopId);
+  const ddEl = document.getElementById('dd-deliveries');
+  if (!dayDels.length) {
+    ddEl.innerHTML = '<div style="font-size:12px;color:var(--t3);padding:8px 0">Нет поставок в этот день</div>';
+  } else {
+    ddEl.innerHTML = dayDels.map(d => `
+      <div class="bal-card" style="margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:13px;font-weight:600">${d.supplier}</span>
+          <span class="badge ${d.status === 'debt' ? 'b-re' : 'b-gr'}">${d.status === 'debt' ? fmt(d.debt) + ' долг' : 'оплачено'}</span>
+        </div>
+        <div style="font-size:12px;color:var(--t3);margin-top:4px">Поставка: ${fmt(d.amount)}</div>
+      </div>`).join('');
+  }
+}
+
+// ═══════════════════════════════════
+// EDIT MOVE (bottom sheet)
+// ═══════════════════════════════════
+let editingMoveId = '';
+
+function openEditMove() {
+  const m = appData.moves.find(x => x.id === editingMoveId);
+  if (!m) return;
+
+  // Build product rows for editing
+  const prodRows = m.products.map((p, i) => `
+    <div class="edit-prod-row" id="ep-${i}">
+      <span class="prod-name">${p.name}</span>
+      <div class="qty-ctrl">
+        <button class="qty-btn" onclick="editQty(${i},-1)">−</button>
+        <span class="qty-val" id="eqv-${i}">${p.qty}</span>
+        <button class="qty-btn" onclick="editQty(${i},1)">+</button>
+      </div>
+      <button class="qty-btn" style="background:rgba(226,75,74,0.12);color:var(--red)" onclick="removeEditProd(${i})">
+        <i class="ti ti-x" style="font-size:13px"></i>
+      </button>
+    </div>`).join('');
+
+  // Status options
+  const statuses = [
+    { v: 'pending', l: 'Ожидает' },
+    { v: 'sent',    l: 'В пути' },
+    { v: 'done',    l: 'Выполнено' },
+    { v: 'rejected',l: 'Отклонено' },
+  ];
+  const statusOpts = statuses.map(s =>
+    `<option value="${s.v}" ${m.status === s.v ? 'selected' : ''}>${s.l}</option>`
+  ).join('');
+
+  openSheet(`
+    <div class="sheet-title">Редактировать ${m.id}</div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px">
+      <div class="inp-grp">
+        <label>СТАТУС</label>
+        <select id="em-status">${statusOpts}</select>
+      </div>
+
+      <div>
+        <div class="sec" style="margin-bottom:8px">ТОВАРЫ</div>
+        <div id="em-products">${prodRows}</div>
+        <div style="margin-top:10px">
+          <div class="search-wrap">
+            <i class="ti ti-search"></i>
+            <input class="search-inp" id="em-search" placeholder="Добавить товар из каталога..."
+              oninput="filterEditCatalog(this.value)"/>
+          </div>
+          <div id="em-cat-results" style="display:none;background:var(--s2);border-radius:10px;max-height:140px;overflow-y:auto;border:1px solid var(--border);margin-top:4px"></div>
+        </div>
+      </div>
+
+      <div class="inp-grp">
+        <label>ПРИМЕЧАНИЕ</label>
+        <textarea id="em-note" rows="2" style="resize:none">${m.note || ''}</textarea>
+      </div>
+
+      <button class="btn" onclick="saveEditMove()">Сохранить изменения</button>
+      <button class="btn btn-gy" onclick="closeSheet()" style="margin-top:-6px">Отмена</button>
+    </div>
+  `);
+}
+
+function editQty(i, d) {
+  const el = document.getElementById('eqv-' + i);
+  if (!el) return;
+  el.textContent = Math.max(1, parseInt(el.textContent) + d);
+}
+
+function removeEditProd(i) {
+  const row = document.getElementById('ep-' + i);
+  if (row) row.remove();
+}
+
+function filterEditCatalog(q) {
+  const res = document.getElementById('em-cat-results');
+  if (!q) { res.style.display = 'none'; return; }
+  const matches = appData.catalog.filter(p => p.name.toLowerCase().includes(q.toLowerCase())).slice(0, 6);
+  if (!matches.length) { res.style.display = 'none'; return; }
+  res.style.display = 'block';
+  res.innerHTML = matches.map(p => `
+    <div onclick="addEditProd('${p.id}')"
+      style="padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;display:flex;justify-content:space-between">
+      <span>${p.name}</span>
+      <span style="color:var(--or);font-size:12px">${fmt(p.price)}</span>
+    </div>`).join('');
+}
+
+function addEditProd(id) {
+  const p = appData.catalog.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('em-search').value = '';
+  document.getElementById('em-cat-results').style.display = 'none';
+
+  const container = document.getElementById('em-products');
+  const rows = container.querySelectorAll('.edit-prod-row');
+  const i = rows.length;
+  const div = document.createElement('div');
+  div.className = 'edit-prod-row';
+  div.id = 'ep-' + i;
+  div.innerHTML = `
+    <span class="prod-name">${p.name}</span>
+    <div class="qty-ctrl">
+      <button class="qty-btn" onclick="editQty(${i},-1)">−</button>
+      <span class="qty-val" id="eqv-${i}">1</span>
+      <button class="qty-btn" onclick="editQty(${i},1)">+</button>
+    </div>
+    <button class="qty-btn" style="background:rgba(226,75,74,0.12);color:var(--red)" onclick="removeEditProd(${i})">
+      <i class="ti ti-x" style="font-size:13px"></i>
+    </button>`;
+  container.appendChild(div);
+}
+
+async function saveEditMove() {
+  const m = appData.moves.find(x => x.id === editingMoveId);
+  if (!m) return;
+
+  const newStatus = document.getElementById('em-status').value;
+  const newNote = document.getElementById('em-note').value.trim();
+
+  // Collect product rows
+  const rows = document.querySelectorAll('#em-products .edit-prod-row');
+  const newProducts = Array.from(rows).map((row, i) => {
+    const name = row.querySelector('.prod-name').textContent.trim();
+    const qtyEl = row.querySelector('.qty-val');
+    const qty = qtyEl ? parseInt(qtyEl.textContent) : 1;
+    return { name, qty };
+  }).filter(p => p.name);
+
+  if (!newProducts.length) { toast('Добавьте хотя бы один товар'); return; }
+
+  m.status = newStatus;
+  m.note = newNote;
+  m.products = newProducts;
+  addFeed('or', `${m.id} изменено: ${newStatus}`);
+
+  try {
+    await gasPost({ action: 'updateMove', id: m.id, status: newStatus, note: newNote, products: newProducts });
+    toast('✓ Перемещение обновлено!');
+  } catch(e) {
+    toast('✓ Обновлено локально');
+  }
+
+  closeSheet();
+  openMove(m.id, backTo); // re-render detail
+}
+
+
+// ═══════════════════════════════════
+// SALARY PERIODS
+// ═══════════════════════════════════
+function getSalaryPeriod() {
+  const d = new Date();
+  const day = d.getDate();
+  const month = d.getMonth(); // 0-based
+  const year = d.getFullYear();
+  // Period 1: 1–15 → выплата 30го этого месяца
+  // Period 2: 16–31 → выплата 15го следующего месяца
+  if (day <= 15) {
+    const lastDay = new Date(year, month + 1, 0).getDate(); // last day of month
+    const payDay = 30 <= lastDay ? 30 : lastDay;
+    const totalDays = 15;
+    const passed = day;
+    const left = 15 - day;
+    const payDate = `30.${String(month+1).padStart(2,'0')}.${year}`;
+    return {
+      period: 1,
+      label: `1–15 ${monthName(month)}`,
+      payDate,
+      payLabel: `30 ${monthName(month)}`,
+      passed,
+      left,
+      total: totalDays,
+      pct: Math.round(passed / totalDays * 100),
+      hint: 'Аванс — смены + % выручки за 1–15'
+    };
+  } else {
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const totalDays = lastDay - 15;
+    const passed = day - 15;
+    const left = lastDay - day;
+    const nextMonth = month + 1 > 11 ? 0 : month + 1;
+    const nextYear = month + 1 > 11 ? year + 1 : year;
+    const payDate = `15.${String(nextMonth+1).padStart(2,'0')}.${nextYear}`;
+    return {
+      period: 2,
+      label: `16–${lastDay} ${monthName(month)}`,
+      payDate,
+      payLabel: `15 ${monthName(nextMonth)}`,
+      passed,
+      left,
+      total: totalDays,
+      pct: Math.round(passed / totalDays * 100),
+      hint: 'Основная — смены + % + НЛК + премии − инвентура'
+    };
+  }
+}
+
+function monthName(m) {
+  return ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'][m];
+}
+function monthNameFull(m) {
+  return ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'][m];
+}
+
+function renderSalary() {
+  if (!currentUser) return;
+  const shop = appData.shops.find(s => s.id === currentUser.shop) || {};
+  const base = Number(shop.base) || 0;
+  document.getElementById('sal-sub').textContent = shop.name || currentUser.shopName || '';
+
+  const period = getSalaryPeriod();
+
+  // Period indicator card
+  document.getElementById('sal-cur-period').textContent = period.label;
+  document.getElementById('sal-days-passed').textContent = period.passed;
+  document.getElementById('sal-days-left').textContent = period.left + ' дн.';
+  document.getElementById('sal-pay-date').textContent = period.payLabel;
+  document.getElementById('sal-period-hint').textContent = period.hint;
+  setTimeout(() => {
+    document.getElementById('sal-period-bar').style.width = period.pct + '%';
+  }, 100);
+
+  // Revenue data for current month
+  const d = new Date();
+  const month = String(d.getMonth()+1).padStart(2,'0');
+  const year = d.getFullYear();
+
+  // Period 1 revenue: days 1–15
+  const rev1 = appData.revenue.filter(r => {
+    if (r.shop !== currentUser.shop) return false;
+    const parts = r.date.split('.');
+    if (!parts[1] || parts[1] !== month) return false;
+    const day = parseInt(parts[0]);
+    return day >= 1 && day <= 15;
+  }).reduce((a, r) => a + (Number(r.amount) || 0), 0);
+
+  // Period 2 revenue: days 16–31
+  const rev2 = appData.revenue.filter(r => {
+    if (r.shop !== currentUser.shop) return false;
+    const parts = r.date.split('.');
+    if (!parts[1] || parts[1] !== month) return false;
+    const day = parseInt(parts[0]);
+    return day >= 16;
+  }).reduce((a, r) => a + (Number(r.amount) || 0), 0);
+
+  // Месячная выручка и выполнение плана
+  const totalMonthRev = appData.revenue.filter(r => r.shop === currentUser.shop).reduce((a,r) => a + (Number(r.amount)||0), 0);
+  const plan = Number(shop.plan) || 1;
+  const planPct = Math.round(totalMonthRev / plan * 100);
+  const planHit = planPct >= 100;
+
+  // Ставка за смену и % с выручки.
+  // Можно переопределить в таблице «Магазины»: колонки Ставка / %Базовый / %Премиальный.
+  const shiftRate = Number(shop.shiftRate) || Math.round(base / 30); // ставка за смену
+  const revPctBase  = Number(shop.revPctBase)  || 0.04; // 4% — базовый
+  const revPctBonus = Number(shop.revPctBonus) || 0.05; // 5% — при выполнении плана месяца
+  const revPct = planHit ? revPctBonus : revPctBase;
+
+  const shifts1 = Math.min(period.period === 1 ? period.passed : 15, 15);
+  const shifts2 = Math.min(period.period === 2 ? period.passed : 0, 16);
+
+  // Period 1 calc
+  const p1Shifts = shiftRate * shifts1;
+  const p1Pct = Math.round(rev1 * revPct);
+  const p1Total = p1Shifts + p1Pct;
+
+  // Period 2 calc (НЛК и инвентура — из таблицы, пока заглушки)
+  const p2Shifts = shiftRate * shifts2;
+  const p2Pct = Math.round(rev2 * revPct);
+  const bonus = planPct >= 100 ? base * 0.5 : planPct >= 80 ? base * 0.25 : planPct >= 60 ? base * 0.1 : 0;
+  const nlk = 0; // из таблицы
+  const inventory = 0; // из таблицы
+  const p2Total = p2Shifts + p2Pct + Math.round(bonus) + nlk - inventory;
+
+  // Карточка «Ставка / процент»
+  const pctLabel = Math.round(revPct * 100) + '%';
+  document.getElementById('sal-shift-rate').textContent = fmt(shiftRate);
+  document.getElementById('sal-rev-pct').textContent = pctLabel;
+  const boostEl = document.getElementById('sal-pct-boost');
+  const pctHintEl = document.getElementById('sal-pct-hint');
+  if (planHit) {
+    boostEl.style.display = '';
+    pctHintEl.textContent = '✓ План выполнен (' + planPct + '%) — ставка повышена до ' + Math.round(revPctBonus*100) + '%';
+    pctHintEl.style.color = 'var(--green)';
+  } else {
+    boostEl.style.display = 'none';
+    pctHintEl.textContent = 'План ' + planPct + '% · при 100% ставка вырастет ' + Math.round(revPctBase*100) + '% → ' + Math.round(revPctBonus*100) + '%';
+    pctHintEl.style.color = 'var(--t3)';
+  }
+  const p1RateEl = document.getElementById('sal-p1-rate');
+  const p2RateEl = document.getElementById('sal-p2-rate');
+  if (p1RateEl) p1RateEl.textContent = '· ' + pctLabel;
+  if (p2RateEl) p2RateEl.textContent = '· ' + pctLabel;
+
+  // Render period 1
+  document.getElementById('sal-p1-badge').textContent = period.period === 1 ? 'Текущий' : 'Закрыт';
+  document.getElementById('sal-p1-badge').className = 'badge ' + (period.period === 1 ? 'b-or' : 'b-gr');
+  document.querySelector('.sal-shifts-1').textContent = fmt(p1Shifts) + ' · ' + shifts1 + '×' + fmt(shiftRate);
+  document.getElementById('sal-p1-pct').textContent = '+' + fmt(p1Pct);
+  document.getElementById('sal-p1-total').textContent = fmt(p1Total);
+
+  // Render period 2
+  document.getElementById('sal-p2-badge').textContent = period.period === 2 ? 'Текущий' : 'Ожидание';
+  document.getElementById('sal-p2-badge').className = 'badge ' + (period.period === 2 ? 'b-or' : 'b-gy');
+  document.querySelector('.sal-shifts-2').textContent = fmt(p2Shifts) + ' · ' + shifts2 + '×' + fmt(shiftRate);
+  document.getElementById('sal-p2-pct').textContent = '+' + fmt(p2Pct);
+  document.getElementById('sal-p2-nlk').textContent = nlk ? '+' + fmt(nlk) : '—';
+  document.getElementById('sal-p2-bonus').textContent = bonus ? '+' + fmt(Math.round(bonus)) : '—';
+  document.getElementById('sal-p2-inv').textContent = inventory ? '−' + fmt(inventory) : '—';
+  document.getElementById('sal-p2-total').textContent = fmt(p2Total);
+
+  // Grand total
+  document.getElementById('sal-grand-total').textContent = fmt(p1Total + p2Total);
+
+  // Update main screen salary widget
+  const nextPayEl = document.getElementById('m-next-pay');
+  const nextPeriodEl = document.getElementById('m-next-period');
+  if (nextPayEl) {
+    nextPayEl.textContent = period.payLabel + ' — ' + fmt(period.period === 1 ? p1Total : p2Total);
+    nextPeriodEl.textContent = 'За период ' + period.label;
+  }
+  // Main screen badge
+  const salBadge = document.getElementById('m-sal-badge');
+  if (salBadge) {
+    salBadge.textContent = planPct >= 100 ? 'Полная премия' : planPct >= 80 ? 'Премия 25%' : planPct >= 60 ? 'Премия 10%' : 'Без премии';
+  }
+  document.getElementById('m-base').textContent = fmt(p1Total + p2Shifts + p2Pct);
+  document.getElementById('m-bonus').textContent = fmt(Math.round(bonus));
+  document.getElementById('m-total').textContent = fmt(p1Total + p2Total);
+}
+
+// ═══════════════════════════════════
+// HINTS / ПАМЯТКИ
+// ═══════════════════════════════════
+const HINTS = {
+  inventory: {
+    title: 'Проведение инвентуры',
+    icon: 'ti-clipboard-list',
+    color: 'var(--blue)',
+    steps: [
+      { n:'1', title:'Подготовка', text:'За час до закрытия предупреди напарника. Выведи кассу в ноль (закрой смену на кассе). Подготовь бланк инвентуры или открой таблицу на телефоне.' },
+      { n:'2', title:'Пересчёт', text:'Пересчитай каждую позицию на витрине и на складе. Считай поштучно — не на глаз. Вноси в бланк: наименование, факт, остаток по системе.' },
+      { n:'3', title:'Расхождения', text:'Если факт меньше системы — это недостача. Фотографируй полку. Если больше — излишек, тоже фиксируй. Не исправляй самостоятельно.' },
+      { n:'4', title:'Передача', text:'Фото заполненного бланка отправь управляющему в тот же день. Подпиши бланк. Итог инвентуры влияет на ЗП периода 16–31.' },
+      { n:'⚠', title:'Важно', text:'Никогда не проводи инвентуру в одиночку — нужен свидетель (второй продавец или управляющий). Все расхождения фиксируются письменно.' },
+    ]
+  },
+  delivery: {
+    title: 'Приёмка поставки',
+    icon: 'ti-truck-delivery',
+    color: 'var(--green)',
+    steps: [
+      { n:'1', title:'До прихода товара', text:'Найди накладную (ТОРГ-12 или УПД) заранее — поставщик должен прислать её заранее или привезти с собой. Освободи место на складе.' },
+      { n:'2', title:'Пересчёт при приёмке', text:'Пересчитывай каждую коробку при курьере/водителе. Сверяй количество с накладной. Не подписывай, если не пересчитал — это твоя ответственность.' },
+      { n:'3', title:'Проверка товара', text:'Осмотри товар на брак и повреждения. Проверь сроки годности у жидкостей. Разбитое или бракованное — отдели и сфотографируй до разгрузки.' },
+      { n:'4', title:'Оформление в приложении', text:'Открой раздел Поставки → «+». Укажи поставщика, сумму поставки и остаток долга. Если оплатил наличкой сразу — долг = 0.' },
+      { n:'5', title:'Расстановка', text:'Занеси товар в систему (если есть). Расставь по витрине. Новые позиции — на витрину, старые — вперёд. Остатки — на склад.' },
+    ]
+  },
+  transfer: {
+    title: 'Перемещения между точками',
+    icon: 'ti-arrows-transfer-up',
+    color: 'var(--or)',
+    steps: [
+      { n:'📤', title:'Отправить товар', text:'Зайди в «Создать» → выбери откуда (твоя точка) и куда. Через поиск добавь товары и количество. Нажми «Создать перемещение». Принимающая точка получит уведомление.' },
+      { n:'📦', title:'Упаковка', text:'Упакуй товар, напиши на коробке: «ПРМ-XXX, от [точка] → [точка], дата». Отдай курьеру или передай лично. В приложении нажми «Отметить как отправлено».' },
+      { n:'📥', title:'Принять товар', text:'На принимающей точке придёт карточка во «Входящих». Пересчитай товар при получении. Если всё ок — нажми «✓ Получено». Если что-то не так — «✗ Не прибыло» и пиши примечание.' },
+      { n:'✏️', title:'Редактировать', text:'Открой перемещение → карандаш в шапке. Можно изменить количество, добавить товары, изменить статус и добавить примечание. Все изменения сохраняются в таблице.' },
+      { n:'⚠', title:'Важно', text:'Никогда не передавай товар без оформления в приложении — это нарушение. При расхождении в количестве — фиксируй в примечании перемещения.' },
+    ]
+  },
+  evening: {
+    title: 'Вечерний отчёт',
+    icon: 'ti-moon',
+    color: 'var(--warn)',
+    steps: [
+      { n:'1', title:'Закрытие кассы', text:'Закрой смену на кассе. Распечатай или сохрани Z-отчёт. Сумма в отчёте = сумма выручки дня. Не закрывай смену если не уверен — позвони управляющему.' },
+      { n:'2', title:'Пересчёт наличных', text:'Пересчитай всю наличку в кассе. Сравни с отчётом. Расхождение больше 100 ₽ — ищи причину до ухода. Зафикси в приложении (раздел Балансы → обнови свою сумму).' },
+      { n:'3', title:'Сдача выручки', text:'Сдай выручку согласно инструкции точки: инкассация, перевод, сейф. Никогда не оставляй крупные суммы в кассе на ночь без согласования.' },
+      { n:'4', title:'Отчёт управляющему', text:'Отправь в чат: выручку дня, количество чеков, остаток наличных, любые инциденты (недостача, брак, конфликт). Формат: «[точка] [дата]: выручка X₽, чеков N, наличных Y₽».' },
+      { n:'5', title:'Закрытие точки', text:'Проверь витрину (всё убрано, нет открытых жидкостей). Выключи технику. Закрой кассу. Установи сигнализацию. Закрой дверь.' },
+    ]
+  },
+  salary: {
+    title: 'Как считается ЗП',
+    icon: 'ti-cash',
+    color: 'var(--or)',
+    steps: [
+      { n:'📅', title:'Два периода', text:'Зарплата выплачивается дважды в месяц. Аванс 30го числа — за смены 1–15. Основная 15го следующего месяца — за смены 16–31.' },
+      { n:'💰', title:'Аванс (30го)', text:'Считается: ставка за смену × количество смен 1–15 + процент с выручки за эти дни (4%, а при выполнении плана месяца — 5%). Никаких вычетов. Выплачивается строго 30го.' },
+      { n:'💎', title:'Основная (15го)', text:'Считается: ставка × смены 16–31 + % выручки (4% или 5% при плане) + НЛК (за выполнение норматива) + премия за точку − вычет инвентуры (если была недостача).' },
+      { n:'📈', title:'Процент с выручки 4% → 5%', text:'Базовая ставка процента с выручки — 4%. Как только точка выполняет план на месяц (100%), процент за весь период пересчитывается по ставке 5%. В разделе ЗП это видно сразу — бейдж «+1%» на карточке.' },
+      { n:'📊', title:'Премия за точку', text:'Начисляется если выполнен план: 60–79% = 10% от оклада, 80–99% = 25% от оклада, 100%+ = 50% от оклада. Считается по итогу всего месяца.' },
+      { n:'⚠', title:'Вычет инвентуры', text:'Если по итогам инвентуры выявлена недостача — сумма вычитается из основной выплаты. Размер вычета согласовывается с управляющим. Не замалчивай расхождения.' },
+    ]
+  }
+};
+
+function openHint(key) {
+  const h = HINTS[key];
+  if (!h) return;
+  document.getElementById('hint-title').textContent = h.title;
+
+  const stepsHtml = h.steps.map(s => `
+    <div style="display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)">
+      <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,0.3);border:1.5px solid ${h.color};display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:11px;font-weight:700;color:${h.color};flex-shrink:0">${s.n}</div>
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:5px;color:var(--t1)">${s.title}</div>
+        <div style="font-size:13px;color:var(--t2);line-height:1.65">${s.text}</div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('hint-body').innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;padding:4px 0 16px;border-bottom:1px solid var(--border);margin-bottom:4px">
+      <div style="width:48px;height:48px;border-radius:14px;background:rgba(0,0,0,0.3);border:1.5px solid ${h.color};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="ti ${h.icon}" style="font-size:24px;color:${h.color}"></i>
+      </div>
+      <div>
+        <div style="font-family:var(--font-head);font-size:15px;font-weight:700">${h.title}</div>
+        <div style="font-size:12px;color:var(--t3);margin-top:2px">Памятка Параплан</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column">${stepsHtml}</div>
+    <div style="padding:16px;background:var(--s2);border-radius:12px;margin-top:8px;font-size:12px;color:var(--t3);text-align:center">
+      <i class="ti ti-info-circle" style="vertical-align:-2px;margin-right:4px"></i>
+      Вопросы — пиши управляющему
+    </div>`;
+
+  showScreen('hint');
+}
+
+// ═══════════════════════════════════
+// INIT
+// ═══════════════════════════════════
+document.getElementById('setup-url').value = GAS_URL;
+loadShopsForLogin();
+</script>
+
+
+</body></html>

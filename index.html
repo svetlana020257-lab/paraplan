@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<!-- saved from url=(0045)file:///C:/Users/vasil/Downloads/index_7.html -->
+<!-- saved from url=(0045)file:///C:/Users/vasil/Downloads/index_8.html -->
 <html lang="ru"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Параплан</title>
 <link rel="preconnect" href="https://fonts.googleapis.com/">
 <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
-<link href="./Параплан_files/css2" rel="stylesheet">
-<link rel="stylesheet" href="./Параплан_files/tabler-icons.min.css">
+<link href="./index_files/css2" rel="stylesheet">
+<link rel="stylesheet" href="./index_files/tabler-icons.min.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -551,6 +551,12 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--font-body);max-
           </div>
         </div>
         <div id="rz-split-hint" style="font-size:11px;color:var(--t3);text-align:center;margin-top:8px">Введите сумму наличными — перевод посчитается сам</div>
+      </div>
+      <div id="rz-transfer-to-wrap" style="display:none;margin-top:12px">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:4px">Кому перевод (на чью карту)</div>
+        <input id="rz-transfer-to" list="rz-transfer-to-list" placeholder="Имя получателя" autocomplete="off" style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--t1);font-size:15px;padding:10px 12px;-webkit-appearance:none">
+        <datalist id="rz-transfer-to-list"></datalist>
+        <div style="font-size:11px;color:var(--t3);margin-top:6px">Укажите, на чью карту пришёл перевод — для учёта по дням</div>
       </div>
     </div>
 
@@ -1949,6 +1955,16 @@ function isoToRu(iso) {
   return `${p[2]}.${p[1]}.${p[0]}`;
 }
 
+function populateTransferRecipients() {
+  const dl = document.getElementById('rz-transfer-to-list');
+  if (!dl) return;
+  const names = new Set();
+  (appData.employees || []).forEach(e => { const n = e.name || e.fio || e['ФИО']; if (n) names.add(n); });
+  (appData.balances || []).forEach(b => { if (b.employee) names.add(b.employee); });
+  if (currentUser && currentUser.name) names.add(currentUser.name);
+  dl.innerHTML = [...names].map(n => `<option value="${n}"></option>`).join('');
+}
+
 function openRealize() {
   realizeItems = [];
   rzDiscType = 'rub';
@@ -1962,6 +1978,8 @@ function openRealize() {
   document.getElementById('rz-disc').value = 0;
   document.getElementById('rz-cash').value = 0;
   document.getElementById('rz-transfer').value = 0;
+  document.getElementById('rz-transfer-to').value = '';
+  populateTransferRecipients();
   setRzDiscType('rub');
   setRzPay('cash');
   renderRealizeItems();
@@ -2066,6 +2084,8 @@ function setRzPay(p) {
     if (el) el.classList.toggle('active', x === p);
   });
   document.getElementById('rz-split').style.display = p === 'mixed' ? '' : 'none';
+  const toWrap = document.getElementById('rz-transfer-to-wrap');
+  if (toWrap) toWrap.style.display = (p === 'transfer' || p === 'mixed') ? '' : 'none';
   if (p === 'mixed') {
     const { net } = rzNet();
     document.getElementById('rz-cash').value = net; // по умолчанию всё наличными, перевод 0
@@ -2133,6 +2153,16 @@ async function submitRealize() {
   }
   const payLabel = rzPay === 'cash' ? 'Наличные' : rzPay === 'transfer' ? 'Перевод' : 'Смешанно';
 
+  // Получатель перевода (на чью карту пришли деньги)
+  let transferTo = '';
+  if (transfer > 0) {
+    transferTo = document.getElementById('rz-transfer-to').value.trim();
+    if (!transferTo) {
+      toast('Укажите, кому перевод (на чью карту)');
+      return;
+    }
+  }
+
   const payload = {
     action: 'addSales',
     shop: currentUser.shop,
@@ -2147,13 +2177,14 @@ async function submitRealize() {
     payment: payLabel,
     cash,
     transfer,
+    transferTo,
     items: realizeItems.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
     note
   };
 
   // Локально отражаем в выручке выбранного дня сразу (итог после скидки)
   appData.revenue.push({ date: dateRu, shop: currentUser.shop, amount: net, checks });
-  addFeed('gr', 'Реализация ' + dateRu + ': ' + fmt(net) + ' · ' + payLabel);
+  addFeed('gr', 'Реализация ' + dateRu + ': ' + fmt(net) + ' · ' + payLabel + (transfer > 0 ? ' → ' + transferTo : ''));
 
   try {
     await gasPost(payload);
@@ -2887,6 +2918,7 @@ function openHint(key) {
 document.getElementById('setup-url').value = GAS_URL;
 loadShopsForLogin();
 </script>
+
 
 
 </body></html>

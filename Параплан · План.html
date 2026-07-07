@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<!-- saved from url=(0044)file:///C:/Users/vasil/Downloads/plan_2.html -->
+<html lang="ru"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Параплан · План</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+<link href="./Параплан · План_files/css2" rel="stylesheet">
+<link rel="stylesheet" href="./Параплан · План_files/tabler-icons.min.css">
+<style>
+:root{
+  --or:#E87A1E;--or-d:#B85C0A;--or-l:#F5A04A;--or-glow:rgba(232,122,30,0.25);
+  --bg:#0C0C0C;--s1:#161616;--s2:#1E1E1E;--s3:#272727;--s4:#313131;
+  --t1:#F2EDE6;--t2:#A09890;--t3:#6A6058;
+  --border:#2A2A2A;
+  --green:#4CAF50;--red:#E24B4A;--warn:#EFA027;--blue:#4A9EE2;
+  --font-head:'Unbounded',sans-serif;
+  --font-body:'Golos Text',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--t1);font-family:var(--font-body);max-width:430px;margin:0 auto;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;padding:0}
+.screen{display:none;min-height:100vh;flex-direction:column}
+.screen.active{display:flex}
+
+/* ── LOGIN ── */
+.login-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;padding:40px 24px;min-height:100vh}
+.login-logo{width:76px;height:76px;background:var(--or);border-radius:22px;display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:30px;font-weight:900;color:#fff;margin:0 auto 18px;box-shadow:0 0 50px var(--or-glow)}
+.login-title{font-family:var(--font-head);font-size:22px;font-weight:700;text-align:center;letter-spacing:.02em}
+.login-sub{text-align:center;color:var(--t2);font-size:13px;margin-top:6px;margin-bottom:30px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--t2);margin-bottom:6px;font-weight:500}
+.inp,select{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px;color:var(--t1);font-size:15px;font-family:var(--font-body);outline:none;-webkit-appearance:none;appearance:none}
+.inp:focus,select:focus{border-color:var(--or)}
+select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23A09890' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
+.btn{width:100%;background:var(--or);color:#fff;border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:700;font-family:var(--font-body);cursor:pointer;letter-spacing:.02em;transition:transform .1s,background .15s}
+.btn:active{transform:scale(.98);background:var(--or-d)}
+.login-status{text-align:center;font-size:12px;color:var(--t3);margin-top:14px;min-height:16px}
+
+/* ── HEADER ── */
+.hdr{background:var(--s1);border-bottom:1px solid var(--border);padding:13px 16px;display:flex;align-items:center;gap:11px;position:sticky;top:0;z-index:20}
+.hdr-logo{width:36px;height:36px;background:var(--or);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:900;font-size:14px;color:#fff;flex-shrink:0;box-shadow:0 0 16px var(--or-glow)}
+.hdr h1{font-family:var(--font-head);font-size:14px;font-weight:700;letter-spacing:.02em}
+.hdr p{font-size:11px;color:var(--t2);margin-top:1px}
+.hdr-action{background:none;border:none;color:var(--t3);font-size:21px;cursor:pointer;padding:4px}
+.hdr-action:active{color:var(--or)}
+.hdr-right{margin-left:auto;display:flex;gap:2px}
+
+.body{flex:1;padding:16px 16px 32px;overflow-y:auto}
+
+/* month picker */
+.monthbar{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.monthbar select{padding:10px 34px 10px 12px;font-size:13px;border-radius:10px;flex:1}
+.monthbar .mb-lbl{font-size:11px;color:var(--t3);white-space:nowrap}
+
+/* network ring card */
+.net-card{background:linear-gradient(160deg,var(--s2),var(--s1));border:1px solid var(--border);border-radius:20px;padding:22px 18px 20px;text-align:center;position:relative;overflow:hidden;margin-bottom:18px}
+.net-card::before{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:radial-gradient(circle,var(--or-glow),transparent 70%);pointer-events:none}
+.net-eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--or);font-weight:600;margin-bottom:14px}
+.ring-wrap{position:relative;width:180px;height:180px;margin:0 auto 6px}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-pct{font-family:var(--font-head);font-size:40px;font-weight:900;line-height:1}
+.ring-pct span{font-size:20px}
+.ring-cap{font-size:11px;color:var(--t2);margin-top:4px;letter-spacing:.04em}
+.net-nums{display:flex;justify-content:center;gap:0;margin-top:12px;border-top:1px solid var(--border);padding-top:14px}
+.net-num{flex:1}
+.net-num .v{font-family:var(--font-head);font-size:15px;font-weight:700}
+.net-num .k{font-size:10px;color:var(--t3);margin-top:2px;letter-spacing:.03em}
+.net-num.mid{border-left:1px solid var(--border);border-right:1px solid var(--border)}
+
+/* section label */
+.sec{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);font-weight:600;margin:0 2px 10px}
+
+/* point row */
+.pt{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:9px}
+.pt-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px;gap:10px}
+.pt-name{font-weight:600;font-size:14px}
+.pt-pct{font-family:var(--font-head);font-weight:700;font-size:15px;flex-shrink:0}
+.bar{height:7px;background:var(--s3);border-radius:6px;overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:6px;transition:width .5s ease}
+.pt-nums{display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--t2)}
+.pt-nums b{color:var(--t1);font-weight:600}
+.noplan{color:var(--t3);font-size:11px;font-style:italic}
+
+.empty{text-align:center;color:var(--t3);padding:50px 20px;font-size:13px}
+.empty i{font-size:34px;display:block;margin-bottom:12px;color:var(--s4)}
+
+/* toast + sync */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--s4);color:var(--t1);padding:11px 18px;border-radius:12px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:60;max-width:88%;text-align:center;border:1px solid var(--border)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinning{animation:spin .8s linear infinite}
+.you-chip{display:inline-flex;align-items:center;gap:4px;background:var(--or-glow);color:var(--or-l);font-size:10px;font-weight:600;padding:2px 7px;border-radius:6px;margin-left:6px;vertical-align:middle}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div id="sc-login" class="screen active">
+  <div class="login-wrap">
+    <div class="login-logo">П</div>
+    <div class="login-title">Параплан · План</div>
+    <div class="login-sub">Отслеживание плана сети и точек</div>
+
+    <div class="field">
+      <label>Ваше имя</label>
+      <input class="inp" id="li-name" placeholder="Введите имя" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Точка</label>
+      <select id="li-shop"><option value="">Не удалось загрузить точки</option></select>
+    </div>
+    <div class="field">
+      <label>Пароль</label>
+      <input class="inp" type="password" id="li-pin" placeholder="Введите пароль">
+    </div>
+    <button class="btn" onclick="doLogin()" style="margin-top:6px">Войти</button>
+    <div class="login-status" id="login-status">⚠ Не указан адрес бэкенда (BACKEND_URL)</div>
+  </div>
+</div>
+
+<!-- ══ DASHBOARD ══ -->
+<div id="sc-app" class="screen">
+  <div class="hdr">
+    <div class="hdr-logo">П</div>
+    <div>
+      <h1>Выполнение плана</h1>
+      <p id="hdr-sub">—</p>
+    </div>
+    <div class="hdr-right">
+      <button class="hdr-action" id="sync-btn" onclick="syncData()" title="Обновить"><i class="ti ti-refresh"></i></button>
+      <button class="hdr-action" onclick="doLogout()" title="Выйти"><i class="ti ti-logout"></i></button>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="monthbar">
+      <span class="mb-lbl"><i class="ti ti-calendar"></i></span>
+      <select id="month-sel" onchange="render()"></select>
+    </div>
+
+    <!-- network ring -->
+    <div class="net-card">
+      <div class="net-eyebrow">План сети</div>
+      <div class="ring-wrap">
+        <svg width="180" height="180" viewBox="0 0 180 180">
+          <circle cx="90" cy="90" r="78" fill="none" stroke="var(--s3)" stroke-width="14"></circle>
+          <circle id="ring-fg" cx="90" cy="90" r="78" fill="none" stroke="var(--or)" stroke-width="14" stroke-linecap="round" stroke-dasharray="490" stroke-dashoffset="490"></circle>
+        </svg>
+        <div class="ring-center">
+          <div class="ring-pct" id="net-pct">0<span>%</span></div>
+          <div class="ring-cap">выполнено</div>
+        </div>
+      </div>
+      <div class="net-nums">
+        <div class="net-num"><div class="v" id="net-rev">—</div><div class="k">выручка</div></div>
+        <div class="net-num mid"><div class="v" id="net-plan">—</div><div class="k">план</div></div>
+        <div class="net-num"><div class="v" id="net-left">—</div><div class="k">осталось</div></div>
+      </div>
+    </div>
+
+    <div class="sec" id="pts-sec">Точки</div>
+    <div id="pts-list"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  Один адрес нового бэкенда (…/exec). Вставь сюда URL развёртывания.
+// ═══════════════════════════════════════════════════════════
+const BACKEND_URL = 'ВСТАВЬ_СЮДА_URL_НОВОГО_РАЗВЁРТЫВАНИЯ';   // ← …/exec нового Apps Script
+
+let currentUser=null;                       // {name, shop, shopName, role}
+let data={shops:[],plans:[],revenue:[]};
+const RU_MONTHS=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
+// ─── helpers ───
+function isAdmin(u){return u && !/seller|продавец/i.test(u.role||'');}
+function norm(s){return String(s||'').toLowerCase().replace(/[\s\u00A0\u202F]+/g,' ').trim();}
+function num(v){if(v==null)return 0;if(typeof v==='number')return v;const n=parseFloat(String(v).replace(/[\s\u00A0\u202F]/g,'').replace(',','.').replace(/[^\d.\-]/g,''));return isNaN(n)?0:n;}
+function fmt(n){return Math.round(num(n)).toLocaleString('ru-RU')+' ₽';}
+function fmtShort(n){n=Math.round(num(n));if(Math.abs(n)>=1e6)return (n/1e6).toFixed(1).replace('.0','')+' млн';if(Math.abs(n)>=1e3)return Math.round(n/1e3)+' тыс';return n.toLocaleString('ru-RU')+' ₽';}
+function toast(m,d=2400){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),d);}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('sc-'+id).classList.add('active');}
+function userPointName(){return currentUser.shopName||currentUser.shop||'';}
+function backendReady(){return BACKEND_URL && BACKEND_URL.indexOf('ВСТАВЬ')!==0;}
+
+// ─── API ───
+async function apiGet(){const r=await fetch(BACKEND_URL);return r.json();}
+async function apiPost(obj){
+  const r=await fetch(BACKEND_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(obj)});
+  return r.json();
+}
+
+// планы + выручка + точки
+async function loadData(){
+  if(!backendReady())throw new Error('Не указан адрес бэкенда (BACKEND_URL)');
+  const r=await apiGet();
+  if(r&&r.ok){data.shops=r.shops||[];data.plans=r.plans||[];data.revenue=r.revenue||[];return true;}
+  throw new Error(r&&r.error||'Бэкенд не отвечает');
+}
+function fillShopSelect(){
+  const sel=document.getElementById('li-shop');
+  if(!data.shops.length){sel.innerHTML='<option value="">Нет точек в таблице</option>';return;}
+  sel.innerHTML='<option value="">Выберите точку</option>'+
+    data.shops.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+}
+
+// ─── ВХОД ───
+async function doLogin(){
+  const name=document.getElementById('li-name').value.trim();
+  const shop=document.getElementById('li-shop').value;
+  const pin=document.getElementById('li-pin').value.trim();
+  const st=document.getElementById('login-status');
+  if(!name){toast('Введите имя');return;}
+  if(!shop){toast('Выберите точку');return;}
+  if(!backendReady()){st.style.color='var(--red)';st.textContent='✗ Не указан адрес бэкенда';return;}
+  st.style.color='var(--t3)';st.textContent='Проверяю…';
+  try{
+    const r=await apiPost({action:'login',name,shop,pin});
+    if(r&&r.ok&&r.user){currentUser=r.user;await finishLogin();}
+    else{st.style.color='var(--red)';st.textContent='✗ '+((r&&r.error)||'Неверное имя или пароль');}
+  }catch(e){st.style.color='var(--red)';st.textContent='✗ Нет связи с бэкендом';}
+}
+async function finishLogin(){
+  document.getElementById('login-status').textContent='';
+  document.getElementById('li-pin').value='';
+  const roleLbl={owner:'Владелец',manager:'Управляющий',seller:'Продавец'}[currentUser.role]||currentUser.roleText||'—';
+  document.getElementById('hdr-sub').textContent=
+    isAdmin(currentUser)?`${currentUser.name} · ${roleLbl} · все точки`
+                        :`${currentUser.name} · ${currentUser.shopName}`;
+  show('app');
+  if(!data.plans.length){try{await loadData();}catch(e){toast('⚠ '+e.message,4000);}}
+  buildMonths();render();
+}
+function doLogout(){currentUser=null;show('login');document.getElementById('li-name').value='';document.getElementById('li-pin').value='';}
+
+// ─── ОБНОВИТЬ ───
+async function syncData(){
+  const btn=document.getElementById('sync-btn');if(btn)btn.firstElementChild.classList.add('spinning');
+  try{await loadData();buildMonths();render();toast('✓ Данные обновлены');}
+  catch(e){toast('⚠ '+e.message,4000);}
+  if(btn)btn.firstElementChild.classList.remove('spinning');
+}
+
+// ─── МЕСЯЦЫ (из «Планы») ───
+function buildMonths(){
+  const sel=document.getElementById('month-sel');if(!sel)return;
+  const set=new Set();
+  data.plans.forEach(p=>{if(p.year&&p.month)set.add(p.year+'-'+String(p.month).padStart(2,'0'));});
+  if(!set.size){const n=new Date();set.add(n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0'));}
+  const keys=[...set].sort().reverse();
+  const prev=sel.value;
+  sel.innerHTML=keys.map(k=>{const[y,m]=k.split('-');return `<option value="${k}">${RU_MONTHS[+m-1]} ${y}</option>`;}).join('');
+  if(prev&&keys.includes(prev))sel.value=prev;
+}
+
+// ─── РАСЧЁТ ───
+function statsFor(monthK){
+  const [Y,M]=monthK.split('-').map(Number);
+  const planBy={};
+  data.plans.forEach(p=>{if(p.year===Y&&p.month===M)planBy[norm(p.shop)]=num(p.plan);});
+  const revBy={};
+  data.revenue.forEach(r=>{if(r.month===M)revBy[norm(r.shop)]=(revBy[norm(r.shop)]||0)+num(r.amount);});
+
+  const allShops=data.shops.length?data.shops.map(s=>s.name):Object.keys(planBy);
+  let visible=allShops.slice();
+  if(!isAdmin(currentUser)){const me=norm(userPointName());visible=allShops.filter(n=>norm(n)===me);}
+
+  const pts=visible.map(name=>{
+    const k=norm(name),plan=planBy[k],rev=revBy[k]||0;
+    return {name,plan:(plan==null?null:plan),rev,pct:(plan>0?rev/plan*100:null)};
+  });
+  let netPlan=0,netRev=0;
+  allShops.forEach(name=>{const k=norm(name);netPlan+=(planBy[k]||0);netRev+=(revBy[k]||0);});
+  return {pts,netPlan,netRev,netPct:netPlan>0?netRev/netPlan*100:null};
+}
+function barColor(p){if(p==null)return 'var(--s4)';if(p>=100)return 'var(--green)';if(p>=70)return 'var(--or)';if(p>=40)return 'var(--warn)';return 'var(--red)';}
+
+// ─── ОТРИСОВКА ───
+function render(){
+  if(!currentUser)return;
+  const sel=document.getElementById('month-sel');const mk=sel.value||(sel.options[0]&&sel.options[0].value);
+  if(!mk){document.getElementById('pts-list').innerHTML='<div class="empty"><i class="ti ti-calendar-off"></i>Нет планов в листе «Планы»</div>';return;}
+  const {pts,netPlan,netRev,netPct}=statsFor(mk);
+
+  const clamped=Math.max(0,Math.min(100,netPct==null?0:netPct));
+  const C=2*Math.PI*78;
+  const ring=document.getElementById('ring-fg');
+  ring.style.strokeDasharray=C.toFixed(1);
+  ring.style.strokeDashoffset=(C*(1-clamped/100)).toFixed(1);
+  ring.style.stroke=barColor(netPct);
+  document.getElementById('net-pct').innerHTML=(netPct==null?'—':Math.round(netPct))+'<span>%</span>';
+  document.getElementById('net-rev').textContent=fmtShort(netRev);
+  document.getElementById('net-plan').textContent=fmtShort(netPlan);
+  const left=netPlan-netRev;
+  document.getElementById('net-left').textContent=left>0?fmtShort(left):'✓ план';
+
+  document.getElementById('pts-sec').textContent=isAdmin(currentUser)?`Точки · ${pts.length}`:'Ваша точка';
+  const wrap=document.getElementById('pts-list');
+  if(!pts.length){wrap.innerHTML='<div class="empty"><i class="ti ti-map-pin-off"></i>Нет точек для отображения</div>';return;}
+  const sorted=isAdmin(currentUser)?pts.slice().sort((a,b)=>(b.pct??-1)-(a.pct??-1)):pts;
+  const meName=norm(userPointName());
+  wrap.innerHTML=sorted.map(p=>{
+    const pctTxt=p.pct==null?'—':Math.round(p.pct)+'%';
+    const w=p.pct==null?0:Math.max(2,Math.min(100,p.pct));
+    const col=barColor(p.pct);
+    const youChip=(isAdmin(currentUser)&&norm(p.name)===meName)?'<span class="you-chip"><i class="ti ti-user"></i>вы</span>':'';
+    const row=(p.plan==null||p.plan===0)
+      ? `<div class="pt-nums"><span>Выручка <b>${fmt(p.rev)}</b></span><span class="noplan">план не задан</span></div>`
+      : `<div class="pt-nums"><span>Выручка <b>${fmt(p.rev)}</b></span><span>План <b>${fmt(p.plan)}</b></span></div>`;
+    return `<div class="pt">
+      <div class="pt-top"><div class="pt-name">${p.name}${youChip}</div><div class="pt-pct" style="color:${col}">${pctTxt}</div></div>
+      <div class="bar"><i style="width:${w}%;background:${col}"></i></div>
+      ${row}</div>`;
+  }).join('');
+}
+document.getElementById('month-sel').addEventListener('change',render);
+
+// ─── INIT ───
+(async function init(){
+  try{await loadData();fillShopSelect();}
+  catch(e){document.getElementById('li-shop').innerHTML='<option value="">Не удалось загрузить точки</option>';
+    document.getElementById('login-status').textContent='⚠ '+e.message;}
+})();
+</script>
+
+</body></html>

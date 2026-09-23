@@ -330,13 +330,24 @@ function inMonth(r,y,m){ const p=String(r.date).split('.'); return +p[1]===m && 
 function revMonth(shopId,y,m){
   return (appData.revenue||[]).filter(r=>(!shopId||r.shop===shopId)&&inMonth(r,y,m)).reduce((a,r)=>a+(+r.amount||0),0);
 }
-function shopPlan(shopId){ const s=appData.shops.find(x=>x.id===shopId)||{}; return +s.plan||0; }
-function netPlan(){ return appData.shops.reduce((a,s)=>a+(+s.plan||0),0); }
+/* План берётся из листа «Планы» (Точка · Год · Месяц · План) — у каждого месяца свой.
+   Если листа нет — план точки из справочника, и только для текущего месяца. */
+const MON_LC=MON_NOM.map(x=>x.toLowerCase());
+function toNum(x){ if(typeof x==='number') return x; return +String(x||'').replace(/[\s\u00a0₽]/g,'').replace(',','.')||0; }
+function normMonth(m){ if(typeof m==='number') return m; const s=String(m||'').trim().toLowerCase(); if(/^\d+$/.test(s)) return +s;
+  const i=MON_LC.findIndex(n=>s.startsWith(n.slice(0,3))); return i+1; }
+function shopPlan(shopId,y,m){
+  const list=appData.plans||[];
+  if(list.length){ const p=list.find(p=>p.shop===shopId&&p.y===y&&p.m===m); return p?p.plan:0; }
+  const n=new Date(); if(y!==n.getFullYear()||m!==n.getMonth()+1) return 0;
+  const s=appData.shops.find(x=>x.id===shopId)||{}; return toNum(s.plan);
+}
+function netPlan(y,m){ return appData.shops.reduce((a,s)=>a+shopPlan(s.id,y,m),0); }
 /* shopId = null → вся сеть */
 function monthStats(shopId,d){
   const y=d.getFullYear(), m=d.getMonth()+1;
   const fact=revMonth(shopId,y,m);
-  const plan=shopId?shopPlan(shopId):netPlan();
+  const plan=shopId?shopPlan(shopId,y,m):netPlan(y,m);
   const pct=plan?Math.round(fact/plan*100):0;
   const cur=isCurMonth(d);
   const days=new Date(y,m,0).getDate();
@@ -580,11 +591,15 @@ async function syncData(){
     if(r.ok){ appData={...appData,...r.data}; toast('✓ Данные обновлены'); }
     else toast('⚠ '+(r.error||'Ошибка синхронизации'));
   }catch(e){ toast('⚠ Нет связи. Показаны кэшированные данные.'); }
+  await loadPlans();
   await loadSchedule(activeShop(),schedMonth);
   afterSync(); if(btn) btn.style.animation='';
 }
 function afterSync(){ if(!currentUser) return; normalizeData(); refreshScreen(); }
 
+async function loadPlans(){
+  try{ const r=await gasGet({action:'getPlans'}); if(r.ok&&Array.isArray(r.data)&&r.data.length) appData.plans=r.data; }catch(e){}
+}
 async function loadSchedule(shop,md){
   shop=shop||activeShop(); md=md||schedMonth;
   const m=`${md.getFullYear()}-${pad(md.getMonth()+1)}`;
@@ -616,6 +631,9 @@ function loadDemoData(){
     {date:dRu(2),shop,amount:71800,checks:38},{date:dRu(0),shop:'moskva',amount:112000,checks:67},
     {date:dRu(0),shop:'gromova',amount:54200,checks:28},
   ];
+  appData.plans=[];
+  for(let i=0;i<6;i++){ const d=new Date(new Date().getFullYear(),new Date().getMonth()-i,1);
+    appData.shops.forEach((s,k)=>appData.plans.push({shop:s.id,y:d.getFullYear(),m:d.getMonth()+1,plan:Math.round(s.plan*(0.9+((k+i*3)%5)/20))})); }
   // прошлые месяцы — чтобы в демо была видна история
   const now=new Date();
   for(let i=1;i<=5;i++){
@@ -632,6 +650,10 @@ function resolveShopId(x){ if(x==null) return x; const s=String(x).trim(); if(!s
   let h=appData.shops.find(sh=>String(sh.id).toLowerCase()===s.toLowerCase()); if(h) return h.id;
   h=appData.shops.find(sh=>String(sh.name).toLowerCase()===s.toLowerCase()); return h?h.id:x; }
 function normalizeData(){
+  appData.plans=(appData.plans||[]).map(p=>(p&&p.plan!==undefined&&p.y)?p:({
+      shop:resolveShopId(p.shop??p['Точка']), y:+(p.year??p['Год']),
+      m:normMonth(p.month??p['Месяц']), plan:toNum(p.plan??p['План (руб)'])}))
+    .filter(p=>p.shop&&p.y&&p.m&&p.plan);
   (appData.revenue||[]).forEach(r=>{ if(r) r.shop=resolveShopId(r.shop); });
 }
 
@@ -779,7 +801,7 @@ function dayStatsHTML(shopId,day){
   const rev=revs.reduce((a,r)=>a+(+r.amount||0),0);
   const checks=revs.reduce((a,r)=>a+(+r.checks||0),0);
   const d=ruToDate(day);
-  const dayPlan=Math.round(shopPlan(shopId)/new Date(d.getFullYear(),d.getMonth()+1,0).getDate());
+  const dayPlan=Math.round(shopPlan(shopId,d.getFullYear(),d.getMonth()+1)/new Date(d.getFullYear(),d.getMonth()+1,0).getDate());
   const pct=dayPlan?Math.round(rev/dayPlan*100):0;
   const avg=checks?Math.round(rev/checks):0;
   const shiftPay=Math.round(shiftRate(shopId)+rev*BASE_PCT/100);
@@ -1218,7 +1240,7 @@ function renderDayDetail(ru,shopId){
   const rev=revs.reduce((a,r)=>a+(+r.amount||0),0);
   const checks=revs.reduce((a,r)=>a+(+r.checks||0),0);
   const dd=ruToDate(ru);
-  const dayPlan=Math.round(shopPlan(shopId)/new Date(dd.getFullYear(),dd.getMonth()+1,0).getDate());
+  const dayPlan=Math.round(shopPlan(shopId,dd.getFullYear(),dd.getMonth()+1)/new Date(dd.getFullYear(),dd.getMonth()+1,0).getDate());
   const pct=dayPlan?Math.round(rev/dayPlan*100):0;
   const iso=ru.split('.').reverse().join('-');
   const cell=(appData.schedule||{})[shopId+':'+iso];

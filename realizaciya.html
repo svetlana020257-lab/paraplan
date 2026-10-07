@@ -141,15 +141,15 @@ tfoot td{font-weight:700;background:var(--sunk)}
     <summary><h2>Каталог и подключение</h2></summary>
     <div class="setup">
       <section>
-        <label for="catPaste">Загрузить каталог</label>
-        <p class="hint">Скопируйте из Excel или Google Таблиц колонки <code>Название</code>, <code>Цена</code>, <code>Закупка</code> вместе с заголовком и вставьте сюда. Или выберите файл .xlsx / .csv.</p>
+        <div class="field"><label for="catPoint">Каталог для точки</label><select id="catPoint"></select></div>
+        <p class="hint">«Все точки» — общий каталог: им пользуются точки, у которых нет своего. Скопируйте из Excel или Google Таблиц колонки <code>Название</code>, <code>Цена</code>, <code>Закупка</code> вместе с заголовком и вставьте сюда, или выберите файл .xlsx / .csv. Если в файле есть колонка <code>Точка</code>, каталоги разложатся по точкам сами.</p>
         <textarea id="catPaste" rows="5" placeholder="Название	Цена	Закупка&#10;HQD Cuvie Plus 1200	900	480"></textarea>
         <div class="actions">
           <button class="primary" id="catApply">Загрузить из вставки</button>
           <button id="catFileBtn">Выбрать файл…</button>
           <input type="file" id="catFile" accept=".xlsx,.xls,.csv" hidden>
         </div>
-        <p class="hint" id="catInfo"></p>
+        <div class="hint" id="catInfo"></div>
       </section>
       <section>
         <label for="scriptUrl">Адрес скрипта таблицы</label>
@@ -303,15 +303,17 @@ function rowsToCatalog(rows){
       iPrice=find(/(цена продажи|розн|^цена$|^цена|price|продаж)/),
       iCost=find(/(закуп|себестоим|cost|опт)/),
       iCat=find(/(категор|группа)/),
-      iAl=find(/(синоним|алиас)/);
+      iAl=find(/(синоним|алиас)/),
+      iPt=find(/^(точка|магазин)/);
   let body=rows;
   if(iName>-1){body=rows.slice(1);if(iPrice===iCost)iCost=-1;}
-  else{iName=0;iPrice=1;iCost=2;iCat=-1;iAl=-1;}
+  else{iName=0;iPrice=1;iCost=2;iCat=-1;iAl=-1;iPt=-1;}
   const toNum=v=>{const x=parseFloat(String(v).replace(/\s/g,'').replace(',','.'));return isFinite(x)?x:0};
   const seen=new Set(), out=[];
   body.forEach(r=>{
-    const name=String(r[iName]??'').trim(); if(!name||seen.has(name))return; seen.add(name);
-    out.push({name,price:iPrice>-1?toNum(r[iPrice]):0,cost:iCost>-1?toNum(r[iCost]):0,
+    const name=String(r[iName]??'').trim(), point=iPt>-1?String(r[iPt]??'').trim():'';
+    if(!name||seen.has(point+'|'+name))return; seen.add(point+'|'+name);
+    out.push({name,point,price:iPrice>-1?toNum(r[iPrice]):0,cost:iCost>-1?toNum(r[iCost]):0,
       category:iCat>-1?String(r[iCat]??'').trim():'',aliases:iAl>-1?String(r[iAl]??'').trim():''});
   });
   return out;
@@ -351,10 +353,19 @@ HQD cuvie 1
 xros 3 mini`;
 const DEFAULT_POINTS='Планировочная, Никитина, Москва, Шлюз, Титова, Династия, Богаткова, Коротаева, Горский, Громова, Петухова, Зорге';
 
-let catalog=LS.get('catalog',null), isSample=false;
-if(!catalog||!catalog.length){catalog=SAMPLE_CATALOG;isSample=true}
+const ALL='Все точки';
+let catalogs=LS.get('catalogs',null);
+if(!catalogs){const old=LS.get('catalog',null);catalogs=old&&old.length?{[ALL]:old}:{}}
 let aliases=LS.get('aliases',{});
-let cat=prepCatalog(catalog);
+let catalog=[], cat=[], isSample=true, catKey=null;
+const hasCat=k=>catalogs[k]&&catalogs[k].length;
+// Каталог текущей точки: свой, иначе общий, иначе пример
+function useCatalog(){
+  const p=$('point').value;
+  catKey=hasCat(p)?p:(hasCat(ALL)?ALL:null);
+  if(catKey){catalog=catalogs[catKey];isSample=false}else{catalog=SAMPLE_CATALOG;isSample=true}
+  cat=prepCatalog(catalog);renderChips();
+}
 let lines=[];   // разобранные строки
 
 function today(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
@@ -363,13 +374,15 @@ function toast(msg){const t=$('toast');t.textContent=msg;t.hidden=false;clearTim
 function renderChips(){
   const c=$('chipCatalog');
   c.className='chip '+(isSample?'example':'ok');
-  c.lastElementChild.textContent=isSample?'Каталог-пример: '+catalog.length+' поз.':'Каталог: '+catalog.length+' поз.';
+  c.lastElementChild.textContent=isSample?'Каталог-пример: '+catalog.length+' поз.'
+    :(catKey===ALL?'Общий каталог: ':'Каталог '+catKey+': ')+catalog.length+' поз.';
   const url=LS.get('url','');
   const k=$('chipConn');k.className='chip '+(url?'ok':'');
   k.lastElementChild.textContent=url?'Таблица подключена':'Таблица не подключена';
-  $('catInfo').textContent=isSample
-    ?'Сейчас загружен пример из 8 позиций — загрузите свой каталог.'
-    :'Загружено позиций: '+catalog.length+'. Без закупочной цены: '+catalog.filter(x=>!x.cost).length+'.';
+  const keys=Object.keys(catalogs).filter(hasCat);
+  $('catInfo').innerHTML=keys.length
+    ?'<b>Загружено:</b> '+keys.map(k=>esc(k)+' — '+catalogs[k].length+' поз.'+(catalogs[k].some(x=>!x.cost)?' (без закупки: '+catalogs[k].filter(x=>!x.cost).length+')':'')).join('; ')
+    :'Своих каталогов пока нет — сейчас работает пример из 8 позиций.';
   $('catList').innerHTML=catalog.map(x=>'<option value="'+esc(x.name)+'">').join('');
 }
 function renderPoints(){
@@ -378,14 +391,21 @@ function renderPoints(){
   const cur=LS.get('point','');
   $('point').innerHTML=pts.split(',').map(s=>s.trim()).filter(Boolean)
     .map(p=>'<option'+(p===cur?' selected':'')+'>'+esc(p)+'</option>').join('');
+  const cp=LS.get('catPoint',ALL);
+  $('catPoint').innerHTML=[ALL].concat(pts.split(',').map(s=>s.trim()).filter(Boolean))
+    .map(p=>'<option'+(p===cp?' selected':'')+'>'+esc(p)+'</option>').join('');
 }
-function setCatalog(items,src){
+// items с полем point раскладываются по точкам; без него — в выбранную «Каталог для точки»
+function setCatalog(items,src,replaceAll){
   if(!items.length){toast('Не нашла ни одной позиции. Проверьте, что есть колонка с названием.');return}
-  catalog=items;isSample=false;cat=prepCatalog(catalog);
-  // синонимы из колонки каталога
-  catalog.forEach(it=>String(it.aliases||'').split(/[;|]/).map(norm).filter(Boolean).forEach(a=>aliases[a]=it.name));
-  LS.set('catalog',catalog);LS.set('aliases',aliases);
-  renderChips();parse();toast('Каталог загружен'+(src?' '+src:'')+': '+items.length+' поз.');
+  const target=$('catPoint').value||ALL, groups={};
+  items.forEach(it=>{const k=String(it.point||'').trim()||target;(groups[k]=groups[k]||[]).push(it)});
+  if(replaceAll)catalogs={};
+  Object.keys(groups).forEach(k=>catalogs[k]=groups[k]);
+  items.forEach(it=>String(it.aliases||'').split(/[;|]/).map(norm).filter(Boolean).forEach(a=>aliases[a]=it.name));
+  LS.set('catalogs',catalogs);LS.set('aliases',aliases);
+  useCatalog();parse();
+  toast('Каталог загружен'+(src?' '+src:'')+': '+Object.keys(groups).map(k=>k+' — '+groups[k].length).join(', '));
 }
 
 /* ---- разбор ---- */
@@ -458,7 +478,7 @@ function onLineEdit(e){
     const hit=catalog.find(c=>c.name===el.value); if(!hit)return;
     l.item=cat[catalog.indexOf(hit)];l.st='ok';l.score=1;l.price=null;
     aliases[norm(l.name)]=hit.name;LS.set('aliases',aliases);
-    pushAlias(l.name,hit.name);
+    pushAlias(l.name,hit.name,catKey);
   }else if(f==='qty'){l.qty=Math.max(0,+el.value||0)}
   else if(f==='price'){l.price=el.value===''?null:+el.value}
   const tab=$('viewLines').hidden?'sum':'lines';
@@ -482,15 +502,17 @@ function netErr(e){
     ?'Нет связи со скриптом. Если страница открыта как превью в Claude, отправка заблокирована — откройте её с GitHub Pages.'
     :e.message;
 }
-async function pushAlias(raw,name){try{if(LS.get('url',''))await api('POST',{action:'saveAlias',alias:raw,name})}catch(e){}}
+async function pushAlias(raw,name,point){try{if(LS.get('url',''))await api('POST',{action:'saveAlias',alias:raw,name,point})}catch(e){}}
 
 $('connSave').onclick=()=>{const u=$('scriptUrl').value.trim();LS.set('url',u);renderChips();toast(u?'Адрес сохранён':'Подключение убрано')};
 $('catPull').onclick=async()=>{
-  try{const d=await api('GET',{action:'catalog'});setCatalog(d.items,'из таблицы')}catch(e){toast(netErr(e))}
+  try{const d=await api('GET',{action:'catalog'});setCatalog(d.items.map(x=>({...x,point:x.point||ALL})),'из таблицы',true)}catch(e){toast(netErr(e))}
 };
 $('catPush').onclick=async()=>{
-  if(isSample){toast('Сейчас загружен пример. Сначала загрузите свой каталог.');return}
-  try{const d=await api('POST',{action:'saveCatalog',items:catalog});toast('Каталог сохранён в таблицу: '+d.count+' поз.')}catch(e){toast(netErr(e))}
+  const keys=Object.keys(catalogs).filter(hasCat);
+  if(!keys.length){toast('Сейчас загружен пример. Сначала загрузите свой каталог.');return}
+  try{let n=0;for(const k of keys){const d=await api('POST',{action:'saveCatalog',point:k,items:catalogs[k]});n+=d.count}
+    toast('Сохранено в таблицу: '+keys.length+' каталог(а), '+n+' поз.')}catch(e){toast(netErr(e))}
 };
 $('sendBtn').onclick=async()=>{
   const agg=aggregate(); if(!agg.length)return;
@@ -540,12 +562,13 @@ $('viewLines').addEventListener('change',onLineEdit);
 $('parseBtn').onclick=()=>{parse();if(lines.some(l=>l.st!=='ok'))showTab('lines')};
 $('clearBtn').onclick=()=>{$('sales').value='';parse()};
 $('pointsList').onchange=e=>{LS.set('points',e.target.value);renderPoints()};
-$('point').onchange=e=>LS.set('point',e.target.value);
+$('point').onchange=e=>{LS.set('point',e.target.value);useCatalog();parse()};
+$('catPoint').onchange=e=>LS.set('catPoint',e.target.value);
 
 /* ---- старт ---- */
 $('date').value=today();
 $('scriptUrl').value=LS.get('url','');
 $('sales').value=LS.get('draft',null)??SAMPLE_SALES;
-renderPoints();renderChips();parse();
+renderPoints();useCatalog();parse();
 </script>
 </html>

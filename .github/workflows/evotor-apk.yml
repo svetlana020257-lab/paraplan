@@ -1,0 +1,52 @@
+# Собирает приложение «Параплан Касса» для Эвотора (APK)
+# и кладёт его в релиз «kassa-apk» репозитория — оттуда его можно скачать.
+name: Касса для Эвотора (APK)
+
+on:
+  push:
+    branches: [main]
+    paths: ['evotor-app/**', 'kassa.html', '.github/workflows/evotor-apk.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      EVOTOR_APP_UUID: ${{ vars.EVOTOR_APP_UUID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Вшить свежую копию кассы в приложение
+        run: cp kassa.html evotor-app/app/src/main/assets/kassa.html
+
+      - name: Собрать APK
+        run: gradle -p evotor-app :app:assembleRelease --no-daemon
+
+      - name: Переименовать
+        run: cp evotor-app/app/build/outputs/apk/release/app-release.apk paraplan-kassa.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paraplan-kassa-apk
+          path: paraplan-kassa.apk
+
+      - name: Обновить релиз «kassa-apk»
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete kassa-apk --yes --cleanup-tag || true
+          gh release create kassa-apk paraplan-kassa.apk \
+            --title "Параплан Касса — сборка ${GITHUB_RUN_NUMBER}" \
+            --notes "APK для смарт-терминалов Эвотор. Загрузите его в dev.evotor.ru → приложение → Версии → APK."

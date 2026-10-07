@@ -1,0 +1,37 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'ru.paraplan.kassa'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'ru.paraplan.kassa'
+        minSdk 22
+        targetSdk 28
+        // номер сборки GitHub — у каждой новой версии свой
+        versionCode((System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger())
+        versionName '1.' + (System.getenv('GITHUB_RUN_NUMBER') ?: '0')
+        // UUID приложения с dev.evotor.ru (из адреса dev.evotor.ru/#/user/apps/<UUID>)
+        manifestPlaceholders = [evotorAppUuid: (System.getenv('EVOTOR_APP_UUID') ?: '')]
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('../paraplan.jks')
+            storePassword 'paraplan-kassa'
+            keyAlias 'paraplan'
+            keyPassword 'paraplan-kassa'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    lint { abortOnError false; checkReleaseBuilds false }
+}

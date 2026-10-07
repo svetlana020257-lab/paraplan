@@ -12,7 +12,7 @@ android {
         versionCode((System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger())
         versionName '1.' + (System.getenv('GITHUB_RUN_NUMBER') ?: '0')
         // UUID приложения с dev.evotor.ru (из адреса dev.evotor.ru/#/user/apps/<UUID>)
-        manifestPlaceholders = [evotorAppUuid: (System.getenv('EVOTOR_APP_UUID') ?: '')]
+        manifestPlaceholders = [evotorAppUuid: (System.getenv('EVOTOR_APP_UUID') ?: '1c3e6315-e945-49f7-9865-3e2f85fd18c7')]
     }
 
     signingConfigs {

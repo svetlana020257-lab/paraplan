@@ -10,5 +10,5 @@ APK собирается автоматически (GitHub Actions → «Кас
 `kassa-apk`: https://github.com/svetlana020257-lab/paraplan/releases/tag/kassa-apk
 
 Пакет приложения: `ru.paraplan.kassa`.
-UUID приложения Эвотора задаётся переменной репозитория `EVOTOR_APP_UUID`
-(Settings → Secrets and variables → Actions → Variables).
+UUID приложения Эвотора: `1c3e6315-e945-49f7-9865-3e2f85fd18c7` (можно переопределить переменной репозитория `EVOTOR_APP_UUID`
+в Settings → Secrets and variables → Actions → Variables).

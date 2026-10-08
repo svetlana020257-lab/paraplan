@@ -1,3 +1,7 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Касса Параплан</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600&display=swap" media="print" onload="this.media='all'">
 <script>
@@ -37,6 +41,8 @@ d.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:99;backgro
   color-scheme:dark}
 
 *{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.4;padding-inline:16px;padding-block:14px 16px}
 button,input,select{font:inherit;color:inherit}
@@ -524,7 +530,7 @@ function renderAll(){renderCats();renderGrid();renderCart();renderSync()}
 function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3000)}
 function openSettings(){
   $('pointSel').innerHTML=points.map(p=>'<option'+(p===cfg.point?' selected':'')+'>'+esc(p)+'</option>').join('');
-  $('urlIn').value=cfg.url;$('setScrim').hidden=false;
+  $('urlIn').value=cfg.url||'https://script.google.com/macros/s/AKfycbyxBZRqCt3OLKHLFildDJhvEhL5GnlkwYkCP6fVwF_uuYdtjw-FW_sjfkqNbU3ah3E/exec';$('setScrim').hidden=false;
 }
 
 /* события */

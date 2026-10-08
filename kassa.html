@@ -298,7 +298,7 @@ const rub=x=>Math.round(x).toLocaleString('ru-RU')+' ₽';
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const norm=s=>String(s||'').toLowerCase().replace(/ё/g,'е').replace(/([a-zа-я])(\d)/g,'$1 $2').replace(/(\d)([a-zа-я])/g,'$1 $2').replace(/[^a-zа-я0-9.]+/g,' ').trim();
 const ALL='Все точки';
-const POINTS_DEFAULT=['Планировочная','Никитина','Москва','Шлюз','Титова','Династия','Богаткова','Коротаева','Горский','Громова','Петухова','Зорге'];
+const POINTS_DEFAULT=['Москва','Планировочная','Никитина','Шлюз','Зорге'];
 const validUrl=u=>/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec\/?$/.test(u||'');
 const todayKey=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
 
@@ -312,7 +312,7 @@ const DEMO=[
 
 let cfg={url:LS.get('url',''),point:LS.get('point','')};
 let catAll=null;                        // каталог точки из Эвотора
-let points=LS.get('points',POINTS_DEFAULT);
+let points=POINTS_DEFAULT;
 let catalog=[], cart=[], cat='Все', query='', payMethod='cash';
 const isDemo=()=>!validUrl(cfg.url);
 

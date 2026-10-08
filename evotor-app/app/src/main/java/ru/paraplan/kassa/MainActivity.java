@@ -47,7 +47,7 @@ public class MainActivity extends Activity {
         s.setAllowFileAccess(true);
         s.setAllowFileAccessFromFileURLs(true);
         s.setAllowUniversalAccessFromFileURLs(true);
-        s.setCacheMode(WebSettings.LOAD_DEFAULT);
+        s.setCacheMode(WebSettings.LOAD_NO_CACHE);   // всегда свежая версия кассы
         s.setTextZoom(100);
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
@@ -93,13 +93,24 @@ public class MainActivity extends Activity {
         web.loadUrl(OFFLINE);
     }
 
+    private boolean backAnswered;
+
     @Override
     public void onBackPressed() {
-        // «Назад» закрывает открытое окно кассы (оплата, итог дня, настройки)
+        // «Назад» закрывает открытое окно кассы; если окон нет или страница не отвечает — выходим
+        backAnswered = false;
         web.evaluateJavascript(
-            "(function(){var o=[].slice.call(document.querySelectorAll('.scrim')).filter(function(s){return !s.hidden});" +
+            "(function(){var o=[].slice.call(document.querySelectorAll('.scrim')).filter(function(s){return getComputedStyle(s).display!=='none'});" +
             "if(o.length){o.forEach(function(s){s.hidden=true});return 1}return 0})()",
-            v -> { if ("0".equals(v)) MainActivity.super.onBackPressed(); });
+            v -> { backAnswered = true; if (!"1".equals(v)) finish(); });
+        handler.postDelayed(() -> { if (!backAnswered) finish(); }, 400);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // при уходе с экрана закрываем кассу — следующий запуск откроет свежую версию
+        if (!isChangingConfigurations()) finish();
     }
 
     @Override

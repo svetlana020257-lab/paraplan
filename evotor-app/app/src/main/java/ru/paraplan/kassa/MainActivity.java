@@ -2,9 +2,14 @@ package ru.paraplan.kassa;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.net.http.SslError;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.WindowManager;
+import android.webkit.SslErrorHandler;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -13,17 +18,20 @@ import android.webkit.WebViewClient;
 
 /**
  * «Параплан Касса» для смарт-терминала Эвотор.
- * Открывает кассу с GitHub Pages (так её можно обновлять без переустановки).
- * Если сети нет при запуске — открывает копию кассы, вшитую в приложение;
- * чеки копятся в очереди и уходят в таблицу, когда связь вернётся.
+ * Сначала пробует открыть свежую кассу с GitHub Pages. Если за 8 секунд
+ * страница не открылась, или ошибка сети/сертификата — открывает копию кассы,
+ * вшитую в приложение. Чеки в любом случае уходят в таблицу.
  */
 public class MainActivity extends Activity {
 
     private static final String ONLINE = "https://svetlana020257-lab.github.io/paraplan/kassa.html";
     private static final String OFFLINE = "file:///android_asset/kassa.html";
+    private static final long TIMEOUT_MS = 8000;
 
     private WebView web;
     private boolean fellBack = false;
+    private boolean onlineLoaded = false;
+    private final Handler handler = new Handler(Looper.getMainLooper());
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -37,13 +45,30 @@ public class MainActivity extends Activity {
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setAllowFileAccess(true);
+        s.setAllowFileAccessFromFileURLs(true);
+        s.setAllowUniversalAccessFromFileURLs(true);
         s.setCacheMode(WebSettings.LOAD_DEFAULT);
         s.setTextZoom(100);
+        s.setLoadWithOverviewMode(true);
+        s.setUseWideViewPort(true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
         }
 
+        web.setWebChromeClient(new WebChromeClient());
         web.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                if (url != null && url.startsWith(ONLINE)) onlineLoaded = true;
+            }
+
+            @Override
+            public void onReceivedSslError(WebView view, SslErrorHandler h, SslError error) {
+                // старый терминал не доверяет сертификату сайта — работаем с копией в приложении
+                h.cancel();
+                fallback();
+            }
+
             @Override
             public void onReceivedError(WebView view, WebResourceRequest req, WebResourceError err) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && req.isForMainFrame()) fallback();
@@ -57,28 +82,29 @@ public class MainActivity extends Activity {
         });
 
         setContentView(web);
-        if (savedInstanceState != null) web.restoreState(savedInstanceState);
-        else web.loadUrl(ONLINE);
+        web.loadUrl(ONLINE);
+        handler.postDelayed(() -> { if (!onlineLoaded) fallback(); }, TIMEOUT_MS);
     }
 
     private void fallback() {
-        if (fellBack) return;
+        if (fellBack || onlineLoaded) return;
         fellBack = true;
+        web.stopLoading();
         web.loadUrl(OFFLINE);
     }
 
     @Override
-    protected void onSaveInstanceState(Bundle out) {
-        super.onSaveInstanceState(out);
-        web.saveState(out);
-    }
-
-    @Override
     public void onBackPressed() {
-        // назад внутри кассы: закрыть открытое окно оплаты/итога
+        // «Назад» закрывает открытое окно кассы (оплата, итог дня, настройки)
         web.evaluateJavascript(
             "(function(){var o=[].slice.call(document.querySelectorAll('.scrim')).filter(function(s){return !s.hidden});" +
             "if(o.length){o.forEach(function(s){s.hidden=true});return 1}return 0})()",
             v -> { if ("0".equals(v)) MainActivity.super.onBackPressed(); });
+    }
+
+    @Override
+    protected void onDestroy() {
+        handler.removeCallbacksAndMessages(null);
+        super.onDestroy();
     }
 }

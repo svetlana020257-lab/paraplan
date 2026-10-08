@@ -1,7 +1,11 @@
 <title>Касса Параплан</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600&display=swap" media="print" onload="this.media='all'">
+<script>
+/* Ошибки страницы — на экран, чтобы было видно на кассе */
+window.onerror=function(m,src,l){var d=document.getElementById('fatal');if(!d){d=document.createElement('div');d.id='fatal';
+d.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#b4232c;color:#fff;padding:10px;border-radius:8px;font:13px sans-serif';
+(document.body||document.documentElement).appendChild(d)}d.textContent='Ошибка кассы: '+m+' (строка '+l+')';};
+</script>
 <style>
 /* Layout: кассовый экран — слева витрина (поиск, категории, плитки товаров), справа корзина с итогом; на телефоне корзина — нижняя панель */
 :root{
@@ -319,7 +323,7 @@ const isDemo=()=>!validUrl(cfg.url);
 function pickCatalog(){
   if(!isDemo()&&!catAll)catAll=LS.get('catalog_'+cfg.point,null);   // сохранённый на случай без связи
   const src=isDemo()?DEMO:(catAll||[]);
-  catalog=src.map(x=>({...x,n:norm(x.name+' '+(x.category||''))}));
+  catalog=src.map(x=>Object.assign({},x,{n:norm(x.name+' '+(x.category||''))}));
 }
 
 /* ================= ЧЕКИ ДНЯ И ОЧЕРЕДЬ ================= */

@@ -277,10 +277,10 @@ button{cursor:pointer}
         <label for="urlIn">Ссылка скрипта таблицы</label>
         <input id="urlIn" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" style="font-size:14px">
       </div>
-      <p class="note" id="setNote">Каталог берётся из листа «Каталог» таблицы Параплана: товары с точкой этой кассы, а если их нет — с «Все точки».</p>
+      <p class="note" id="setNote">Товары, цены и остатки берутся прямо из Эвотора — из магазина выбранной точки.</p>
       <div class="row">
         <button class="btn primary" id="saveSet">Сохранить</button>
-        <button class="btn" id="reloadCat">Обновить каталог</button>
+        <button class="btn" id="reloadCat">Обновить товары</button>
       </div>
     </div>
   </div>
@@ -311,15 +311,15 @@ const DEMO=[
 ].map(([category,name,price,cost,stock])=>({point:ALL,category,name,price,cost,stock,aliases:''}));
 
 let cfg={url:LS.get('url',''),point:LS.get('point','')};
-let catAll=LS.get('catalog',null);      // весь каталог из таблицы
+let catAll=null;                        // каталог точки из Эвотора
 let points=LS.get('points',POINTS_DEFAULT);
 let catalog=[], cart=[], cat='Все', query='', payMethod='cash';
 const isDemo=()=>!validUrl(cfg.url);
 
 function pickCatalog(){
-  const src=(isDemo()||!catAll)?DEMO:catAll;
-  const own=src.filter(x=>x.point===cfg.point);
-  catalog=(own.length?own:src.filter(x=>x.point===ALL)).map(x=>({...x,n:norm(x.name+' '+(x.aliases||'')+' '+(x.category||''))}));
+  if(!isDemo()&&!catAll)catAll=LS.get('catalog_'+cfg.point,null);   // сохранённый на случай без связи
+  const src=isDemo()?DEMO:(catAll||[]);
+  catalog=src.map(x=>({...x,n:norm(x.name+' '+(x.category||''))}));
 }
 
 /* ================= ЧЕКИ ДНЯ И ОЧЕРЕДЬ ================= */
@@ -354,14 +354,14 @@ window.addEventListener('online',flush);
 async function loadCatalog(silent){
   if(isDemo()){pickCatalog();renderAll();return}
   try{
-    const res=await fetch(cfg.url+'?action=catalog');const d=await res.json();
+    const res=await fetch(cfg.url+'?action=catalog&point='+encodeURIComponent(cfg.point));const d=await res.json();
     if(!d.ok)throw new Error(d.error);
-    catAll=d.items;LS.set('catalog',catAll);
-    const fromCat=[...new Set(d.items.map(x=>x.point).filter(p=>p&&p!==ALL))];
-    points=[...new Set([...(d.points||[]),...fromCat,...POINTS_DEFAULT])];LS.set('points',points);
+    if(d.points&&d.points.length){points=d.points;LS.set('points',points)}
+    catAll=d.items;LS.set('catalog_'+cfg.point,catAll);
     pickCatalog();renderAll();
-    if(!silent)toast('Каталог обновлён: '+catalog.length+' поз.');
-  }catch(e){pickCatalog();renderAll();if(!silent)toast('Не удалось загрузить каталог — работаю с сохранённым')}
+    if(!d.found)toast('Точки «'+cfg.point+'» нет среди магазинов Эвотора — выберите точку в настройках');
+    else if(!silent)toast('Товары из Эвотора: '+catalog.length);
+  }catch(e){catAll=null;pickCatalog();renderAll();if(!silent)toast('Не удалось загрузить товары из Эвотора — показываю сохранённые')}
 }
 
 /* ================= ВИТРИНА ================= */
@@ -384,7 +384,7 @@ function renderGrid(){
       '<span class="ft"><span class="pr">'+(x.price?rub(x.price):'нет цены')+'</span>'+
       (left==null?'':'<span class="st'+(left<=0?' zero':'')+'">ост. '+left+'</span>')+'</span></button>'}).join('')+
       (more>0?'<div class="more">Ещё '+more+' — уточните поиск</div>':'')
-    :'<div class="empty">'+(catalog.length?'Ничего не найдено. Попробуйте другое слово.':'Каталог пуст. Заполните лист «Каталог» в таблице и нажмите «Обновить каталог» в настройках.')+'</div>';
+    :'<div class="empty">'+(catalog.length?'Ничего не найдено. Попробуйте другое слово.':'Товаров нет. Проверьте в «Настройках», что выбрана точка, и нажмите «Обновить товары».')+'</div>';
 }
 
 /* ================= КОРЗИНА ================= */
@@ -392,7 +392,7 @@ const cartTotal=()=>cart.reduce((s,l)=>s+l.qty*l.price,0);
 function addItem(name){
   const it=catalog.find(x=>x.name===name); if(!it)return;
   const l=cart.find(x=>x.name===name);
-  if(l)l.qty++; else cart.push({name:it.name,price:it.price,cost:it.cost,qty:1});
+  if(l)l.qty++; else cart.push({id:it.id,name:it.name,price:it.price,cost:it.cost,qty:1});
   const now=cart.find(x=>x.name===name).qty;
   if(it.stock!=null&&now>it.stock)toast('Остаток по «'+it.name+'»: '+it.stock+' — проверьте');
   renderCart();renderGrid();
@@ -454,13 +454,13 @@ function confirmPay(){
   LS.set('lastMethod',payMethod);
   const number=checks.filter(c=>c.point===cfg.point).length+1;
   const c={id:(window.crypto&&crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2)),
-    number,time:new Date().toISOString(),point:cfg.point,items:cart.map(l=>({name:l.name,qty:l.qty,price:l.price,cost:l.cost})),
+    number,time:new Date().toISOString(),point:cfg.point,items:cart.map(l=>({id:l.id,name:l.name,qty:l.qty,price:l.price,cost:l.cost})),
     pay,total:t,status:isDemo()?'demo':'pending'};
   checks.unshift(c);saveChecks();
   // остаток на экране
   cart.forEach(l=>{const it=catalog.find(x=>x.name===l.name);if(it&&it.stock!=null){it.stock-=l.qty;
-    const src=(catAll||[]).find(x=>x.name===l.name&&x.point===it.point);if(src)src.stock=it.stock}});
-  if(catAll)LS.set('catalog',catAll);
+    const src=(catAll||[]).find(x=>x.id===it.id);if(src)src.stock=it.stock}});
+  if(catAll&&!isDemo())LS.set('catalog_'+cfg.point,catAll);
   cart=[];$('payScrim').hidden=true;
   renderCart();renderGrid();renderSync();
   toast('Чек №'+number+' — '+rub(t)+(payMethod==='cash'&&(+$('given').value)>t?' · сдача '+rub(+$('given').value-t):''));
@@ -543,7 +543,7 @@ $('saveSet').onclick=()=>{
   const u=$('urlIn').value.trim();
   if(u&&!validUrl(u)){$('setNote').textContent=/docs\.google/.test(u)?'Это ссылка на таблицу. Нужна ссылка скрипта: script.google.com/macros/s/…/exec':'Ссылка должна начинаться с script.google.com/macros/s/ и заканчиваться на /exec';$('setNote').className='note bad';return}
   cfg.url=u;cfg.point=$('pointSel').value;LS.set('url',u);LS.set('point',cfg.point);
-  $('setScrim').hidden=true;cart=[];loadCatalog();flush();
+  $('setScrim').hidden=true;cart=[];catAll=null;pickCatalog();renderAll();loadCatalog();flush();
 };
 $('reloadCat').onclick=()=>{loadCatalog()};
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).hidden=true);

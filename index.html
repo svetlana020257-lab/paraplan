@@ -274,6 +274,13 @@ const SHIFT_RATE = 1500;
 const SHOP_RATES = { bogatk: 2000 };
 function shiftRate(shopId){ return SHOP_RATES[shopId] || SHIFT_RATE; }
 const BASE_PCT = 4;
+// Точки с фиксированным процентом — без премий за план
+const SHOP_PCT = { shluz: 5, bogatk: 5 };
+function shopPct(shopId){ return SHOP_PCT[shopId] || BASE_PCT; }
+// Точки, которые НЕ участвуют в премиях за план (ни точки, ни сети)
+const NO_BONUS_SHOPS = ['shluz','bogatk','nikitina'];
+function bonusShop(shopId){ return !NO_BONUS_SHOPS.includes(shopId); }
+const PLAN_BONUS_PCT = 1;   // +1% за план точки и +1% за план сети — премией 15го след. месяца, по сменам
 
 const EMP_COLORS = ['#E87A1E','#4A9EE2','#4CAF50','#B07CE0','#E24B4A','#20A89F','#EFA027','#8A8A8A'];
 const ROLES = { owner:'Владелец', manager:'Управляющий', seller:'Продавец' };
@@ -804,7 +811,7 @@ function dayStatsHTML(shopId,day){
   const dayPlan=Math.round(shopPlan(shopId,d.getFullYear(),d.getMonth()+1)/new Date(d.getFullYear(),d.getMonth()+1,0).getDate());
   const pct=dayPlan?Math.round(rev/dayPlan*100):0;
   const avg=checks?Math.round(rev/checks):0;
-  const shiftPay=Math.round(shiftRate(shopId)+rev*BASE_PCT/100);
+  const shiftPay=Math.round(shiftRate(shopId)+rev*shopPct(shopId)/100);
   return `<div class="card"><div class="stat-row">
       <div class="stat-card wide" style="cursor:pointer" onclick="openDayDetail('${day}','${shopId}')">
         <div class="stat-lbl"><i class="ti ti-cash-banknote"></i>Выручка за день</div>
@@ -815,7 +822,7 @@ function dayStatsHTML(shopId,day){
       <div class="stat-card"><div class="stat-lbl">Средний чек</div><div class="stat-val num">${avg?fmt(avg):'—'}</div></div>
       <div class="stat-card wide"><div class="stat-lbl"><i class="ti ti-user-dollar"></i>ЗП за смену (оценка)</div>
         <div class="stat-val num">${fmt(shiftPay)}</div>
-        <div class="stat-sub">ставка ${fmt(shiftRate(shopId))} + ${BASE_PCT}% с выручки</div></div>
+        <div class="stat-sub">ставка ${fmt(shiftRate(shopId))} + ${shopPct(shopId)}% с выручки</div></div>
     </div></div>`;
 }
 
@@ -832,11 +839,13 @@ function ratesCardHTML(shopId){
         <div class="stat-sub">${SHOP_RATES[shopId]?'своя ставка точки · ':''}неполная смена — по часам</div></div>
     </div>
     <div style="background:var(--s2);border-radius:12px;padding:12px">
-      <div style="display:flex;font-size:13px;padding:4px 0"><span>База</span><span style="margin-left:auto;font-weight:600">${BASE_PCT}%</span></div>
-      <div style="display:flex;font-size:13px;padding:4px 0;color:${s.pct>=100?'var(--green)':'var(--t3)'}"><span>+1% за план точки ${s.pct>=100?'✓':'· '+word+' '+s.pct+'%'}</span><span style="margin-left:auto;font-weight:600">${s.pct>=100?'+1%':'—'}</span></div>
-      <div style="display:flex;font-size:13px;padding:4px 0;color:${n.pct>=100?'var(--green)':'var(--t3)'}"><span>+1% за план сети ${n.pct>=100?'✓':'· '+word+' '+n.pct+'%'}</span><span style="margin-left:auto;font-weight:600">${n.pct>=100?'+1%':'—'}</span></div>
+      <div style="display:flex;font-size:13px;padding:4px 0"><span>Процент с выручки</span><span style="margin-left:auto;font-weight:600">${shopPct(shopId)}%</span></div>
+      ${bonusShop(shopId)?`
+      <div style="display:flex;font-size:13px;padding:4px 0;color:${s.pct>=100?'var(--green)':'var(--t3)'}"><span>Премия 1% за план точки ${s.pct>=100?'✓':'· '+word+' '+s.pct+'%'}</span><span style="margin-left:auto;font-weight:600">${s.pct>=100?fmt(Math.round(s.fact*PLAN_BONUS_PCT/100)):'—'}</span></div>
+      <div style="display:flex;font-size:13px;padding:4px 0;color:${n.pct>=100?'var(--green)':'var(--t3)'}"><span>Премия 1% за план сети ${n.pct>=100?'✓':'· '+word+' '+n.pct+'%'}</span><span style="margin-left:auto;font-weight:600">${n.pct>=100?'✓':'—'}</span></div>`
+      :`<div style="font-size:12px;padding:4px 0;color:var(--t3)">Фиксированный процент — премии за план на эту точку не начисляются</div>`}
     </div>
-    <div class="mono-hint">Бонусы +1% начисляются только при пройденном обучении — по каждому сотруднику отдельно.</div>
+    ${bonusShop(shopId)?`<div class="mono-hint">Премии за план — это 1% с выручки точки (и 1% с выручки сети). Делятся между сотрудниками пропорционально отработанным сменам и выплачиваются 15го числа следующего месяца.</div>`:''}
   </div>`;
 }
 function renderSalary(){
@@ -862,6 +871,7 @@ function renderSalary(){
 
 async function loadSalaryInto(shopId,boxId){
   salTarget={id:boxId,shop:shopId};
+  bonusCache={};
   const box=document.getElementById(boxId); if(!box) return;
   const now=planMonth;
   const monthLbl=`${MON_NOM[now.getMonth()]} ${now.getFullYear()}`;
@@ -872,7 +882,10 @@ async function loadSalaryInto(shopId,boxId){
   }
   if(!document.getElementById(boxId)) return;
   if(!d){ box.innerHTML=`<div class="card"><div class="empty" style="padding:18px 0">Нет связи с таблицей — расчёт недоступен</div></div>`; return; }
-  let rows=d.rows||[];
+  let rows=(d.rows||[]).map(r=>recalcRow(r,shopId));
+  const bonus=await planBonuses(shopId,now,rows);
+  if(!document.getElementById(boxId)) return;
+  rows.forEach(r=>applyBonus(r,bonus[r.name]));
   if(currentUser.role==='seller') rows=rows.filter(r=>r.name===currentUser.name);
   const head=`<div class="card-title"><i class="ti ti-calculator"></i><span class="t">Расчёт по сотрудникам</span><span class="tail">${monthLbl}</span></div>`;
   if(!rows.length){ box.innerHTML=`<div class="card">${head}<div class="empty" style="padding:18px 0">Нет сотрудников на этой точке</div></div>`; return; }
@@ -894,7 +907,6 @@ async function loadSalaryInto(shopId,boxId){
         <div style="display:flex;gap:8px;font-size:11px;color:var(--t3);margin-bottom:10px">
           <span>${fmt(r.rate)}/смена</span><span>·</span>
           <span style="color:${r.pct>BASE_PCT?'var(--green)':'var(--t3)'}">${r.pct}% с выручки</span>
-          ${!r.trained?'<span>·</span><span class="ac-wn">без обучения</span>':''}
         </div>
         ${salPeriod('Аванс · 1–15 · выплата 30го',r.p1,r.pct,day&&day<=15)}
         ${salPeriod('Основная · 16–31 · выплата 15го',r.p2,r.pct,day>15)}
@@ -902,7 +914,9 @@ async function loadSalaryInto(shopId,boxId){
         <div style="display:flex;align-items:center">
           <span style="font-weight:700;font-size:13px">Итого · ${r.shifts} см. · ${r.hours||0} ч</span>
           <span style="margin-left:auto;font-family:var(--font-head);font-size:19px;color:var(--or)">${fmt(r.total)}</span></div>
-        ${(r.plus||r.minus)?`<div style="display:flex;font-size:11px;color:var(--t3);margin-top:3px">
+        ${(r.plus||r.minus||r.planBonus)?`<div style="display:flex;font-size:11px;color:var(--t3);margin-top:3px">
+          ${r.planBonus?`<span style="color:var(--green)">за план +${fmt(r.planBonus)}</span>`:''}
+          ${r.planBonus&&(r.plus||r.minus)?'<span style="margin:0 5px">·</span>':''}
           ${r.plus?`<span style="color:var(--green)">премии +${fmt(r.plus)}</span>`:''}
           ${r.plus&&r.minus?'<span style="margin:0 5px">·</span>':''}
           ${r.minus?`<span style="color:var(--red)">вычеты −${fmt(r.minus)}</span>`:''}</div>`:''}
@@ -913,10 +927,70 @@ async function loadSalaryInto(shopId,boxId){
     <div class="mono-hint">Ставка ${fmt(shiftRate(shopId))} делится по часам: смена на ${d.shopHours?Math.round(d.shopHours/2):6} ч из ${d.shopHours||12} = половина ставки. Процент — с выручки, которую сотрудник сдал сам.</div>
   </div>`;
 }
+/* ═══ Процент и премии за план (считаются здесь, поверх ответа таблицы) ═══
+   База: 4% с выручки (Шлюз и Богаткова — 5%).
+   План точки → 1% с выручки точки, план сети → 1% с выручки сети:
+   делится между сотрудниками по отработанным сменам, выплата 15го след. месяца (в период 16–31). */
+function recalcRow(r,shopId){
+  const pct=shopPct(shopId);
+  const fix=p=>{ if(!p) return p;
+    const adjSum=(+p.total||0)-(+p.earned||0);
+    const pctSum=Math.round((+p.revenue||0)*pct/100);
+    const earned=(+p.base||0)+pctSum;
+    return {...p,pctSum,earned,total:earned+adjSum};
+  };
+  const p1=fix(r.p1), p2=fix(r.p2);
+  return {...r,pct,p1,p2,total:(p1?p1.total:0)+(p2?p2.total:0)};
+}
+// Отработанные смены в «полных сменах» — неполная смена считается долей по часам
+function shiftEq(r){
+  const one=p=>{ if(!p) return 0; return r.rate? (+p.base||0)/r.rate : (+p.shifts||0); };
+  return one(r.p1)+one(r.p2);
+}
+let bonusCache={};
+async function planBonuses(shopId,month,rows){
+  const res={};
+  if(!bonusShop(shopId)) return res;
+  const y=month.getFullYear(), m=month.getMonth()+1;
+  const add=(name,t,sum)=>{ if(sum<=0) return; (res[name]=res[name]||[]).push({t,sum}); };
+  // План точки
+  const s=monthStats(shopId,month);
+  if(s.pct>=100){
+    const pool=Math.round(s.fact*PLAN_BONUS_PCT/100);
+    const tot=rows.reduce((a,r)=>a+shiftEq(r),0);
+    if(tot) rows.forEach(r=>add(r.name,'премия за план точки',Math.round(pool*shiftEq(r)/tot)));
+  }
+  // План сети — общий котёл со всех участвующих точек, делится по сменам по всей сети
+  const n=monthStats(null,month);
+  if(n.pct>=100){
+    const shops=appData.shops.map(x=>x.id).filter(bonusShop);
+    const key=y+'-'+m;
+    if(!bonusCache[key]){
+      const all=await Promise.all(shops.map(id=>id===shopId?Promise.resolve(rows):
+        gasGet({action:'getSalaryV2',shop:id,shopName:shopName(id),year:y,month:m})
+          .then(r=>r.ok?(r.data.rows||[]):null).catch(()=>null)));
+      if(all.some(x=>x===null)) return res;   // не все точки ответили — не показываем, чтобы не ошибиться
+      bonusCache[key]=all.reduce((a,list)=>a+list.reduce((b,r)=>b+shiftEq(r),0),0);
+    }
+    const tot=bonusCache[key];
+    const pool=Math.round(shops.reduce((a,id)=>a+revMonth(id,y,m),0)*PLAN_BONUS_PCT/100);
+    if(tot) rows.forEach(r=>add(r.name,'премия за план сети',Math.round(pool*shiftEq(r)/tot)));
+  }
+  return res;
+}
+function applyBonus(r,list){
+  if(!list||!list.length) return;
+  const sum=list.reduce((a,b)=>a+b.sum,0);
+  const p2=r.p2||{shifts:0,base:0,revenue:0,pctSum:0,earned:0,total:0,adjList:[]};
+  r.p2={...p2,bonusList:list,total:(+p2.total||0)+sum};
+  r.total+=sum; r.planBonus=sum;
+}
 const ADJ_ICO={'премия':'gift','нлк':'flame','доплата':'plus','аванс':'wallet','штраф':'alert-triangle','недостача':'package-off','вычет':'minus'};
 function salPeriod(title,p,pct,active){
-  if(!p||(!p.shifts&&!p.adj)) return `<div style="display:flex;font-size:12px;color:var(--t3);padding:5px 0"><span>${title}</span><span style="margin-left:auto">—</span></div>`;
+  if(!p||(!p.shifts&&!p.adj&&!(p.bonusList||[]).length)) return `<div style="display:flex;font-size:12px;color:var(--t3);padding:5px 0"><span>${title}</span><span style="margin-left:auto">—</span></div>`;
   const adj=p.adjList||[];
+  const bon=p.bonusList||[];
+  const prelim=isCurMonth(planMonth)?' · предварительно':'';
   return `<div style="padding:7px 0;border-top:1px solid var(--border)">
     <div style="display:flex;align-items:center;margin-bottom:5px">
       <span style="font-size:12px;font-weight:600;color:${active?'var(--or)':'var(--t2)'}">${title}</span>
@@ -929,6 +1003,10 @@ function salPeriod(title,p,pct,active){
       <i class="ti ti-${ADJ_ICO[a.type]||'dots'}" style="font-size:14px;margin-right:5px"></i>
       <span>${a.type}${a.note?' · '+a.note:''}</span>
       <span style="margin-left:auto;font-weight:600">${a.sum>0?'+':'−'}${fmt(Math.abs(a.sum))}</span></div>`).join('')}
+    ${bon.map(b=>`<div style="display:flex;font-size:12px;padding:2px 0;color:var(--green)">
+      <i class="ti ti-trophy" style="font-size:14px;margin-right:5px"></i>
+      <span>${b.t}${prelim}</span>
+      <span style="margin-left:auto;font-weight:600">+${fmt(b.sum)}</span></div>`).join('')}
     <div style="display:flex;font-size:13px;padding:4px 0;border-top:1px solid var(--border);margin-top:3px">
       <span style="font-weight:700">К выплате</span><span style="margin-left:auto;font-weight:700;color:var(--or)">${fmt(p.total)}</span></div>
   </div>`;
@@ -1303,15 +1381,16 @@ const HINTS={
   salary:{ title:'Как считается зарплата', sub:'Периоды, формула, премии', icon:'ti-cash', color:'var(--or)', bg:'rgba(232,122,30,.15)', steps:[
     {n:'📅',t:'Два периода',d:'Зарплата выплачивается 2 раза в месяц.'},
     {n:'30',t:'Выплата 30го — смены 1–15',d:'Входит только: выходы на смены + процент с выручки. НЛК, премии и инвентура сюда не входят — они в следующей выплате.'},
-    {n:'15',t:'Выплата 15го — смены 16–31',d:'Входит: выходы на смены + % с выручки + НЛК + премии за точку − вычет инвентуры.'},
-    {n:'∑',t:'Формула',d:'смены × ставка точки + % с выручки + НЛК + премии за точку − инвентура.'},
+    {n:'15',t:'Выплата 15го — смены 16–31',d:'Входит: выходы на смены + % с выручки + премии за план прошедшего месяца + НЛК + премии за точку − вычет инвентуры.'},
+    {n:'∑',t:'Формула',d:'смены × ставка точки + 4% с выручки + премии за план + НЛК + премии за точку − инвентура.'},
     {n:'?',t:'Вопросы или неточности',d:'Напишите сначала @Светлане — проверим вместе.'},
   ]},
   motivation:{ title:'Система мотивации', sub:'Ставки и бонусы за план', icon:'ti-trophy', color:'var(--or)', bg:'rgba(232,122,30,.15)', steps:[
-    {n:'₽',t:'Ставка за смену',d:'1500 ₽ + 4% с выручки, на Богатковой — 2000 ₽ + 4%. Ставка зависит от точки, где отработана смена (подмена тоже). Неполная смена считается по часам.'},
-    {n:'+1',t:'Личный план точки',d:'+1% начисляется при выполнении плана вашей точки.'},
-    {n:'+1',t:'Общий план сети 🤝',d:'+1% — премия делится между всеми точками пропорционально отработанным сменам. Работаем как одна команда.'},
-    {n:'!',t:'Только с обучением',d:'Оба бонуса начисляются только при пройденном обучении. Без обучения план не засчитывается.'},
+    {n:'₽',t:'Ставка за смену',d:'1500 ₽ + 4% с выручки. На Шлюзе — 1500 ₽ + 5%, на Богатковой — 2000 ₽ + 5%. Ставка зависит от точки, где отработана смена (подмена тоже). Неполная смена считается по часам.'},
+    {n:'+1',t:'Премия за план точки',d:'Если точка выполнила план — 1% с её выручки за месяц идёт в премию. Делится между сотрудниками точки пропорционально отработанным сменам.'},
+    {n:'+1',t:'Премия за план сети 🤝',d:'Если сеть выполнила план — ещё 1% с выручки сети делится между всеми сотрудниками пропорционально отработанным сменам. Работаем как одна команда.'},
+    {n:'15',t:'Когда выплачивается',d:'Премии за план выплачиваются 15го числа следующего месяца, вместе с основной зарплатой.'},
+    {n:'!',t:'Исключения',d:'Шлюз и Богаткова работают на фиксированном проценте (5%) — премии за план там не начисляются. Никитина в премиях за план не участвует.'},
   ]},
 };
 function openHint(key){ const h=HINTS[key]; if(!h) return;

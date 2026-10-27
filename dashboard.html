@@ -296,6 +296,14 @@ window.__ppRole = 'manager';
 .pp-spark svg { display: block; }
 .pp-trend { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; min-height: 1.3em; }
 .pp-trend.up { color: var(--green); } .pp-trend.down { color: var(--red); } .pp-trend.flat { color: var(--t2); }
+.pp-drop { display: flex; align-items: center; gap: 12px; padding: 16px; border: 1.5px dashed var(--s4); border-radius: 12px; background: var(--s2); cursor: pointer; font-size: 13px; color: var(--t2); transition: border-color .15s, background .15s; }
+.pp-drop b { color: var(--t1); font-weight: 600; }
+.pp-drop:hover, .pp-drop.over { border-color: var(--or); background: rgba(232,122,30,.08); }
+.pp-drop-ic { font-size: 22px; color: var(--or); }
+.pp-doc-files { display: flex; flex-wrap: wrap; gap: 6px; }
+.pp-doc-files span { font-size: 12px; padding: 3px 9px; border-radius: 20px; background: var(--s3); color: var(--t2); }
+.pp-doc-files span.bad { background: rgba(226,75,74,.15); color: var(--red); }
+.pp-doc-files select { font: inherit; font-size: 12px; background: var(--s3); color: var(--t1); border: 1px solid var(--s4); border-radius: 8px; padding: 2px 6px; }
 .pp-foot { font-size: 11.5px; color: var(--t3); }
 @media (max-width: 520px) { .pp-br { grid-template-columns: 5.2rem 1fr 2.8rem; } .pp-hide-n { display: none; } }
 </style>
@@ -492,7 +500,7 @@ window.__ppRole = 'manager';
   <section class="pp-page" id="moe" role="tabpanel" aria-labelledby="tab-moe" hidden>
     <div class="pp-imp" id="vazhno">
       <h2 class="pp-imp-h">Важно</h2>
-      <div class="pp-imp-list dash-skeleton" id="imp-list" data-source="price_flags stock_flags card_dups doc_checks"></div>
+      <div class="pp-imp-list dash-skeleton" id="imp-list" data-source="price_flags stock_flags card_dups"></div>
     </div>
     <h2 class="pp-sec" id="sec-ceny">Цены</h2>
     <div class="pp-tools">
@@ -529,15 +537,22 @@ window.__ppRole = 'manager';
     <h2 class="pp-sec" id="sec-dubli">Дубли и минуса</h2>
     <p class="pp-take" id="db-take"><span class="dash-skeleton">—</span></p>
     <div class="pp-card" id="card-docs">
-      <div class="pp-ch"><h2 class="pp-ct">Документы: дубли и перемещения без пары</h2><p class="pp-cn">Поступления и списания за 30 дней. Дубль — на точке два одинаковых документа в пределах 3 дней. Без пары — списание с точки, которому нет такого же поступления на другой точке (±2 дня), и наоборот.</p></div>
+      <div class="pp-ch"><h2 class="pp-ct">Документы ЛК Эвотора: дубли, перемещения, черновики</h2><p class="pp-cn">Эвотор не отдаёт документы личного кабинета автоматически, поэтому — выгрузкой. В ЛК: Документы → нужная точка → период → «Экспорт». В названии файла должна быть точка (например, «Москва.xlsx»). Перетащи сюда файлы всех точек сразу.</p></div>
+      <label class="pp-drop" id="doc-drop">
+        <input type="file" id="doc-files" accept=".xlsx" multiple hidden>
+        <span class="pp-drop-ic" aria-hidden="true">⇪</span>
+        <span><b>Перетащи выгрузки сюда</b> или нажми, чтобы выбрать файлы</span>
+      </label>
+      <div class="pp-doc-files" id="doc-filelist"></div>
       <div class="pp-tablewrap">
-        <table class="pp-table" id="doc-table" data-source="doc_checks" data-row-key="key">
+        <table class="pp-table" id="doc-table">
           <thead><tr>
-            <th class="lft" data-field="kind" data-k="kind"><button class="pp-sort">Что</button></th>
-            <th data-field="point" data-k="point"><button class="pp-sort">Точка</button></th>
-            <th data-field="day" data-k="day"><button class="pp-sort">Дата</button></th>
-            <th class="lft" data-field="what" data-k="what"><button class="pp-sort">Товары</button></th>
-            <th class="lft" data-field="docs" data-k="docs"><button class="pp-sort">Документы</button></th>
+            <th class="lft" data-k="rank"><button class="pp-sort">Что</button></th>
+            <th data-k="point"><button class="pp-sort">Точка</button></th>
+            <th data-k="at"><button class="pp-sort">Дата</button></th>
+            <th class="lft" data-k="doc"><button class="pp-sort">Документ</button></th>
+            <th data-k="cost"><button class="pp-sort">Закупка</button></th>
+            <th class="lft" data-k="note"><button class="pp-sort">Подробности</button></th>
           </tr></thead><tbody></tbody>
         </table>
       </div>
@@ -1750,11 +1765,10 @@ dash.calc('promo_point', {
     const checks = dc === 'ok' ? dash.data('doc_checks').data : [];
     const cards = cd === 'ok' ? dash.data('card_dups').data : [];
     const neg = sf === 'ok' ? dash.data('stock_flags').data.filter((r) => r.qty < 0) : [];
-    if (dc === 'ok') gTable('#doc-table', 'doc', checks, (r) => enc(r.key), (r) => [[r.kind, 'lft'], [r.point], [fmtDay(r.day)], [r.what, 'wrap'], [r.docs, 'wrap mut']],
-      docsRaw.length ? 'Дублей и перемещений без пары нет.' : 'Эвотор пока не отдал ни одного поступления или списания — лист «Эвотор_Документы» пустой. Нужно проверить, какие типы документов видит скрипт.');
+    drawDocUploads();
     if (cd === 'ok') gTable('#cdup-table', 'card', cards, (r) => enc(r.point) + ',' + enc(r.match), (r) => [[r.point, 'lft'], [(() => { const w = document.createElement('span'); w.append(tag(r.kind === 'Общий штрихкод' ? 'штрихкод ' + r.match : 'название', 'or')); return w; })(), 'lft'], [r.names.split(' | ').join('\n'), 'wrap'], [r.stocks]]);
     if (sf === 'ok') gTable('#neg2-table', 'neg2', neg, (r) => enc(r.point) + ',' + enc(r.id), (r) => [[r.name, 'wrap'], [r.point], [fq(r.qty)], [fdate(r.last_sale)]]);
-    if (dc === 'ok' && cd === 'ok' && sf === 'ok') $('#db-take').textContent = `К понедельнику проверить: ${checks.length} по документам, ${cards.length} дублей карточек, ${neg.length} минусов.` + (docsRaw.length ? '' : ' Документы Эвотор пока не отдаёт.');
+    if (cd === 'ok' && sf === 'ok') $('#db-take').textContent = `К понедельнику проверить: ${docResults ? docResults.filter((r) => r.rank <= 4).length + ' по документам, ' : ''}${cards.length} дублей карточек, ${neg.length} минусов.` + (docResults ? '' : ' Документы — загрузи выгрузки из ЛК в блок ниже.');
   }
 
   // ===== Разные названия =====
@@ -1766,6 +1780,141 @@ dash.calc('promo_point', {
     gTable('#names-table', 'names', dash.data('name_diffs').data, (r) => enc(r.barcode), (r) => [[r.barcode, 'lft'], [nf.format(r.variants)], [r.names, 'wrap']], hasCodes ? 'Расхождений в названиях нет.' : 'Штрихкоды появятся после ночной загрузки обновлённого скрипта остатков.');
   }
 
+
+  // ===== Документы ЛК: выгрузки =====
+  // мини-читалка .xlsx: zip (DecompressionStream) + разбор XML первого листа
+  async function ppReadXlsx(buf) {
+    const u8 = new Uint8Array(buf), dv = new DataView(buf);
+    let eocd = -1;
+    for (let i = u8.length - 22; i >= Math.max(0, u8.length - 70000); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    if (eocd < 0) throw new Error('это не файл Excel (.xlsx)');
+    const n = dv.getUint16(eocd + 10, true); let p = dv.getUint32(eocd + 16, true);
+    const files = {}; const td = new TextDecoder();
+    for (let k = 0; k < n; k++) {
+      const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nlen = dv.getUint16(p + 28, true), elen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true), lho = dv.getUint32(p + 42, true);
+      const name = td.decode(u8.subarray(p + 46, p + 46 + nlen));
+      files[name] = { method, csize, lho };
+      p += 46 + nlen + elen + clen;
+    }
+    const read = async (name) => {
+      const f = files[name]; if (!f) return null;
+      const ln = dv.getUint16(f.lho + 26, true), le = dv.getUint16(f.lho + 28, true);
+      const data = u8.subarray(f.lho + 30 + ln + le, f.lho + 30 + ln + le + f.csize);
+      if (f.method === 0) return td.decode(data);
+      const ds = new DecompressionStream('deflate-raw');
+      const out = await new Response(new Blob([data]).stream().pipeThrough(ds)).arrayBuffer();
+      return td.decode(out);
+    };
+    const unx = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#(\d+);/g, (m, c) => String.fromCharCode(+c)).replace(/&amp;/g, '&');
+    const ssXml = await read('xl/sharedStrings.xml');
+    const ss = ssXml ? [...ssXml.matchAll(/<si>([\s\S]*?)<\/si>/g)].map((m) => unx([...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map((t) => t[1]).join(''))) : [];
+    const sheetName = Object.keys(files).filter((f) => /^xl\/worksheets\/sheet\d+\.xml$/.test(f)).sort()[0];
+    const xml = await read(sheetName);
+    if (!xml) throw new Error('в файле нет листа');
+    const rows = [];
+    const col = (ref) => { let c = 0; for (const ch of ref.replace(/\d+/g, '')) c = c * 26 + ch.charCodeAt(0) - 64; return c - 1; };
+    for (const rm of xml.matchAll(/<row[^>]*?r="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)) {
+      const r = []; 
+      for (const cm of rm[2].matchAll(/<c\s([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+        const attrs = cm[1], body = cm[2] || '';
+        const ref = (attrs.match(/r="([A-Z]+\d+)"/) || [])[1]; const t = (attrs.match(/t="(\w+)"/) || [])[1];
+        const v = (body.match(/<v>([\s\S]*?)<\/v>/) || [])[1];
+        let val = '';
+        if (t === 's') val = ss[+v] ?? '';
+        else if (t === 'inlineStr') val = unx([...body.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map((x) => x[1]).join(''));
+        else if (v != null) val = t === 'str' ? unx(v) : (isNaN(+v) ? unx(v) : +v);
+        r[ref ? col(ref) : r.length] = val;
+      }
+      rows[+rm[1] - 1] = r;
+    }
+    return rows.filter(Boolean).map((r) => Array.from(r, (x) => (x === undefined ? '' : x)));
+  }
+  const PP_POINTS = ['Богаткова', 'Горский', 'Громова', 'Династия', 'Зорге', 'Коротаева', 'Москва', 'Никитина', 'Петухова', 'Планировочная', 'Титова', 'Шлюз'];
+  const ppPointOf = (txt) => {
+    const t = String(txt || '').toLowerCase().replace(/ё/g, 'е').trim();
+    if (!t) return null;
+    const alias = [['склад', 'Склад'], ['план', 'Планировочная'], ['чемск', 'Коротаева'], ['корот', 'Коротаева'], ['софий', 'Шлюз'], ['шлюз', 'Шлюз'], ['тц москва', 'Москва'], ['москв', 'Москва'], ['зорге', 'Зорге'], ['громов', 'Громова'], ['горск', 'Горский'], ['династ', 'Династия'], ['петухов', 'Петухова'], ['никитин', 'Никитина'], ['богатк', 'Богаткова'], ['титов', 'Титова']];
+    for (const [k, v] of alias) if (t.includes(k)) return v;
+    return null;
+  };
+  let docFiles = [];   // {file, point, rows, error}
+  let docResults = null;
+  gSort.doc = { k: 'rank', dir: 1 };
+  const dropEl = $('#doc-drop'), fileIn = $('#doc-files');
+  dropEl.addEventListener('dragover', (e) => { e.preventDefault(); dropEl.classList.add('over'); });
+  dropEl.addEventListener('dragleave', () => dropEl.classList.remove('over'));
+  dropEl.addEventListener('drop', (e) => { e.preventDefault(); dropEl.classList.remove('over'); addDocFiles(e.dataTransfer.files); });
+  fileIn.addEventListener('change', () => { addDocFiles(fileIn.files); fileIn.value = ''; });
+
+  async function addDocFiles(list) {
+    for (const f of [...list]) {
+      const entry = { file: f.name, point: ppPointOf(f.name.replace(/\.xlsx$/i, '')), rows: [], error: '' };
+      try { entry.rows = await ppReadXlsx(await f.arrayBuffer()); } catch (e) { entry.error = e.message; }
+      docFiles = docFiles.filter((d) => d.file !== f.name).concat([entry]);
+    }
+    checkDocs(); draw();
+  }
+
+  function checkDocs() {
+    const docs = [];
+    for (const f of docFiles) {
+      if (f.error || !f.point || !f.rows.length) continue;
+      const h = f.rows[0].map((x) => String(x).trim().toLowerCase());
+      const ix = (re) => h.findIndex((x) => re.test(x));
+      const iD = ix(/дата/), iN = ix(/номер/), iT = ix(/^тип/), iC = ix(/закуп/), iS = ix(/^сумма/), iK = ix(/коммент/), iP = 0;
+      for (const r of f.rows.slice(1)) {
+        const type = String(r[iT] || '').replace(/^\*/, '').trim();
+        if (!type || /^продажа|^возврат|^реализац/i.test(type)) continue;
+        const m = String(r[iD] || '').match(/(\d{2})\.(\d{2})\.(\d{4})\s*(\d{1,2}):(\d{2})/);
+        if (!m) continue;
+        const at = `${m[3]}-${m[2]}-${m[1]}T${m[4].padStart(2, '0')}:${m[5]}`;
+        const comment = String(r[iK] ?? '').trim();
+        const parts = comment.split(/\s*[-–—]\s*/);
+        const from = parts.length === 2 ? ppPointOf(parts[0]) : null, to = parts.length === 2 ? ppPointOf(parts[1]) : null;
+        docs.push({ point: f.point, at, t: Date.parse(at), number: String(r[iN] ?? ''), type, cost: Number(r[iC]) || 0, sum: Number(r[iS]) || 0, comment, from, to, done: /провед/i.test(String(r[iP])), used: false });
+      }
+    }
+    const out = [], DAY = 864e5;
+    const docName = (d) => `${d.type} №${d.number}`;
+    const loaded = new Set(docFiles.filter((f) => f.point && !f.error).map((f) => f.point));
+    for (const d of docs) if (!d.done) out.push({ rank: 1, kind: 'Черновик — не проведён', cls: 'red', ...d, note: d.comment || '—' });
+    // дубли
+    for (let i = 0; i < docs.length; i++) for (let j = i + 1; j < docs.length; j++) {
+      const a = docs[i], b = docs[j];
+      if (a.point === b.point && a.type === b.type && a.cost === b.cost && a.sum === b.sum && a.cost > 0 && Math.abs(a.t - b.t) <= 3 * DAY && a.done && b.done)
+        out.push({ rank: 2, kind: 'Похоже на дубль', cls: 'red', ...b, note: `${docName(a)} от ${a.at.slice(8, 10)}.${a.at.slice(5, 7)} на ту же сумму${a.comment === b.comment ? ', тот же комментарий' : ''}` });
+    }
+    // перемещения
+    const isOut = (d) => /списание|перемещение исх/i.test(d.type), isIn = (d) => /поступление|перемещение вх/i.test(d.type);
+    const near = (a, b) => Math.abs(a.t - b.t) <= 3 * DAY && Math.abs(a.cost - b.cost) <= Math.max(1, a.cost * 0.01);
+    for (const o of docs.filter((d) => d.done && isOut(d) && d.from && d.to && d.to !== 'Склад' && d.to !== d.point)) {
+      if (!loaded.has(o.to)) { out.push({ rank: 5, kind: 'Пару не проверить', cls: 'gr', ...o, note: `нет выгрузки точки ${o.to}` }); continue; }
+      const pair = docs.find((d) => !d.used && d.done && isIn(d) && d.point === o.to && d.from === o.from && d.to === o.to && near(d, o));
+      if (pair) { pair.used = true; o.used = true; } else out.push({ rank: 3, kind: 'Списание без поступления', cls: 'or', ...o, note: `«${o.comment}»: на ${o.to} нет поступления на ${rub(o.cost)} в пределах 3 дней` });
+    }
+    for (const n of docs.filter((d) => d.done && isIn(d) && !d.used && d.from && d.to && d.from !== 'Склад' && d.from !== d.point && loaded.has(d.from))) {
+      out.push({ rank: 3, kind: 'Поступление без списания', cls: 'or', ...n, note: `«${n.comment}»: на ${n.from} нет списания на ${rub(n.cost)} в пределах 3 дней` });
+    }
+    for (const d of docs.filter((d) => d.done && /поступление/i.test(d.type) && !d.comment)) out.push({ rank: 4, kind: 'Поступление без комментария', cls: 'gr', ...d, note: 'не указан поставщик или откуда товар' });
+    for (const d of docs.filter((d) => d.done && /списание/i.test(d.type) && !d.comment)) out.push({ rank: 4, kind: 'Списание без причины', cls: 'gr', ...d, note: 'не указано, куда или почему списано' });
+    for (const d of docs.filter((d) => d.done && /инвентар/i.test(d.type))) out.push({ rank: 6, kind: 'Инвентаризация', cls: 'gr', ...d, note: `разница по сумме ${rub(d.sum)}` });
+    docResults = out.map((r, k) => ({ ...r, doc: docName(r), key: k }));
+  }
+
+  function drawDocUploads() {
+    const fl = $('#doc-filelist'); fl.replaceChildren();
+    docFiles.forEach((f, idx) => {
+      if (f.error) { const sp = document.createElement('span'); sp.className = 'bad'; sp.textContent = `${f.file}: ${f.error}`; fl.append(sp); return; }
+      if (!f.point) {
+        const sel = document.createElement('select'); sel.append(new Option(`${f.file}: какая точка?`, ''), ...PP_POINTS.map((p) => new Option(p, p)));
+        sel.addEventListener('change', () => { docFiles[idx].point = sel.value || null; checkDocs(); draw(); }); fl.append(sel); return;
+      }
+      const sp = document.createElement('span'); sp.textContent = `${f.point} · ${Math.max(0, f.rows.length - 1)} док.`; fl.append(sp);
+    });
+    if (!docResults) { gTable('#doc-table', 'doc', [], (r) => '', () => [], 'Перетащи выгрузки документов — проверка появится сразу. Файлы никуда не отправляются, всё считается здесь, в браузере.'); return; }
+    gTable('#doc-table', 'doc', docResults, (r) => String(r.key), (r) => [[tag(r.kind, r.cls), 'lft'], [r.point], [fmtDay(r.at.slice(0, 10)) + ', ' + r.at.slice(11)], [r.doc, 'lft'], [rub(r.cost)], [r.note, 'wrap mut']], 'Проблем не нашлось.');
+  }
+
   // ===== Важно =====
   function drawImportant() {
     const el = $('#imp-list');
@@ -1775,20 +1924,20 @@ dash.calc('promo_point', {
     const pf = ok('price_flags') ? dash.data('price_flags').data : [];
     const sfl = ok('stock_flags') ? dash.data('stock_flags').data : [];
     const cards = ok('card_dups') ? dash.data('card_dups').data : [];
-    const checks = ok('doc_checks') ? dash.data('doc_checks').data : [];
+    const checks = docResults ? docResults.filter((r) => r.rank <= 4) : [];
     const items = [
       [pf.filter((r) => r.reason === 'below').length, 'продаются ниже закупки', 'поставить новую цену', 'card-prices', 'below', 'red'],
       [pf.filter((r) => r.reason === 'up').length, 'вырос закуп, цена прежняя', 'поднять цену', 'card-prices', 'up', 'or'],
       [sfl.filter((r) => r.low).length, 'заканчиваются до поставки', 'заказ в понедельник', 'ostatki', null, 'or'],
       [sfl.filter((r) => r.qty < 0).length, 'позиций в минусе', 'проверить поступления', 'card-neg2', null, 'red'],
-      [checks.length, 'документов под вопросом', 'дубли и перемещения без пары', 'card-docs', null, 'yl'],
+      [docResults ? checks.length : '—', 'документов под вопросом', docResults ? 'дубли, черновики, перемещения без пары' : 'загрузи выгрузки из ЛК', 'card-docs', null, 'yl'],
       [cards.length, 'дублей карточек', 'свести списанием/оприходованием', 'card-cards', null, 'yl'],
       [(dash.data('name_diffs').status === 'ok' ? dash.data('name_diffs').data.length : 0), 'товаров с разными названиями', 'один штрихкод — разные имена', 'card-names', null, 'yl'],
       [pf.filter((r) => r.reason === 'low').length, 'с наценкой ниже нормы', 'проверить цену', 'card-prices', 'low', 'yl'],
     ];
     items.forEach(([n, t, sub, pg, reason, cls]) => {
-      const b = document.createElement('button'); b.className = 'pp-imp-i ' + (n ? cls : 'ok');
-      const nn = document.createElement('span'); nn.className = 'pp-imp-n'; nn.textContent = nf.format(n);
+      const b = document.createElement('button'); b.className = 'pp-imp-i ' + (n ? cls : 'ok'); if (n === '—') b.className = 'pp-imp-i yl';
+      const nn = document.createElement('span'); nn.className = 'pp-imp-n'; nn.textContent = typeof n === 'number' ? nf.format(n) : n;
       const tt = document.createElement('span'); tt.className = 'pp-imp-t'; tt.textContent = t; const sm = document.createElement('small'); sm.textContent = n ? sub : 'всё в порядке'; tt.append(sm);
       const go = document.createElement('span'); go.className = 'pp-imp-go'; go.textContent = '→';
       b.append(nn, tt, go);

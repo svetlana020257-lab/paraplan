@@ -59,7 +59,7 @@ body { font-family: 'PP Golos', system-ui, sans-serif; -webkit-font-smoothing: a
 /* ---- Мини-движок дашборда: те же dash.loader / dash.calc / dash.onData, что и в Claude ---- */
 (function () {
   // ▼ Сюда можно вписать ссылку на скрипт (…/exec), тогда на входе будет только пароль
-  var API_URL = '';
+  var API_URL = 'https://script.google.com/macros/s/AKfycbxmHbOp25tuoEoDgn6xcnQsQb9YSMcjh3Flc6tGgWWw3J6kWuFPZiWF1PZnx5POSIZZFA/exec';
 
   var LS = { get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
              set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} },

@@ -280,6 +280,8 @@ window.__ppRole = 'manager';
 .pp-tab-me { color: var(--or-l); }
 .pp-tab-me[hidden] { display: none; }
 .pp-bars { align-content: start; }
+.pp-top3 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); align-items: start; }
+@media (min-width: 1000px) { .pp-top3 { grid-template-columns: 1fr 1fr 1fr; } }
 .pp-trow1, .pp-trow2 { display: grid; gap: 12px; grid-template-columns: 1fr; }
 .pp-tcol { display: grid; gap: 12px; align-content: start; }
 .pp-trow1 > .pp-card, .pp-trow2 > .pp-card { display: flex; flex-direction: column; }
@@ -665,7 +667,7 @@ window.__ppRole = 'manager';
         <span class="pp-ks"><span data-source="promo_person" data-field="qty">—</span> шт.</span>
       </div>
     </div>
-    <div class="pp-grid">
+    <div class="pp-top3">
       <div class="pp-card" id="card-top-rev">
         <div class="pp-ch"><h2 class="pp-ct">Топ по выручке за смену</h2><p class="pp-cn">Средняя выручка точки в смены продавца, от 3 смен за месяц</p></div>
         <div class="pp-rank dash-skeleton" id="rank-rev" data-source="person_month"></div>
@@ -674,6 +676,7 @@ window.__ppRole = 'manager';
         <div class="pp-ch"><h2 class="pp-ct">Топ по акциям</h2><p class="pp-cn">Сколько акций продавец отметил в Кэпе за месяц</p></div>
         <div class="pp-rank dash-skeleton" id="rank-promo" data-source="promo_person"></div>
       </div>
+      <div class="pp-tcol">
       <div class="pp-card" id="card-promo-kind">
         <div class="pp-ch"><h2 class="pp-ct">Акции по видам</h2><p class="pp-cn">Продано штук за месяц</p></div>
         <div class="pp-bars pp-wide dash-skeleton" id="promo-kind" data-source="promo_kind"></div>
@@ -681,6 +684,7 @@ window.__ppRole = 'manager';
       <div class="pp-card" id="card-promo-point">
         <div class="pp-ch"><h2 class="pp-ct">Акции по точкам</h2><p class="pp-cn">Продано штук за месяц</p></div>
         <div class="pp-bars dash-skeleton" id="promo-point" data-source="promo_point"></div>
+      </div>
       </div>
     </div>
   </section>

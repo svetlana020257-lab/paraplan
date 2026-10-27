@@ -1,0 +1,1302 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0C0C0C">
+<title>Параплан · штаб</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+:root {
+  --font-anthropic-sans: 'PP Golos', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-anthropic-serif: 'PP Unbounded', Georgia, serif;
+  --cds-dur-slow: .3s; --cds-ease-out: cubic-bezier(.2,.8,.2,1);
+  --color-fg: #F2EDE6; --color-fg-muted: #A09890; --color-bg: #050505; --color-panel: #161616; --color-border-line: #2A2A2A;
+  --color-ok: #4CAF50; --color-warn: #EFA027; --color-bad: #E24B4A;
+}
+html, body { margin: 0; background: #050505; color: #F2EDE6; }
+body { font-family: 'PP Golos', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+#dash-root { max-width: 1280px; margin: 0 auto; padding: 12px; box-sizing: border-box; }
+@media (min-width: 900px) { #dash-root { padding: 24px; } }
+.dash-skeleton { position: relative; color: transparent !important; }
+.dash-skeleton:empty, .pp-bars.dash-skeleton, .pp-chart.dash-skeleton, .pp-small.dash-skeleton, .pp-roster.dash-skeleton, .pp-rank.dash-skeleton, .pp-order.dash-skeleton { min-height: 120px; }
+.dash-skeleton::after { content: ''; position: absolute; inset: 2px 0; max-width: 9rem; border-radius: 8px; background: linear-gradient(90deg, #1E1E1E, #2A2A2A, #1E1E1E); background-size: 200% 100%; animation: ppShimmer 1.4s infinite linear; }
+.pp-bars.dash-skeleton::after, .pp-chart.dash-skeleton::after, .pp-small.dash-skeleton::after, .pp-roster.dash-skeleton::after, .pp-rank.dash-skeleton::after, .pp-order.dash-skeleton::after { max-width: none; }
+@keyframes ppShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+/* вход и панель */
+.ppx-login { position: fixed; inset: 0; z-index: 50; background: #050505; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.ppx-login[hidden] { display: none; }
+.ppx-box { width: 100%; max-width: 360px; background: #161616; border: 1px solid #2A2A2A; border-radius: 18px; padding: 26px 22px; display: grid; gap: 12px; text-align: center; }
+.ppx-logo { width: 64px; height: 64px; margin: 0 auto 4px; border-radius: 18px; background: #E87A1E; color: #fff; display: flex; align-items: center; justify-content: center; font-family: 'PP Unbounded', sans-serif; font-weight: 900; font-size: 28px; box-shadow: 0 0 40px rgba(232,122,30,.3); }
+.ppx-h { font-family: 'PP Unbounded', sans-serif; font-weight: 900; font-size: 18px; letter-spacing: .04em; margin: 0; }
+.ppx-in { font: inherit; font-size: 15px; color: #F2EDE6; background: #1E1E1E; border: 1px solid #2A2A2A; border-radius: 11px; padding: 12px 14px; width: 100%; box-sizing: border-box; }
+.ppx-in:focus { outline: 2px solid #E87A1E; outline-offset: 1px; }
+.ppx-btn { font: inherit; font-size: 15px; font-weight: 600; color: #fff; background: #E87A1E; border: 0; border-radius: 11px; padding: 13px; cursor: pointer; }
+.ppx-err { color: #E24B4A; font-size: 13px; min-height: 1.2em; margin: 0; }
+.ppx-small { color: #6A6058; font-size: 12px; margin: 0; }
+.ppx-bar { max-width: 1280px; margin: 0 auto; padding: 10px 12px 0; display: flex; gap: 8px; justify-content: flex-end; align-items: center; font-size: 12px; color: #6A6058; box-sizing: border-box; }
+@media (min-width: 900px) { .ppx-bar { padding: 16px 24px 0; } }
+.ppx-bar button { font: inherit; font-size: 12px; color: #A09890; background: #161616; border: 1px solid #2A2A2A; border-radius: 9px; padding: 6px 11px; cursor: pointer; }
+.ppx-bar button:hover { color: #F2EDE6; }
+</style>
+</head>
+<body>
+<div class="ppx-login" id="ppx-login" hidden>
+  <div class="ppx-box">
+    <div class="ppx-logo">П</div>
+    <h1 class="ppx-h">ПАРАПЛАН · ШТАБ</h1>
+    <input class="ppx-in" id="ppx-api" type="url" placeholder="Ссылка на скрипт (…/exec)" autocomplete="off">
+    <input class="ppx-in" id="ppx-key" type="password" placeholder="Пароль" autocomplete="current-password">
+    <button class="ppx-btn" id="ppx-go">Войти</button>
+    <p class="ppx-err" id="ppx-err"></p>
+    <p class="ppx-small">Данные — из таблиц «Приложение», «Отчет» и «Инструктор Кэп»</p>
+  </div>
+</div>
+<div class="ppx-bar"><span id="ppx-at"></span><button id="ppx-reload">Обновить</button><button id="ppx-out">Выйти</button></div>
+
+<script>
+/* ---- Мини-движок дашборда: те же dash.loader / dash.calc / dash.onData, что и в Claude ---- */
+(function () {
+  // ▼ Сюда можно вписать ссылку на скрипт (…/exec), тогда на входе будет только пароль
+  var API_URL = '';
+
+  var LS = { get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+             set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+             del: function (k) { try { localStorage.removeItem(k); } catch (e) {} } };
+  var loaders = {}, calcs = {}, raw = {}, rawErr = {}, cache = {}, cbs = [], params = {}, loaded = false, fatal = null;
+
+  function result(id, seen) {
+    if (cache[id]) return cache[id];
+    var r;
+    if (calcs[id]) {
+      seen = seen || {};
+      if (seen[id]) return { status: 'error', data: [], message: 'цикл' };
+      seen[id] = true;
+      var ins = calcs[id].inputs.map(function (i) { return result(i, seen); });
+      var bad = ins.filter(function (x) { return x.status !== 'ok'; })[0];
+      if (bad) r = { status: bad.status, data: [], message: bad.message };
+      else {
+        try { r = { status: 'ok', data: calcs[id].fn.apply(null, ins.map(function (x) { return x.data; })) }; }
+        catch (e) { r = { status: 'error', data: [], message: String(e.message || e) }; console.error('calc ' + id, e); }
+      }
+    } else if (!loaded) r = { status: fatal ? 'error' : 'loading', data: [], message: fatal };
+    else if (rawErr[id]) r = { status: 'error', data: [], message: rawErr[id] };
+    else if (!raw[id]) r = { status: 'missing', data: [] };
+    else {
+      try {
+        var out = loaders[id] ? loaders[id].fn({ answer: raw[id], args: {} }) : raw[id];
+        if (out && Array.isArray(out.rows)) r = { status: 'ok', data: out.rows, columns: out.columns };
+        else r = { status: 'ok', data: out };
+      } catch (e) { r = { status: 'error', data: [], message: String(e.message || e) }; console.error('loader ' + id, e); }
+    }
+    r.refreshing = false; r.meta = [];
+    if (loaded || fatal) cache[id] = r;
+    return r;
+  }
+  function fire() { cbs.forEach(function (fn) { try { fn(); } catch (e) { console.error(e); } }); }
+
+  window.dash = {
+    loader: function (id, o) { loaders[id] = o; },
+    calc: function (id, o) { calcs[id] = o; },
+    data: function (id) { return result(id); },
+    onData: function (fn) { cbs.push(fn); try { fn(); } catch (e) { console.error(e); } },
+    params: function () { return Object.assign({}, params); },
+    setParams: function (p) { Object.assign(params, p); setTimeout(fire, 0); },
+    resetParams: function () { params = {}; setTimeout(fire, 0); },
+    setLink: function (name) { try { history.replaceState(null, '', '#' + name); } catch (e) { location.hash = name; } },
+    refresh: function () { load(); },
+    colors: ['#E87A1E', '#4A9EE2', '#4CAF50', '#EFA027', '#B07CE8', '#E24B4A', '#2BB3A3', '#A09890']
+  };
+
+  var box = document.getElementById('ppx-login'), apiIn = document.getElementById('ppx-api'), keyIn = document.getElementById('ppx-key'), err = document.getElementById('ppx-err');
+  function api() { return API_URL || LS.get('pp_dash_api') || ''; }
+  function showLogin(msg) {
+    apiIn.hidden = !!API_URL; apiIn.value = api(); keyIn.value = '';
+    err.textContent = msg || ''; box.hidden = false; (API_URL || apiIn.value ? keyIn : apiIn).focus();
+  }
+  function load() {
+    var url = api(), key = LS.get('pp_dash_key');
+    if (!url || !key) { showLogin(''); return; }
+    loaded = false; fatal = null; cache = {}; fire();
+    fetch(url + (url.indexOf('?') > -1 ? '&' : '?') + 'key=' + encodeURIComponent(key), { redirect: 'follow' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.ok) { LS.del('pp_dash_key'); showLogin(j.error === 'unauthorized' ? 'Неверный пароль' : 'Ошибка: ' + j.error); return; }
+        box.hidden = true;
+        raw = j.data || {}; rawErr = j.errors || {}; loaded = true; cache = {};
+        var at = new Date(j.at);
+        document.getElementById('ppx-at').textContent = 'Обновлено ' + at.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        fire();
+      })
+      .catch(function (e) { fatal = 'Не удалось загрузить данные: ' + e.message; cache = {}; fire(); showLogin('Не удалось связаться со скриптом — проверь ссылку'); });
+  }
+  document.getElementById('ppx-go').addEventListener('click', function () {
+    if (!API_URL) { var u = apiIn.value.trim(); if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(u)) { err.textContent = 'Нужна ссылка вида https://script.google.com/…/exec'; return; } LS.set('pp_dash_api', u); }
+    if (!keyIn.value) { err.textContent = 'Введи пароль'; return; }
+    LS.set('pp_dash_key', keyIn.value); err.textContent = 'Загружаю…'; load();
+  });
+  keyIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('ppx-go').click(); });
+  document.getElementById('ppx-reload').addEventListener('click', load);
+  document.getElementById('ppx-out').addEventListener('click', function () { LS.del('pp_dash_key'); showLogin(''); });
+  var t; window.addEventListener('resize', function () { clearTimeout(t); t = setTimeout(fire, 150); });
+  window.__ppLoad = load;
+})();
+</script>
+<div id="dash-root">
+<link rel="stylesheet" href="dashboard-fonts.css">
+<style>
+#dash-root { --dash-gutter: 0; }
+.pp {
+  --or: #E87A1E; --or-d: #B85C0A; --or-l: #F5A04A; --or-glow: rgba(232,122,30,.22);
+  --bg: #0C0C0C; --s1: #161616; --s2: #1E1E1E; --s3: #272727; --s4: #313131;
+  --t1: #F2EDE6; --t2: #A09890; --t3: #6A6058; --line: #2A2A2A;
+  --green: #4CAF50; --red: #E24B4A; --warn: #EFA027;
+  --fh: 'PP Unbounded', var(--font-anthropic-sans), sans-serif;
+  --fb: 'PP Golos', var(--font-anthropic-sans), sans-serif;
+  background: var(--bg); color: var(--t1); font-family: var(--fb); font-size: 14px; line-height: 1.4;
+  border-radius: 18px; padding: clamp(14px, 3vw, 28px); display: grid; gap: 18px; min-height: 100%;
+}
+.pp * { box-sizing: border-box; }
+.pp-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pp-logo { width: 40px; height: 40px; border-radius: 11px; background: var(--or); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--fh); font-weight: 900; font-size: 18px; box-shadow: 0 0 18px var(--or-glow); flex-shrink: 0; }
+.pp-brand { display: grid; gap: 1px; margin-right: auto; }
+.pp-name { font-family: var(--fh); font-weight: 900; font-size: 19px; letter-spacing: .04em; margin: 0; line-height: 1.1; }
+.pp-sub { font-size: 12px; color: var(--t2); }
+.pp-month { font: inherit; font-size: 13px; color: var(--t1); background: var(--s2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; cursor: pointer; }
+.pp-month:focus-visible, .pp-tab:focus-visible, .pp-sort:focus-visible { outline: 2px solid var(--or); outline-offset: 2px; }
+.pp-tabs { display: flex; gap: 4px; background: var(--s1); border: 1px solid var(--line); border-radius: 13px; padding: 4px; overflow-x: auto; }
+.pp-tab { flex: 1; min-width: max-content; font: inherit; font-size: 13px; font-weight: 600; color: var(--t2); background: none; border: 0; border-radius: 10px; padding: 9px 14px; cursor: pointer; letter-spacing: .02em; transition: background .15s, color .15s; }
+.pp-tab:hover { color: var(--t1); }
+.pp-tab[aria-selected=true] { background: var(--or); color: #fff; box-shadow: 0 0 14px var(--or-glow); }
+.pp-page { display: grid; gap: 16px; }
+.pp-page[hidden] { display: none; }
+.pp-take { margin: 0; color: var(--t2); font-size: 15px; line-height: 1.5; min-height: 1.5em; max-width: 62rem; }
+.pp .pp-take b { color: var(--t1); font-weight: 600; }
+.pp-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: 10px; }
+.pp-kpi { background: var(--s1); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 4px; align-content: start; }
+.pp-kpi.hero { background: linear-gradient(160deg, rgba(232,122,30,.16), var(--s1) 70%); border-color: rgba(232,122,30,.35); }
+.pp-kl { font-size: 10.5px; color: var(--t3); text-transform: uppercase; letter-spacing: .08em; }
+.pp-kv { font-family: var(--fh); font-weight: 700; font-size: clamp(19px, 2.4vw, 25px); font-variant-numeric: tabular-nums; line-height: 1.15; min-height: 1.15em; white-space: nowrap; }
+.pp-ks { font-size: 12px; color: var(--t2); font-variant-numeric: tabular-nums; min-height: 1.35em; }
+.pp-up { color: var(--green); } .pp-down { color: var(--red); } .pp-mid { color: var(--warn); }
+.pp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 12px; }
+.pp-card { background: var(--s1); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.pp-ch { display: grid; gap: 2px; }
+.pp-ct { font-family: var(--fh); font-weight: 700; font-size: 14px; letter-spacing: .01em; margin: 0; }
+.pp-cn { font-size: 12px; color: var(--t2); margin: 0; }
+.pp-bars { display: grid; gap: 9px; min-height: 120px; }
+.pp-br { display: grid; grid-template-columns: minmax(5.5rem, 7.5rem) 1fr 3rem; gap: 10px; align-items: center; font-size: 12.5px; }
+.pp-bn { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pp-track { position: relative; height: 10px; background: var(--s3); border-radius: 6px; }
+.pp-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: var(--or); }
+.pp-fill.mid { background: var(--warn); } .pp-fill.low { background: var(--red); }
+.pp-pace { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--t1); border-radius: 1px; opacity: .7; }
+.pp-plan100 { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--t3); }
+.pp-bv { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.pp-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11.5px; color: var(--t2); }
+.pp-legend i { display: inline-block; vertical-align: middle; margin-right: 6px; }
+.pp-chart { position: relative; min-height: 220px; }
+.pp-tip { position: absolute; pointer-events: none; background: var(--s3); border: 1px solid var(--s4); border-radius: 10px; padding: 7px 10px; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; z-index: 3; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+.pp-tip .k { color: var(--t2); }
+.pp-tablewrap { overflow: auto; max-height: 34rem; border-radius: 10px; }
+.pp-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.pp-table th { position: sticky; top: 0; background: var(--s1); z-index: 1; padding: 0; border-bottom: 1px solid var(--line); text-align: right; }
+.pp-table th:first-child, .pp-table td:first-child { text-align: left; }
+.pp-sort { font: inherit; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--t3); background: none; border: 0; padding: 8px 10px; cursor: pointer; width: 100%; text-align: inherit; white-space: nowrap; }
+.pp-sort:hover, th[aria-sort] .pp-sort { color: var(--or-l); }
+.pp-table td { padding: 9px 10px; border-bottom: 1px solid var(--s2); text-align: right; white-space: nowrap; }
+.pp-table tbody tr:hover td { background: var(--s2); }
+.pp-table td.nm { font-weight: 600; }
+.pp-chip { display: inline-block; min-width: 3.2rem; text-align: center; padding: 2px 8px; border-radius: 20px; font-weight: 600; font-size: 12px; }
+.pp-chip.up { background: rgba(76,175,80,.14); color: var(--green); }
+.pp-chip.mid { background: rgba(239,160,39,.14); color: var(--warn); }
+.pp-chip.low { background: rgba(226,75,74,.14); color: var(--red); }
+.pp-small { position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: 10px; }
+.pp-sm { background: var(--s2); border-radius: 11px; padding: 11px 12px 6px; display: grid; gap: 2px; }
+.pp-smh { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; }
+.pp-smh b { font-weight: 600; }
+.pp-smv { color: var(--t2); font-variant-numeric: tabular-nums; }
+.pp-sm svg { display: block; }
+.pp-roster { display: grid; gap: 6px; min-height: 120px; }
+.pp-ro { display: grid; grid-template-columns: minmax(6rem, 8.5rem) 1fr; gap: 10px; align-items: baseline; padding: 8px 10px; background: var(--s2); border-radius: 10px; font-size: 13px; }
+.pp-ro .p { color: var(--t2); }
+.pp-ro .who { font-weight: 600; }
+.pp-ro .sub { color: var(--warn); font-weight: 500; font-size: 12px; }
+.pp-empty { color: var(--t3); font-size: 12.5px; padding: 8px 0; }
+.pp-fail { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--t2); font-size: 12px; min-height: inherit; }
+.pp-fail::before { content: ''; width: .375rem; height: .375rem; border-radius: 50%; background: var(--red); }
+.pp [data-dash-source-state=empty] { color: transparent; }
+.pp [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+.pp-rank { display: grid; gap: 6px; min-height: 140px; }
+.pp-rk { display: grid; grid-template-columns: 1.9rem minmax(5rem, 9rem) 1fr auto; gap: 10px; align-items: center; padding: 7px 10px; background: var(--s2); border-radius: 10px; font-size: 13px; }
+.pp-rk.lead { background: linear-gradient(90deg, rgba(232,122,30,.18), var(--s2) 75%); }
+.pp-rn { width: 1.7rem; height: 1.7rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--fh); font-weight: 700; font-size: 12px; background: var(--s3); color: var(--t2); }
+.pp-rk.lead .pp-rn { background: var(--or); color: #fff; box-shadow: 0 0 12px var(--or-glow); }
+.pp-rw { display: grid; gap: 1px; min-width: 0; }
+.pp-rw b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pp-rw small { color: var(--t3); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pp-rt { height: 6px; background: var(--s3); border-radius: 4px; position: relative; }
+.pp-rt i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--or); }
+.pp-rv { font-family: var(--fh); font-weight: 700; font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 520px) { .pp-rk { grid-template-columns: 1.9rem 1fr auto; } .pp-rt { display: none; } }
+.pp-wide .pp-br { grid-template-columns: minmax(7rem, 15rem) 1fr 3rem; }
+.pp-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pp-search { font: inherit; font-size: 13px; color: var(--t1); background: var(--s2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-width: 0; flex: 1 1 12rem; max-width: 22rem; }
+.pp-search::placeholder { color: var(--t3); }
+.pp-btn { font: inherit; font-size: 12.5px; font-weight: 600; color: #fff; background: var(--or); border: 0; border-radius: 10px; padding: 8px 14px; cursor: pointer; }
+.pp-btn.ghost { background: var(--s3); color: var(--t1); }
+.pp-btn:focus-visible, .pp-search:focus-visible { outline: 2px solid var(--or); outline-offset: 2px; }
+.pp-upd { font-size: 12px; color: var(--t3); margin-left: auto; }
+.pp-tag { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.pp-tag.red { background: rgba(226,75,74,.15); color: var(--red); }
+.pp-tag.or { background: rgba(232,122,30,.15); color: var(--or-l); }
+.pp-tag.gr { background: rgba(76,175,80,.14); color: var(--green); }
+.pp-table td.wrap { white-space: normal; min-width: 12rem; text-align: left; }
+.pp-table td.lft, .pp-table th.lft { text-align: left; }
+.pp-table td.mut { color: var(--t2); }
+.pp-order { display: grid; gap: 12px; min-height: 120px; }
+.pp-og { background: var(--s2); border-radius: 11px; padding: 10px 12px; display: grid; gap: 4px; }
+.pp-ogh { display: flex; justify-content: space-between; gap: 8px; font-family: var(--fh); font-weight: 700; font-size: 12.5px; letter-spacing: .02em; color: var(--or-l); }
+.pp-oi { display: grid; grid-template-columns: 1fr auto; gap: 10px; font-size: 13px; padding: 3px 0; border-bottom: 1px dashed var(--s3); }
+.pp-oi:last-child { border-bottom: 0; }
+.pp-oi b { font-variant-numeric: tabular-nums; font-weight: 700; }
+.pp-oi small { display: block; color: var(--t3); font-size: 11px; }
+.pp-note { font-size: 12px; color: var(--t2); }
+.pp-foot { font-size: 11.5px; color: var(--t3); }
+@media (max-width: 520px) { .pp-br { grid-template-columns: 5.2rem 1fr 2.8rem; } .pp-hide-n { display: none; } }
+</style>
+
+<div class="pp">
+  <header class="pp-top">
+    <div class="pp-logo" aria-hidden="true">П</div>
+    <div class="pp-brand">
+      <h1 class="pp-name">ПАРАПЛАН</h1>
+      <span class="pp-sub">штаб сети · выручка, план, смены</span>
+    </div>
+    <select class="pp-month" id="pp-month" aria-label="Месяц" data-source="net_month"></select>
+  </header>
+
+  <nav class="pp-tabs" role="tablist" aria-label="Листы">
+    <button class="pp-tab" role="tab" id="tab-obzor" data-page="obzor" aria-selected="true">Обзор</button>
+    <button class="pp-tab" role="tab" id="tab-ostatki" data-page="ostatki" aria-selected="false">Остатки</button>
+    <button class="pp-tab" role="tab" id="tab-tochki" data-page="tochki" aria-selected="false">Точки</button>
+    <button class="pp-tab" role="tab" id="tab-smeny" data-page="smeny" aria-selected="false">Смены</button>
+    <button class="pp-tab" role="tab" id="tab-top" data-page="top" aria-selected="false">Топ</button>
+  </nav>
+
+  <!-- ОБЗОР -->
+  <section class="pp-page" id="obzor" role="tabpanel" aria-labelledby="tab-obzor">
+    <p class="pp-take" id="take"><span class="dash-skeleton">—</span></p>
+    <div class="pp-kpis" id="kpi">
+      <div class="pp-kpi hero" id="k-fact">
+        <span class="pp-kl">Выручка за месяц</span>
+        <span class="pp-kv dash-skeleton" data-source="net_month" data-field="fact" data-fetchpriority="high">—</span>
+        <span class="pp-ks"><span data-source="net_month" data-field="delta">—</span> <span class="pp-hide-n" id="k-fact-n"></span></span>
+      </div>
+      <div class="pp-kpi" id="k-plan">
+        <span class="pp-kl">Выполнено плана</span>
+        <span class="pp-kv dash-skeleton" data-source="net_month" data-field="pct">—</span>
+        <span class="pp-ks">план <span data-source="net_month" data-field="plan">—</span></span>
+      </div>
+      <div class="pp-kpi" id="k-fc">
+        <span class="pp-kl">Прогноз на месяц</span>
+        <span class="pp-kv dash-skeleton" data-source="net_month" data-field="forecast">—</span>
+        <span class="pp-ks"><span data-source="net_month" data-field="forecast_pct">—</span> плана</span>
+      </div>
+      <div class="pp-kpi" id="k-need">
+        <span class="pp-kl">Нужно в день до плана</span>
+        <span class="pp-kv dash-skeleton" data-source="net_month" data-field="need_per_day">—</span>
+        <span class="pp-ks">сейчас в среднем <span data-source="net_month" data-field="avg_day">—</span></span>
+      </div>
+    </div>
+    <div class="pp-grid">
+      <div class="pp-card" id="card-plan">
+        <div class="pp-ch">
+          <h2 class="pp-ct">Выполнение плана по точкам</h2>
+          <p class="pp-cn" id="plan-note">Полоса — выполнено, белая черта — где надо быть сегодня по темпу</p>
+        </div>
+        <div class="pp-bars dash-skeleton" id="plan-bars" data-source="by_point"></div>
+        <div class="pp-legend"><span><i style="width:12px;height:8px;border-radius:4px;background:var(--or)"></i>прогноз ≥ 100%</span><span><i style="width:12px;height:8px;border-radius:4px;background:var(--warn)"></i>90–99%</span><span><i style="width:12px;height:8px;border-radius:4px;background:var(--red)"></i>меньше 90%</span></div>
+      </div>
+      <div class="pp-card" id="card-daily">
+        <div class="pp-ch">
+          <h2 class="pp-ct">Выручка сети по дням</h2>
+          <p class="pp-cn" id="daily-note">Пунктир — план сети на день</p>
+        </div>
+        <div class="pp-chart dash-skeleton" id="daily" data-source="net_daily net_month"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ОСТАТКИ -->
+  <section class="pp-page" id="ostatki" role="tabpanel" aria-labelledby="tab-ostatki" hidden>
+    <div class="pp-tools">
+      <select class="pp-month" id="st-point" aria-label="Точка" data-source="stock_flags"></select>
+      <input class="pp-search" id="st-q" type="search" placeholder="Найти товар или группу" aria-label="Поиск товара">
+      <span class="pp-upd">Остатки на <span id="st-upd" data-source="stock" data-field="updated" data-row="0">—</span></span>
+    </div>
+    <p class="pp-take" id="st-take"><span class="dash-skeleton">—</span></p>
+    <div class="pp-kpis" id="st-kpi">
+      <div class="pp-kpi hero"><span class="pp-kl">Заказать</span><span class="pp-kv dash-skeleton" id="kv-low" data-source="stock_flags">—</span><span class="pp-ks" id="ks-low"></span></div>
+      <div class="pp-kpi"><span class="pp-kl">В минусе</span><span class="pp-kv dash-skeleton" id="kv-neg" data-source="stock_flags">—</span><span class="pp-ks">позиций с отрицательным остатком</span></div>
+      <div class="pp-kpi"><span class="pp-kl">Лежит без продаж</span><span class="pp-kv dash-skeleton" id="kv-dead" data-source="stock_flags">—</span><span class="pp-ks" id="ks-dead"></span></div>
+    </div>
+
+    <div class="pp-card" id="card-low">
+      <div class="pp-ch"><h2 class="pp-ct">Заканчивается — заказать</h2><p class="pp-cn" id="low-note">Хватит меньше чем до следующей поставки</p></div>
+      <div class="pp-tablewrap">
+        <table class="pp-table" id="low-table" data-source="stock_flags" data-row-key="point,id">
+          <thead><tr>
+            <th class="lft" data-field="name" data-k="name"><button class="pp-sort">Товар</button></th>
+            <th data-field="point" data-k="point"><button class="pp-sort">Точка</button></th>
+            <th data-field="qty" data-k="qty"><button class="pp-sort">Остаток</button></th>
+            <th data-field="per_day" data-k="per_day"><button class="pp-sort">В день</button></th>
+            <th data-field="days_left" data-k="days_left"><button class="pp-sort">Хватит, дн</button></th>
+            <th data-field="order_qty" data-k="order_qty"><button class="pp-sort">Заказать</button></th>
+            <th class="lft" data-field="donors" data-k="donors"><button class="pp-sort">Где взять</button></th>
+          </tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="pp-card" id="card-order">
+      <div class="pp-ch">
+        <h2 class="pp-ct">Список к заказу по группам</h2>
+        <p class="pp-cn" id="order-note">Сколько штук заказать у поставщиков</p>
+      </div>
+      <div class="pp-tools"><button class="pp-btn" id="order-copy">Скопировать список</button><span class="pp-note" id="order-copied"></span></div>
+      <div class="pp-order dash-skeleton" id="order-list" data-source="stock_order"></div>
+    </div>
+
+    <div class="pp-grid">
+      <div class="pp-card" id="card-neg">
+        <div class="pp-ch"><h2 class="pp-ct">Минуса</h2><p class="pp-cn">Отрицательный остаток — продали с одной карточки, а приход внесли на другую, или не провели поступление</p></div>
+        <div class="pp-tablewrap">
+          <table class="pp-table" id="neg-table" data-source="stock_flags" data-row-key="point,id">
+            <thead><tr>
+              <th class="lft" data-field="name" data-k="name"><button class="pp-sort">Товар</button></th>
+              <th data-field="point" data-k="point"><button class="pp-sort">Точка</button></th>
+              <th data-field="qty" data-k="qty"><button class="pp-sort">Остаток</button></th>
+              <th data-field="last_sale" data-k="last_sale"><button class="pp-sort">Посл. продажа</button></th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="pp-card" id="card-dead">
+        <div class="pp-ch"><h2 class="pp-ct">Лежит без продаж</h2><p class="pp-cn" id="dead-note">Кандидаты на перемещение или акцию; сначала самые дорогие по закупке</p></div>
+        <div class="pp-tablewrap">
+          <table class="pp-table" id="dead-table" data-source="stock_flags" data-row-key="point,id">
+            <thead><tr>
+              <th class="lft" data-field="name" data-k="name"><button class="pp-sort">Товар</button></th>
+              <th data-field="point" data-k="point"><button class="pp-sort">Точка</button></th>
+              <th data-field="qty" data-k="qty"><button class="pp-sort">Остаток</button></th>
+              <th data-field="frozen" data-k="frozen"><button class="pp-sort">По закупке</button></th>
+              <th class="lft" data-field="takers" data-k="takers"><button class="pp-sort">Где продаётся</button></th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ТОЧКИ -->
+  <section class="pp-page" id="tochki" role="tabpanel" aria-labelledby="tab-tochki" hidden>
+    <div class="pp-card" id="card-table">
+      <div class="pp-ch">
+        <h2 class="pp-ct">Точки за месяц</h2>
+        <p class="pp-cn">Прогноз — средний день по закрытым дням × дней в месяце. Нажми на заголовок, чтобы отсортировать.</p>
+      </div>
+      <div class="pp-tablewrap">
+        <table class="pp-table" id="pt-table" data-source="by_point" data-row-key="month,point">
+          <thead><tr>
+            <th data-field="point" data-k="point"><button class="pp-sort">Точка</button></th>
+            <th data-field="fact" data-k="fact"><button class="pp-sort">Факт</button></th>
+            <th data-field="plan" data-k="plan"><button class="pp-sort">План</button></th>
+            <th data-field="pct" data-k="pct"><button class="pp-sort">Выполнено</button></th>
+            <th data-field="forecast_pct" data-k="forecast_pct"><button class="pp-sort">Прогноз</button></th>
+            <th data-field="need_per_day" data-k="need_per_day"><button class="pp-sort">Нужно/день</button></th>
+            <th data-field="avg_day" data-k="avg_day"><button class="pp-sort">Средний день</button></th>
+            <th data-field="last_full" data-k="last_full"><button class="pp-sort">Посл. день</button></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="pp-card" id="card-small">
+      <div class="pp-ch">
+        <h2 class="pp-ct">Дни по точкам</h2>
+        <p class="pp-cn">Выручка каждой точки по дням месяца, шкала у всех одна. Пунктир — план точки на день.</p>
+      </div>
+      <div class="pp-small dash-skeleton" id="small" data-source="rev_dated by_point"></div>
+    </div>
+  </section>
+
+  <!-- СМЕНЫ -->
+  <section class="pp-page" id="smeny" role="tabpanel" aria-labelledby="tab-smeny" hidden>
+    <div class="pp-grid">
+      <div class="pp-card" id="card-today">
+        <div class="pp-ch"><h2 class="pp-ct">Сегодня на сменах</h2><p class="pp-cn" id="today-note">По листу «График»</p></div>
+        <div class="pp-roster dash-skeleton" id="roster-today" data-source="shifts_named"></div>
+      </div>
+      <div class="pp-card" id="card-tomorrow">
+        <div class="pp-ch"><h2 class="pp-ct">Завтра</h2><p class="pp-cn" id="tomorrow-note">Точки без строки в графике — «нет в графике»</p></div>
+        <div class="pp-roster dash-skeleton" id="roster-tomorrow" data-source="shifts_named"></div>
+      </div>
+    </div>
+    <div class="pp-card" id="card-people">
+      <div class="pp-ch">
+        <h2 class="pp-ct">Продавцы за месяц</h2>
+        <p class="pp-cn">Отработанные смены до последнего дня с выручкой. Выручка в смены — выручка точки за день, при подмене делится по часам.</p>
+      </div>
+      <div class="pp-tablewrap">
+        <table class="pp-table" id="ps-table" data-source="person_month" data-row-key="month,person">
+          <thead><tr>
+            <th data-field="person" data-k="person"><button class="pp-sort">Продавец</button></th>
+            <th data-field="shifts" data-k="shifts"><button class="pp-sort">Смен</button></th>
+            <th data-field="hours" data-k="hours"><button class="pp-sort">Часов</button></th>
+            <th data-field="revenue" data-k="revenue"><button class="pp-sort">Выручка в смены</button></th>
+            <th data-field="per_shift" data-k="per_shift"><button class="pp-sort">За смену</button></th>
+            <th data-field="points" data-k="points"><button class="pp-sort">Точки</button></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ТОП -->
+  <section class="pp-page" id="top" role="tabpanel" aria-labelledby="tab-top" hidden>
+    <div class="pp-kpis" id="top-kpi">
+      <div class="pp-kpi hero" id="k-promo">
+        <span class="pp-kl">Акций продано за месяц</span>
+        <span class="pp-kv dash-skeleton" data-source="promo_month" data-field="qty">—</span>
+        <span class="pp-ks">по отметкам в Кэпе «Я красавчик»</span>
+      </div>
+      <div class="pp-kpi" id="k-best-rev">
+        <span class="pp-kl">Лучший по выручке за смену</span>
+        <span class="pp-kv dash-skeleton" id="best-rev" data-source="person_month" data-field="person">—</span>
+        <span class="pp-ks" id="best-rev-s"><span data-source="person_month" data-field="per_shift">—</span> за смену</span>
+      </div>
+      <div class="pp-kpi" id="k-best-promo">
+        <span class="pp-kl">Лучший по акциям</span>
+        <span class="pp-kv dash-skeleton" id="best-promo" data-source="promo_person" data-field="person">—</span>
+        <span class="pp-ks"><span data-source="promo_person" data-field="qty">—</span> шт.</span>
+      </div>
+    </div>
+    <div class="pp-grid">
+      <div class="pp-card" id="card-top-rev">
+        <div class="pp-ch"><h2 class="pp-ct">Топ по выручке за смену</h2><p class="pp-cn">Средняя выручка точки в смены продавца, от 3 смен за месяц</p></div>
+        <div class="pp-rank dash-skeleton" id="rank-rev" data-source="person_month"></div>
+      </div>
+      <div class="pp-card" id="card-top-promo">
+        <div class="pp-ch"><h2 class="pp-ct">Топ по акциям</h2><p class="pp-cn">Сколько акций продавец отметил в Кэпе за месяц</p></div>
+        <div class="pp-rank dash-skeleton" id="rank-promo" data-source="promo_person"></div>
+      </div>
+      <div class="pp-card" id="card-promo-kind">
+        <div class="pp-ch"><h2 class="pp-ct">Акции по видам</h2><p class="pp-cn">Продано штук за месяц</p></div>
+        <div class="pp-bars pp-wide dash-skeleton" id="promo-kind" data-source="promo_kind"></div>
+      </div>
+      <div class="pp-card" id="card-promo-point">
+        <div class="pp-ch"><h2 class="pp-ct">Акции по точкам</h2><p class="pp-cn">Продано штук за месяц</p></div>
+        <div class="pp-bars dash-skeleton" id="promo-point" data-source="promo_point"></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="pp-foot">Данные — таблица «Приложение»: листы «Выручка», «Планы», «График»; остатки — «Отчет», лист «Эвотор_Остатки» (обновляется ночью); акции — таблица «Инструктор Кэп», лист «Продажи по акциям». Сегодняшний день в выручке считается незакрытым и в прогноз не входит.</p>
+</div>
+
+<script>
+dash.loader('revenue', {
+  description: 'Строки листа «Выручка» в таблицу: дата (дд.мм), точка, сумма числом',
+  fn: ({ answer }) => {
+    const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
+    if (!a || !Array.isArray(a.values)) throw new Error('Google Sheets не вернул значения листа «Выручка»');
+    const v = a.values;
+    const num = (s) => { if (s == null) return null; const t = String(s).replace(/[\s  ₽]/g, '').replace(',', '.'); if (t === '') return null; const n = Number(t); return Number.isFinite(n) ? n : null; };
+    const rows = v.slice(1).filter((r) => r && r[0] && r[1]).map((r) => ({ date: String(r[0]).trim(), point: String(r[1]).trim(), amount: num(r[2]) }));
+    return { columns: ['date', 'point', 'amount'], rows };
+  },
+});
+dash.loader('plans', {
+  description: 'Строки листа «Планы» в таблицу: точка, год, месяц, план числом',
+  fn: ({ answer }) => {
+    const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
+    if (!a || !Array.isArray(a.values)) throw new Error('Google Sheets не вернул значения листа «Планы»');
+    const v = a.values;
+    const num = (s) => { if (s == null) return null; const t = String(s).replace(/[\s  ₽]/g, '').replace(',', '.'); if (t === '') return null; const n = Number(t); return Number.isFinite(n) ? n : null; };
+    const rows = v.slice(1).filter((r) => r && r[0] && r[2]).map((r) => ({ point: String(r[0]).trim(), year: num(r[1]), month: String(r[2]).trim(), plan: num(r[3]) }));
+    return { columns: ['point', 'year', 'month', 'plan'], rows };
+  },
+});
+dash.loader('shifts', {
+  description: 'Строки листа «График» (с 3-й строки) в таблицу: дата, точка, основной и подмена с часами',
+  fn: ({ answer }) => {
+    const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
+    if (!a || !Array.isArray(a.values)) throw new Error('Google Sheets не вернул значения листа «График»');
+    const v = a.values;
+    const num = (s) => { if (s == null) return null; const t = String(s).replace(/[\s  ]/g, '').replace(',', '.'); if (t === '') return null; const n = Number(t); return Number.isFinite(n) ? n : null; };
+    const txt = (s) => (s == null ? '' : String(s).trim());
+    const rows = v.slice(1).filter((r) => r && /^\d{4}-\d{2}-\d{2}$/.test(txt(r[0])) && txt(r[2])).map((r) => ({
+      date: txt(r[0]), point_id: txt(r[1]), point: txt(r[2]), main: txt(r[3]), main_hours: num(r[4]), sub: txt(r[5]), sub_hours: num(r[6]),
+    }));
+    return { columns: ['date', 'point_id', 'point', 'main', 'main_hours', 'sub', 'sub_hours'], rows };
+  },
+});
+
+dash.loader('promos', {
+  description: 'Строки листа «Продажи по акциям» в таблицу: дата, точка, продавец, акция, количество',
+  fn: ({ answer }) => {
+    const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
+    if (!a || !Array.isArray(a.values)) throw new Error('Google Sheets не вернул значения листа «Продажи по акциям»');
+    const txt = (x) => (x == null ? '' : String(x).trim());
+    const rows = a.values.slice(1).filter((r) => r && /^\d{2}\.\d{2}\.\d{4}$/.test(txt(r[0])) && txt(r[4])).map((r) => {
+      const n = Number(txt(r[5]).replace(',', '.'));
+      return { date: txt(r[0]), point: txt(r[2]), person: txt(r[3]), promo: txt(r[4]), qty: Number.isFinite(n) && txt(r[5]) !== '' ? n : 1 };
+    });
+    return { columns: ['date', 'point', 'person', 'promo', 'qty'], rows };
+  },
+});
+
+dash.loader('stock', {
+  description: 'Строки листа «Эвотор_Остатки» в таблицу: точка, товар, группа, остаток, продажи, закупка, цена',
+  fn: ({ answer }) => {
+    const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
+    if (!a || !Array.isArray(a.values)) throw new Error('Google Sheets не вернул значения листа «Эвотор_Остатки»');
+    const txt = (x) => (x == null ? '' : String(x).trim());
+    const num = (x) => { const t = txt(x).replace(/[\s  ₽]/g, '').replace(',', '.'); if (t === '') return null; const n = Number(t); return Number.isFinite(n) ? n : null; };
+    const date = (x) => { const m = txt(x).match(/^(\d{2})\.(\d{2})\.(\d{4})$/); return m ? `${m[3]}-${m[2]}-${m[1]}` : ''; };
+    const rows = a.values.slice(1).filter((r) => r && txt(r[0]) && txt(r[1])).map((r) => ({
+      point: txt(r[0]), id: txt(r[1]), code: txt(r[2]), name: txt(r[3]), group: txt(r[4]), qty: num(r[5]) || 0, unit: txt(r[6]),
+      sold: num(r[7]) || 0, per_day: num(r[8]) || 0, days_left: num(r[9]), sold_dead: num(r[10]) || 0, last_sale: date(r[11]),
+      cost: num(r[12]), price: num(r[13]), updated: txt(r[14]),
+    }));
+    return { columns: ['point', 'id', 'code', 'name', 'group', 'qty', 'unit', 'sold', 'per_day', 'days_left', 'sold_dead', 'last_sale', 'cost', 'price', 'updated'], rows };
+  },
+});
+dash.loader('stock_settings', {
+  description: 'Лист «Остатки_настройки»: название настройки и значение числом',
+  fn: ({ answer }) => {
+    const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
+    if (!a || !Array.isArray(a.values)) throw new Error('Google Sheets не вернул значения листа «Остатки_настройки»');
+    const rows = a.values.slice(1).filter((r) => r && r[0]).map((r) => ({ setting: String(r[0]).trim(), value: Number(String(r[1] == null ? '' : r[1]).replace(',', '.').replace(/\s/g, '')) }));
+    return { columns: ['setting', 'value'], rows };
+  },
+});
+
+dash.calc('stock_flags', {
+  inputs: ['stock', 'stock_settings'],
+  title: 'Остатки: что заказать, минуса, лежит',
+  description: 'По каждой позиции: заказать — хватит меньше «заканчивается» дней; сколько — продажи в день × «запас на» − остаток; лежит — остаток есть, продаж за «лежит» дней нет; где взять — точки, где этого товара больше их собственной потребности.',
+  fn: (stock, stock_settings) => {
+    const S = (re, d) => { const r = stock_settings.find((x) => re.test(x.setting)); return r && r.value > 0 ? r.value : d; };
+    const lowDays = S(/хватит меньше/i, 8), orderDays = S(/запас/i, 10);
+    const key = (n) => n.toLowerCase().replace(/ё/g, 'е').replace(/[«»"'`]/g, '').replace(/\s+/g, ' ').trim();
+    const byName = new Map();
+    for (const r of stock) { const k = key(r.name); if (!byName.has(k)) byName.set(k, []); byName.get(k).push(r); }
+    const surplus = (r) => Math.floor(r.qty - r.per_day * orderDays);
+    return stock.map((r) => {
+      const low = r.per_day > 0 && r.qty / r.per_day < lowDays;
+      const need = low ? Math.max(1, Math.ceil(r.per_day * orderDays - Math.max(0, r.qty))) : 0;
+      const dead = r.qty > 0 && r.sold_dead === 0;
+      const others = byName.get(key(r.name)).filter((o) => o.point !== r.point);
+      const donors = low ? others.filter((o) => surplus(o) > 0).sort((a, b) => surplus(b) - surplus(a)).map((o) => `${o.point} ${surplus(o)}`).join(', ') : '';
+      const takers = dead ? others.filter((o) => o.per_day > 0).sort((a, b) => b.per_day - a.per_day).map((o) => o.point).join(', ') : '';
+      return {
+        point: r.point, id: r.id, name: r.name, group: r.group, qty: r.qty, per_day: r.per_day,
+        days_left: r.per_day > 0 ? Math.round(Math.max(0, r.qty) / r.per_day * 10) / 10 : null,
+        status: r.qty < 0 ? 'minus' : low ? 'low' : dead ? 'dead' : 'ok',
+        low, order_qty: need, donors, dead, takers, frozen: dead && r.cost ? Math.round(r.qty * r.cost) : null,
+        last_sale: r.last_sale, cost: r.cost,
+      };
+    });
+  },
+});
+
+dash.calc('stock_order', {
+  inputs: ['stock_flags'],
+  title: 'Список к заказу по сети',
+  description: 'Для каждого товара: сумма «заказать» по точкам минус то, что можно перекинуть с точек, где его больше их потребности. Группы приведены к одному написанию.',
+  fn: (stock_flags) => {
+    const key = (n) => n.toLowerCase().replace(/ё/g, 'е').replace(/[«»"'`]/g, '').replace(/\s+/g, ' ').trim();
+    const gkey = (g) => (g || 'Без группы').toLowerCase().replace(/[\s\-]/g, '');
+    const by = new Map(); const gname = new Map();
+    for (const r of stock_flags) {
+      const k = key(r.name);
+      const o = by.get(k) || { name: r.name, gk: gkey(r.group), need: 0, spare: 0, points: [] };
+      if (!gname.has(o.gk)) gname.set(o.gk, r.group || 'Без группы');
+      if (r.low) { o.need += r.order_qty; o.points.push(`${r.point} ${r.order_qty}`); }
+      by.set(k, o);
+    }
+    return [...by.values()].filter((o) => o.need > 0).map((o) => ({
+      name: o.name, group: gname.get(o.gk), need: o.need, points: o.points.join(', '),
+    }));
+  },
+});
+
+dash.calc('rev_dated', {
+  inputs: ['revenue'],
+  title: 'Выручка с полной датой',
+  description: 'В листе дата без года: июнь–декабрь считаются 2026 годом, январь–май — 2027-м. Пустые суммы пропускаются.',
+  fn: (revenue) => revenue
+    .filter((r) => r.amount != null && /^\d{1,2}\.\d{1,2}$/.test(r.date))
+    .map((r) => {
+      const [d, m] = r.date.split('.').map(Number);
+      const y = m >= 6 ? 2026 : 2027;
+      const mm = String(m).padStart(2, '0');
+      return { day: `${y}-${mm}-${String(d).padStart(2, '0')}`, month: `${y}-${mm}`, point: r.point, amount: r.amount };
+    }),
+});
+
+dash.calc('by_point', {
+  inputs: ['rev_dated', 'plans'],
+  title: 'План и факт по точкам',
+  description: 'По точке и месяцу: факт, план, выполнение, прогноз по среднему закрытому дню, сколько нужно в день до плана. Последний день в данных считается незакрытым.',
+  fn: (rev_dated, plans) => {
+    const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+    const maxDay = rev_dated.reduce((m, r) => (r.day > m ? r.day : m), '');
+    const lastByMonth = new Map();
+    for (const r of rev_dated) lastByMonth.set(r.month, Math.max(lastByMonth.get(r.month) || 0, Number(r.day.slice(8))));
+    const doneDays = (month) => lastByMonth.get(month) - (maxDay.slice(0, 7) === month ? 1 : 0);
+    const k = (m, p) => m + '|' + p;
+    const fact = new Map(); const done = new Map(); const lastFull = new Map();
+    for (const r of rev_dated) {
+      const key = k(r.month, r.point); const d = Number(r.day.slice(8));
+      fact.set(key, (fact.get(key) || 0) + r.amount);
+      if (d <= doneDays(r.month)) done.set(key, (done.get(key) || 0) + r.amount);
+      if (d === doneDays(r.month)) lastFull.set(key, (lastFull.get(key) || 0) + r.amount);
+    }
+    const plan = new Map();
+    for (const p of plans) {
+      const i = MONTHS.indexOf(p.month);
+      if (i < 0 || p.plan == null || p.year == null) continue;
+      plan.set(k(`${p.year}-${String(i + 1).padStart(2, '0')}`, p.point), p.plan);
+    }
+    const keys = new Set([...fact.keys(), ...[...plan.keys()].filter((x) => lastByMonth.has(x.split('|')[0]))]);
+    return [...keys].map((key) => {
+      const [month, point] = key.split('|');
+      const [y, m] = month.split('-').map(Number);
+      const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      const dd = doneDays(month);
+      const f = fact.get(key) || 0; const pl = plan.has(key) ? plan.get(key) : null;
+      const avg = dd > 0 ? (done.get(key) || 0) / dd : null;
+      const forecast = avg != null ? (done.get(key) || 0) + avg * (days - dd) : null;
+      const left = days - dd;
+      return {
+        month, point, plan: pl, fact: f, pct: pl ? f / pl : null,
+        forecast, forecast_pct: pl && forecast != null ? forecast / pl : null,
+        need_per_day: pl && left > 0 ? Math.max(0, pl - (done.get(key) || 0)) / left : null,
+        avg_day: avg, last_full: dd > 0 ? (lastFull.get(key) || 0) : null,
+        done_days: dd, days_in_month: days, plan_per_day: pl ? pl / days : null,
+      };
+    });
+  },
+});
+
+dash.calc('net_month', {
+  inputs: ['by_point', 'rev_dated'],
+  title: 'Сеть по месяцам',
+  description: 'Сумма всех точек за месяц; план сети — сумма планов точек; сравнение — с теми же закрытыми днями прошлого месяца.',
+  fn: (by_point, rev_dated) => {
+    const by = new Map();
+    for (const r of by_point) {
+      const o = by.get(r.month) || { month: r.month, fact: 0, plan: 0, forecast: 0, avg_day: 0, last_full: 0, done_days: r.done_days, days_in_month: r.days_in_month };
+      o.fact += r.fact; if (r.plan != null) o.plan += r.plan;
+      o.forecast += r.forecast || 0; o.avg_day += r.avg_day || 0; o.last_full += r.last_full || 0;
+      by.set(r.month, o);
+    }
+    const list = [...by.values()].sort((a, b) => (a.month < b.month ? -1 : 1));
+    return list.map((o, i) => {
+      const prev = list[i - 1];
+      const sum = (month, upto) => rev_dated.filter((r) => r.month === month && Number(r.day.slice(8)) <= upto).reduce((s, r) => s + r.amount, 0);
+      const cur_same = sum(o.month, o.done_days);
+      const prev_same = prev && o.done_days > 0 ? sum(prev.month, o.done_days) : null;
+      const left = o.days_in_month - o.done_days;
+      return {
+        month: o.month, fact: o.fact, plan: o.plan || null, pct: o.plan ? o.fact / o.plan : null,
+        forecast: o.done_days > 0 ? o.forecast : null, forecast_pct: o.plan && o.done_days > 0 ? o.forecast / o.plan : null,
+        need_per_day: o.plan && left > 0 ? Math.max(0, o.plan - cur_same) / left : null,
+        avg_day: o.done_days > 0 ? o.avg_day : null, last_full: o.done_days > 0 ? o.last_full : null,
+        prev_same, delta: prev_same ? cur_same / prev_same - 1 : null,
+        done_days: o.done_days, days_in_month: o.days_in_month, plan_per_day: o.plan ? o.plan / o.days_in_month : null,
+      };
+    });
+  },
+});
+
+dash.calc('net_daily', {
+  inputs: ['rev_dated'],
+  title: 'Сеть по дням',
+  description: 'Сумма выручки всех точек за каждый день.',
+  fn: (rev_dated) => {
+    const by = new Map();
+    for (const r of rev_dated) by.set(r.day, (by.get(r.day) || 0) + r.amount);
+    return [...by].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([day, amount]) => ({ day, month: day.slice(0, 7), amount }));
+  },
+});
+
+dash.calc('shifts_named', {
+  inputs: ['shifts'],
+  title: 'График с уточнёнными именами',
+  description: 'Анастасия на Никитиной — это Настя (не Анастасия с Династии).',
+  fn: (shifts) => {
+    const fix = (name, point) => (name === 'Анастасия' && point === 'Никитина' ? 'Настя' : name);
+    return shifts.map((s) => ({ ...s, main: fix(s.main, s.point), sub: fix(s.sub, s.point) }));
+  },
+});
+
+dash.calc('person_month', {
+  inputs: ['shifts_named', 'rev_dated'],
+  title: 'Смены продавцов по месяцам',
+  description: 'Смены из «Графика» до последнего дня с выручкой; пустые часы = 12; выручка точки за день делится между основным и подменой по часам.',
+  fn: (shifts_named, rev_dated) => {
+    const rev = new Map();
+    let maxDay = '';
+    for (const r of rev_dated) { rev.set(r.day + '|' + r.point, (rev.get(r.day + '|' + r.point) || 0) + r.amount); if (r.day > maxDay) maxDay = r.day; }
+    const by = new Map();
+    const add = (month, person, point, h, share) => {
+      if (!person) return;
+      const key = month + '|' + person;
+      const o = by.get(key) || { month, person, shifts: 0, hours: 0, revenue: 0, pts: new Set() };
+      o.shifts += 1; o.hours += h; o.revenue += share; o.pts.add(point);
+      by.set(key, o);
+    };
+    for (const s of shifts_named) {
+      if (s.date > maxDay) continue;
+      const hm = s.main ? (s.main_hours != null ? s.main_hours : (s.sub ? 0 : 12)) : 0;
+      const hs = s.sub ? (s.sub_hours != null ? s.sub_hours : 12 - hm) : 0;
+      const total = hm + hs;
+      const r = rev.get(s.date + '|' + s.point) || 0;
+      const month = s.date.slice(0, 7);
+      if (s.main && hm > 0) add(month, s.main, s.point, hm, total ? r * hm / total : 0);
+      if (s.sub && hs > 0) add(month, s.sub, s.point, hs, total ? r * hs / total : 0);
+    }
+    return [...by.values()].map((o) => ({ month: o.month, person: o.person, shifts: o.shifts, hours: o.hours, revenue: Math.round(o.revenue), per_shift: o.shifts ? Math.round(o.revenue / o.shifts) : null, points: [...o.pts].join(', ') }));
+  },
+});
+dash.calc('promo_rows', {
+  inputs: ['promos'],
+  title: 'Акции с точками как в сети',
+  description: 'Название точки из Кэпа приводится к названию в выручке (Софийская = Шлюз, Чемской = Коротаева, ТЦ Москва = Москва, Зорге 4 = Зорге); «Данил Петухова» = Данил.',
+  fn: (promos) => {
+    const POINT = { 'Софийская': 'Шлюз', 'Чемской': 'Коротаева', 'ТЦ Москва': 'Москва', 'Зорге 4': 'Зорге' };
+    const PERSON = { 'Данил Петухова': 'Данил' };
+    return promos.map((r) => {
+      const [d, m, y] = r.date.split('.');
+      const raw = r.point.replace(/^Параплан\s+/, '').replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+      return { day: `${y}-${m}-${d}`, month: `${y}-${m}`, point: POINT[raw] || raw, person: PERSON[r.person] || r.person, promo: r.promo, qty: r.qty };
+    });
+  },
+});
+
+dash.calc('promo_month', {
+  inputs: ['promo_rows'],
+  title: 'Акций за месяц',
+  description: 'Сколько акций продано по сети за месяц, штук.',
+  fn: (promo_rows) => {
+    const by = new Map();
+    for (const r of promo_rows) by.set(r.month, (by.get(r.month) || 0) + r.qty);
+    return [...by].map(([month, qty]) => ({ month, qty }));
+  },
+});
+
+dash.calc('promo_person', {
+  inputs: ['promo_rows'],
+  title: 'Акции по продавцам',
+  description: 'Сколько акций отметил каждый продавец за месяц, штук.',
+  fn: (promo_rows) => {
+    const by = new Map();
+    for (const r of promo_rows) {
+      const k = r.month + '|' + r.person;
+      const o = by.get(k) || { month: r.month, person: r.person, qty: 0, pts: new Set() };
+      o.qty += r.qty; o.pts.add(r.point); by.set(k, o);
+    }
+    return [...by.values()].map((o) => ({ month: o.month, person: o.person, qty: o.qty, points: [...o.pts].join(', ') }));
+  },
+});
+
+dash.calc('promo_kind', {
+  inputs: ['promo_rows'],
+  title: 'Акции по видам',
+  description: 'Сколько продано каждой акции за месяц, штук.',
+  fn: (promo_rows) => {
+    const by = new Map();
+    for (const r of promo_rows) { const k = r.month + '|' + r.promo; by.set(k, (by.get(k) || 0) + r.qty); }
+    return [...by].map(([k, qty]) => ({ month: k.split('|')[0], promo: k.split('|')[1], qty }));
+  },
+});
+
+dash.calc('promo_point', {
+  inputs: ['promo_rows'],
+  title: 'Акции по точкам',
+  description: 'Сколько акций продала каждая точка за месяц, штук.',
+  fn: (promo_rows) => {
+    const by = new Map();
+    for (const r of promo_rows) { const k = r.month + '|' + r.point; by.set(k, (by.get(k) || 0) + r.qty); }
+    return [...by].map(([k, qty]) => ({ month: k.split('|')[0], point: k.split('|')[1], qty }));
+  },
+});
+</script>
+
+<script>
+(() => {
+  const MN = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+  const MG = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  const MP = ['январю', 'февралю', 'марту', 'апрелю', 'маю', 'июню', 'июлю', 'августу', 'сентябрю', 'октябрю', 'ноябрю', 'декабрю'];
+  const nf = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
+  const cf = new Intl.NumberFormat('ru-RU', { notation: 'compact', maximumFractionDigits: 1 });
+  const rub = (v) => (v == null ? '—' : nf.format(Math.round(v)) + ' ₽');
+  const crub = (v) => (v == null ? '—' : cf.format(v) + ' ₽');
+  const pct = (v) => (v == null ? '—' : Math.round(v * 100) + '%');
+  const signed = (v) => (v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(Math.round(v * 100)) + '%');
+  const monthName = (m) => { const [y, mm] = m.split('-').map(Number); return MN[mm - 1][0].toUpperCase() + MN[mm - 1].slice(1) + ' ' + y; };
+  const tone = (fp) => (fp == null ? '' : fp >= 1 ? 'up' : fp >= 0.9 ? 'mid' : 'low');
+  const enc = (s) => encodeURIComponent(s);
+  const where = (o) => Object.entries(o).map(([k, v]) => enc(k) + '=' + enc(v)).join('&');
+  const todayNsk = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Novosibirsk', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const fmtDay = (iso) => { const [, m, d] = iso.split('-').map(Number); return d + ' ' + MG[m - 1]; };
+
+  const $ = (s) => document.querySelector(s);
+  const root = $('.pp');
+  const sel = $('#pp-month');
+  let page = 'obzor';
+  let month = null;
+  const sortState = { pt: { k: 'fact', dir: -1 }, ps: { k: 'revenue', dir: -1 } };
+
+  const fail = (el) => { el.classList.remove('dash-skeleton'); el.replaceChildren(); const d = document.createElement('div'); d.className = 'pp-fail'; d.textContent = 'Не загрузилось'; el.append(d); };
+  const statusOf = (...ids) => { const st = ids.map((id) => dash.data(id).status); if (st.some((s) => s === 'error' || s === 'connect' || s === 'declined' || s === 'missing')) return 'error'; if (st.every((s) => s === 'ok')) return 'ok'; return 'loading'; };
+
+  // tabs
+  const showPage = (p, push) => {
+    page = p;
+    root.querySelectorAll('.pp-tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.page === p)));
+    root.querySelectorAll('.pp-page').forEach((s) => { s.hidden = s.id !== p; });
+    if (push) dash.setLink(p);
+    draw();
+  };
+  root.querySelectorAll('.pp-tab').forEach((t) => t.addEventListener('click', () => showPage(t.dataset.page, true)));
+  sel.addEventListener('change', () => { month = sel.value; dash.setParams({ month }); draw(); });
+
+  // sortable tables
+  const bindSort = (tableId, key) => {
+    $(tableId).querySelectorAll('th').forEach((th) => th.querySelector('button').addEventListener('click', () => {
+      const s = sortState[key];
+      if (s.k === th.dataset.k) s.dir = -s.dir; else { s.k = th.dataset.k; s.dir = th.dataset.k === 'point' || th.dataset.k === 'person' || th.dataset.k === 'points' ? 1 : -1; }
+      draw();
+    }));
+  };
+  bindSort('#pt-table', 'pt'); bindSort('#ps-table', 'ps');
+  const markSort = (tableId, key) => $(tableId).querySelectorAll('th').forEach((th) => {
+    if (th.dataset.k === sortState[key].k) th.setAttribute('aria-sort', sortState[key].dir > 0 ? 'ascending' : 'descending'); else th.removeAttribute('aria-sort');
+  });
+  const sortRows = (rows, key) => { const s = sortState[key]; return rows.slice().sort((a, b) => { const x = a[s.k], y = b[s.k]; if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1; return (typeof x === 'string' ? x.localeCompare(y, 'ru') : x - y) * s.dir; }); };
+
+  const tip = (box) => { let t = box.querySelector('.pp-tip'); if (!t) { t = document.createElement('div'); t.className = 'pp-tip'; t.hidden = true; box.append(t); } return t; };
+  const placeTip = (box, t, x, y) => { const bw = box.clientWidth; t.hidden = false; const tw = t.offsetWidth; t.style.left = Math.max(0, Math.min(bw - tw, x - tw / 2)) + 'px'; t.style.top = Math.max(0, y - t.offsetHeight - 10) + 'px'; };
+  const tipLines = (t, head, lines) => { t.replaceChildren(); const h = document.createElement('div'); h.className = 'k'; h.textContent = head; t.append(h); lines.forEach((l) => { const d = document.createElement('div'); d.textContent = l; t.append(d); }); };
+
+  function drawMonthSelect(nm) {
+    const months = nm.map((r) => r.month);
+    if (!month || !months.includes(month)) month = (dash.params().month && months.includes(dash.params().month)) ? dash.params().month : months[months.length - 1];
+    const cur = [...sel.options].map((o) => o.value).join();
+    if (cur !== months.slice().reverse().join()) sel.replaceChildren(...months.slice().reverse().map((m) => new Option(monthName(m), m)));
+    sel.value = month;
+  }
+
+  function drawOverview(nm, bp, nd) {
+    const o = nm.find((r) => r.month === month);
+    const prev = nm[nm.findIndex((r) => r.month === month) - 1];
+    // KPI marks
+    $('#kpi').querySelectorAll('[data-source="net_month"]').forEach((el) => {
+      el.setAttribute('data-where', where({ month }));
+      el.classList.remove('dash-skeleton');
+      const f = el.dataset.field; const v = o ? o[f] : null;
+      el.textContent = f === 'pct' || f === 'forecast_pct' ? pct(v) : f === 'delta' ? signed(v) : rub(v);
+      el.classList.remove('pp-up', 'pp-down', 'pp-mid');
+      if (f === 'delta' && v != null) el.classList.add(v >= 0 ? 'pp-up' : 'pp-down');
+      if (f === 'forecast_pct' && v != null) el.classList.add(v >= 1 ? 'pp-up' : v >= 0.9 ? 'pp-mid' : 'pp-down');
+    });
+    $('#k-fact-n').textContent = o && o.delta != null && prev ? `к тем же ${o.done_days} дн. ${MG[Number(prev.month.slice(5)) - 1]}` : '';
+
+    // takeaway
+    const take = $('#take'); take.replaceChildren();
+    if (o) {
+      const rows = bp.filter((r) => r.month === month && r.plan);
+      const behind = rows.filter((r) => r.forecast_pct != null && r.forecast_pct < 0.9).sort((a, b) => a.forecast_pct - b.forecast_pct).map((r) => r.point);
+      const ahead = rows.filter((r) => r.forecast_pct != null && r.forecast_pct >= 1).length;
+      const b = (txt, f) => { const s = document.createElement('b'); s.setAttribute('data-source', 'net_month'); s.setAttribute('data-where', where({ month })); s.setAttribute('data-field', f); s.textContent = txt; return s; };
+      const t = (s) => document.createTextNode(s);
+      const finished = o.done_days >= o.days_in_month;
+      if (finished) {
+        take.append(t(`${monthName(month)} закрыт: `), b(rub(o.fact), 'fact'), t(', это '), b(pct(o.pct), 'pct'), t(' плана сети.'));
+      } else if (o.forecast_pct != null) {
+        take.append(t('Сеть идёт на '), b(pct(o.forecast_pct), 'forecast_pct'), t(' плана: прогноз '), b(crub(o.forecast), 'forecast'), t(' при плане '), b(crub(o.plan), 'plan'), t('. '));
+        take.append(t(`В плане ${ahead} из ${rows.length} точек`));
+        take.append(t(behind.length ? `; сильнее всего отстают: ${behind.slice(0, 3).join(', ')}.` : '; сильно не отстаёт никто.'));
+      } else {
+        take.append(t('Месяц только начался — прогноз появится после первого закрытого дня.'));
+      }
+    }
+
+    // plan bars
+    const bars = $('#plan-bars');
+    const st = statusOf('by_point');
+    bars.replaceChildren();
+    if (st === 'error') fail(bars);
+    else if (st === 'ok') {
+      bars.classList.remove('dash-skeleton');
+      const rows = bp.filter((r) => r.month === month && r.plan).sort((a, b) => (b.pct || 0) - (a.pct || 0));
+      const max = Math.max(1.05, ...rows.map((r) => r.pct || 0));
+      const pace = o ? o.done_days / o.days_in_month : null;
+      $('#plan-note').textContent = pace != null && pace < 1 ? `Полоса — выполнено; белая черта — сколько должно быть к ${fmtDay(month + '-' + String(Math.max(o.done_days, 1)).padStart(2, '0'))} (${pct(pace)})` : 'Полоса — выполнено, тонкая черта — 100% плана';
+      rows.forEach((r) => {
+        const row = document.createElement('div'); row.className = 'pp-br';
+        const n = document.createElement('span'); n.className = 'pp-bn'; n.textContent = r.point;
+        const tr = document.createElement('div'); tr.className = 'pp-track';
+        const f = document.createElement('div'); f.className = 'pp-fill ' + (tone(r.forecast_pct) === 'up' ? '' : tone(r.forecast_pct)); f.style.width = Math.min(100, (r.pct || 0) / max * 100) + '%';
+        const p100 = document.createElement('div'); p100.className = 'pp-plan100'; p100.style.left = (1 / max * 100) + '%';
+        tr.append(f, p100);
+        if (pace != null && pace < 1) { const pc = document.createElement('div'); pc.className = 'pp-pace'; pc.style.left = `calc(${pace / max * 100}% - 1px)`; tr.append(pc); }
+        const v = document.createElement('span'); v.className = 'pp-bv'; v.textContent = pct(r.pct);
+        v.setAttribute('data-source', 'by_point'); v.setAttribute('data-where', where({ month, point: r.point })); v.setAttribute('data-field', 'pct');
+        row.append(n, tr, v); bars.append(row);
+      });
+    }
+
+    // daily chart
+    const box = $('#daily');
+    const st2 = statusOf('net_daily', 'net_month');
+    box.querySelectorAll('svg, .pp-fail').forEach((e) => e.remove());
+    if (st2 === 'error') { fail(box); return; }
+    if (st2 !== 'ok' || !o) return;
+    box.classList.remove('dash-skeleton');
+    const days = nd.filter((r) => r.month === month);
+    const w = Math.max(280, box.clientWidth); const h = 220;
+    const n = o.days_in_month;
+    const ymax = Math.max(o.plan_per_day || 0, ...days.map((d) => d.amount)) * 1.08 || 1;
+    const svg = d3.select(box).insert('svg', ':first-child').attr('width', '100%').attr('viewBox', `0 0 ${w} ${h}`).style('display', 'block').style('font-family', 'var(--fb)');
+    const y = d3.scaleLinear([0, ymax], [h - 24, 8]).nice(4);
+    const ticks = y.ticks(4);
+    const tmp = svg.append('g');
+    let left = 0; ticks.forEach((v) => { const tt = tmp.append('text').style('font-size', '11px').text(cf.format(v)); left = Math.max(left, tt.node().getComputedTextLength()); }); tmp.remove();
+    left += 10;
+    const x = d3.scaleBand(d3.range(1, n + 1), [left, w - 4]).paddingInner(0.22);
+    ticks.forEach((v) => {
+      svg.append('line').attr('x1', left).attr('x2', w - 4).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', '#232323');
+      svg.append('text').attr('x', left - 6).attr('y', y(v)).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', '#6A6058').style('font-size', '11px').text(v === 0 ? '0' : cf.format(v));
+    });
+    const step = n > 20 ? 5 : 2;
+    d3.range(1, n + 1).filter((d) => d === 1 || d % step === 0).forEach((d) => svg.append('text').attr('x', x(d) + x.bandwidth() / 2).attr('y', h - 6).attr('text-anchor', 'middle').attr('fill', '#6A6058').style('font-size', '11px').text(d));
+    const bw = Math.min(24, x.bandwidth());
+    const off = (x.bandwidth() - bw) / 2;
+    const tp = tip(box);
+    days.forEach((d) => {
+      const dn = Number(d.day.slice(8)); const open = dn > o.done_days;
+      svg.append('rect').attr('x', x(dn) + off).attr('width', bw).attr('y', y(d.amount)).attr('height', Math.max(0, y(0) - y(d.amount))).attr('rx', Math.min(4, bw / 2))
+        .attr('fill', open ? 'rgba(232,122,30,.35)' : '#E87A1E')
+        .on('mousemove', (ev) => { tipLines(tp, fmtDay(d.day) + (open ? ' · день идёт' : ''), [rub(d.amount), o.plan_per_day ? 'план на день ' + rub(o.plan_per_day) : '']); const [mx, my] = d3.pointer(ev, box); placeTip(box, tp, mx, my); })
+        .on('mouseleave', () => { tp.hidden = true; });
+    });
+    if (o.plan_per_day) {
+      svg.append('line').attr('x1', left).attr('x2', w - 4).attr('y1', y(o.plan_per_day)).attr('y2', y(o.plan_per_day)).attr('stroke', '#F2EDE6').attr('stroke-opacity', .55).attr('stroke-dasharray', '4 4');
+    }
+    $('#daily-note').textContent = o.plan_per_day ? `Пунктир — план сети на день, ${rub(o.plan_per_day)}. Светлый столбик — день ещё идёт.` : 'Светлый столбик — день ещё идёт.';
+  }
+
+  function drawPoints(bp, rd) {
+    const tb = $('#pt-table tbody'); tb.replaceChildren();
+    const st = statusOf('by_point');
+    markSort('#pt-table', 'pt');
+    if (st === 'ok') {
+      sortRows(bp.filter((r) => r.month === month), 'pt').forEach((r) => {
+        const tr = document.createElement('tr'); tr.dataset.key = enc(r.month) + ',' + enc(r.point);
+        const td = (txt, cls) => { const c = document.createElement('td'); if (cls) c.className = cls; c.textContent = txt; return c; };
+        const chip = (v, t) => { const c = document.createElement('td'); const s = document.createElement('span'); s.className = 'pp-chip ' + t; s.textContent = pct(v); c.append(s); return c; };
+        tr.append(td(r.point, 'nm'), td(rub(r.fact)), td(rub(r.plan)), td(pct(r.pct)), chip(r.forecast_pct, tone(r.forecast_pct)), td(rub(r.need_per_day)), td(rub(r.avg_day)), td(rub(r.last_full)));
+        tb.append(tr);
+      });
+    }
+    // small multiples
+    const box = $('#small');
+    const st2 = statusOf('rev_dated', 'by_point');
+    box.replaceChildren();
+    if (st2 === 'error') { fail(box); return; }
+    if (st2 !== 'ok') return;
+    box.classList.remove('dash-skeleton');
+    const rows = rd.filter((r) => r.month === month);
+    const pts = bp.filter((r) => r.month === month).sort((a, b) => (b.plan || 0) - (a.plan || 0) || b.fact - a.fact);
+    if (!pts.length) return;
+    const dim = pts[0].days_in_month; const dd = pts[0].done_days;
+    const stp = tip(box);
+    const ymax = Math.max(...rows.map((r) => r.amount), ...pts.map((p) => p.plan_per_day || 0)) || 1;
+    pts.forEach((p) => {
+      const card = document.createElement('div'); card.className = 'pp-sm';
+      const hd = document.createElement('div'); hd.className = 'pp-smh';
+      const nm = document.createElement('b'); nm.textContent = p.point;
+      const v = document.createElement('span'); v.className = 'pp-smv'; v.textContent = crub(p.fact);
+      v.setAttribute('data-source', 'by_point'); v.setAttribute('data-where', where({ month, point: p.point })); v.setAttribute('data-field', 'fact');
+      hd.append(nm, v); card.append(hd); box.append(card);
+      const w = Math.max(160, card.clientWidth - 24); const h = 64;
+      const svg = d3.select(card).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${w} ${h}`);
+      const x = d3.scaleBand(d3.range(1, dim + 1), [0, w]).paddingInner(0.25);
+      const y = d3.scaleLinear([0, ymax], [h - 2, 4]);
+      rows.filter((r) => r.point === p.point).forEach((r) => {
+        const dn = Number(r.day.slice(8));
+        svg.append('rect').attr('x', x(dn)).attr('width', x.bandwidth()).attr('y', y(r.amount)).attr('height', Math.max(0, y(0) - y(r.amount))).attr('rx', Math.min(2, x.bandwidth() / 2))
+          .attr('fill', dn > dd ? 'rgba(232,122,30,.35)' : (tone(p.forecast_pct) === 'low' ? '#E24B4A' : tone(p.forecast_pct) === 'mid' ? '#EFA027' : '#E87A1E'))
+          .on('mousemove', (ev) => { tipLines(stp, p.point + ' · ' + fmtDay(r.day), [rub(r.amount)]); const [mx, my] = d3.pointer(ev, box); placeTip(box, stp, mx, my); })
+          .on('mouseleave', () => { stp.hidden = true; });
+      });
+      if (p.plan_per_day) svg.append('line').attr('x1', 0).attr('x2', w).attr('y1', y(p.plan_per_day)).attr('y2', y(p.plan_per_day)).attr('stroke', '#F2EDE6').attr('stroke-opacity', .5).attr('stroke-dasharray', '3 3');
+    });
+  }
+
+  function drawShifts(sh, pm) {
+    const today = todayNsk(); const tomorrow = addDays(today, 1);
+    $('#today-note').textContent = fmtDay(today) + ' · по листу «График»';
+    $('#tomorrow-note').textContent = fmtDay(tomorrow);
+    const st = statusOf('shifts_named');
+    const allPoints = [...new Set(sh.map((s) => s.point))];
+    const roster = (el, day) => {
+      el.replaceChildren();
+      if (st === 'error') { fail(el); return; }
+      if (st !== 'ok') return;
+      el.classList.remove('dash-skeleton');
+      const list = sh.filter((s) => s.date === day);
+      const seen = new Set();
+      list.sort((a, b) => a.point.localeCompare(b.point, 'ru')).forEach((s) => {
+        if (seen.has(s.point)) return; seen.add(s.point);
+        const r = document.createElement('div'); r.className = 'pp-ro';
+        const p = document.createElement('span'); p.className = 'p'; p.textContent = s.point;
+        const w = document.createElement('span');
+        const m = document.createElement('span'); m.className = 'who'; m.textContent = s.main || '—';
+        m.setAttribute('data-source', 'shifts_named'); m.setAttribute('data-where', where({ date: day, point: s.point })); m.setAttribute('data-field', 'main');
+        w.append(m);
+        if (s.sub) { const sb = document.createElement('span'); sb.className = 'sub'; sb.textContent = '  · подмена ' + s.sub; w.append(sb); }
+        r.append(p, w); el.append(r);
+      });
+      const missing = allPoints.filter((p) => !seen.has(p)).sort((a, b) => a.localeCompare(b, 'ru'));
+      if (!list.length) { const e = document.createElement('div'); e.className = 'pp-empty'; e.textContent = 'На этот день в графике пока пусто.'; el.append(e); }
+      else if (missing.length) { const e = document.createElement('div'); e.className = 'pp-empty'; e.textContent = 'Нет в графике: ' + missing.join(', '); el.append(e); }
+    };
+    roster($('#roster-today'), today);
+    roster($('#roster-tomorrow'), tomorrow);
+
+    const tb = $('#ps-table tbody'); tb.replaceChildren();
+    markSort('#ps-table', 'ps');
+    if (statusOf('person_month') === 'ok') {
+      sortRows(pm.filter((r) => r.month === month), 'ps').forEach((r) => {
+        const tr = document.createElement('tr'); tr.dataset.key = enc(r.month) + ',' + enc(r.person);
+        const td = (txt, cls) => { const c = document.createElement('td'); if (cls) c.className = cls; c.textContent = txt; return c; };
+        tr.append(td(r.person, 'nm'), td(nf.format(r.shifts)), td(nf.format(r.hours)), td(rub(r.revenue)), td(rub(r.per_shift)), td(r.points));
+        tb.append(tr);
+      });
+    }
+  }
+
+  function rankList(el, rows, opt) {
+    el.replaceChildren();
+    el.classList.remove('dash-skeleton');
+    if (!rows.length) { const e = document.createElement('div'); e.className = 'pp-empty'; e.textContent = opt.empty; el.append(e); return; }
+    const max = Math.max(...rows.map((r) => r[opt.field])) || 1;
+    rows.forEach((r, i) => {
+      const row = document.createElement('div'); row.className = 'pp-rk' + (i < 3 ? ' lead' : '');
+      const n = document.createElement('span'); n.className = 'pp-rn'; n.textContent = String(i + 1);
+      const w = document.createElement('span'); w.className = 'pp-rw';
+      const b = document.createElement('b'); b.textContent = r.person;
+      const sm = document.createElement('small'); sm.textContent = opt.sub(r);
+      w.append(b, sm);
+      const t = document.createElement('span'); t.className = 'pp-rt'; const f = document.createElement('i'); f.style.width = (r[opt.field] / max * 100) + '%'; t.append(f);
+      const v = document.createElement('span'); v.className = 'pp-rv'; v.textContent = opt.fmt(r[opt.field]);
+      v.setAttribute('data-source', opt.source); v.setAttribute('data-where', where({ month: r.month, person: r.person })); v.setAttribute('data-field', opt.field);
+      row.append(n, w, t, v); el.append(row);
+    });
+  }
+
+  function barList(el, rows, key, source) {
+    el.replaceChildren();
+    el.classList.remove('dash-skeleton');
+    if (!rows.length) { const e = document.createElement('div'); e.className = 'pp-empty'; e.textContent = 'В этом месяце акций не отмечали.'; el.append(e); return; }
+    const max = Math.max(...rows.map((r) => r.qty)) || 1;
+    rows.forEach((r) => {
+      const row = document.createElement('div'); row.className = 'pp-br';
+      const n = document.createElement('span'); n.className = 'pp-bn'; n.textContent = r[key]; n.title = r[key];
+      const tr = document.createElement('div'); tr.className = 'pp-track';
+      const f = document.createElement('div'); f.className = 'pp-fill'; f.style.width = (r.qty / max * 100) + '%'; tr.append(f);
+      const v = document.createElement('span'); v.className = 'pp-bv'; v.textContent = nf.format(r.qty);
+      v.setAttribute('data-source', source); v.setAttribute('data-where', where({ month: r.month, [key]: r[key] })); v.setAttribute('data-field', 'qty');
+      row.append(n, tr, v); el.append(row);
+    });
+  }
+
+  function drawTop() {
+    const get = (id) => (dash.data(id).status === 'ok' ? dash.data(id).data : []);
+    // KPI: акции
+    const pmo = get('promo_month').find((r) => r.month === month);
+    const kq = $('#k-promo .pp-kv');
+    if (statusOf('promo_month') !== 'loading') { kq.classList.remove('dash-skeleton'); kq.setAttribute('data-where', where({ month })); kq.textContent = pmo ? nf.format(pmo.qty) + ' шт.' : '0 шт.'; }
+    // топ по выручке
+    const revRows = get('person_month').filter((r) => r.month === month && r.shifts >= 3 && r.per_shift != null).sort((a, b) => b.per_shift - a.per_shift).slice(0, 10);
+    const rr = $('#rank-rev');
+    if (statusOf('person_month') === 'error') fail(rr);
+    else if (statusOf('person_month') === 'ok') rankList(rr, revRows, { field: 'per_shift', source: 'person_month', fmt: crub, sub: (r) => `${r.shifts} смен · ${r.points}`, empty: 'Нет продавцов с 3+ сменами в этом месяце.' });
+    const br = revRows[0];
+    const brEl = $('#best-rev'); const brS = $('#best-rev-s span');
+    if (statusOf('person_month') === 'ok') {
+      brEl.classList.remove('dash-skeleton');
+      brEl.textContent = br ? br.person : '—'; brS.textContent = br ? rub(br.per_shift) : '—';
+      if (br) { brEl.setAttribute('data-where', where({ month, person: br.person })); brS.setAttribute('data-where', where({ month, person: br.person })); }
+    }
+    // топ по акциям
+    const prRows = get('promo_person').filter((r) => r.month === month).sort((a, b) => b.qty - a.qty || a.person.localeCompare(b.person, 'ru')).slice(0, 10);
+    const rp = $('#rank-promo');
+    if (statusOf('promo_person') === 'error') fail(rp);
+    else if (statusOf('promo_person') === 'ok') rankList(rp, prRows, { field: 'qty', source: 'promo_person', fmt: (v) => nf.format(v) + ' шт.', sub: (r) => r.points, empty: 'В этом месяце акций не отмечали.' });
+    const bp1 = prRows[0];
+    const bpEl = $('#best-promo'); const bpS = $('#k-best-promo .pp-ks span');
+    if (statusOf('promo_person') === 'ok') {
+      bpEl.classList.remove('dash-skeleton');
+      bpEl.textContent = bp1 ? bp1.person : '—'; bpS.textContent = bp1 ? nf.format(bp1.qty) : '—';
+      if (bp1) { bpEl.setAttribute('data-where', where({ month, person: bp1.person })); bpS.setAttribute('data-where', where({ month, person: bp1.person })); }
+    }
+    // по видам и точкам
+    const pk = $('#promo-kind'); const pp = $('#promo-point');
+    if (statusOf('promo_kind') === 'error') fail(pk); else if (statusOf('promo_kind') === 'ok') barList(pk, get('promo_kind').filter((r) => r.month === month).sort((a, b) => b.qty - a.qty), 'promo', 'promo_kind');
+    if (statusOf('promo_point') === 'error') fail(pp); else if (statusOf('promo_point') === 'ok') barList(pp, get('promo_point').filter((r) => r.month === month).sort((a, b) => b.qty - a.qty), 'point', 'promo_point');
+  }
+
+  // ===== Остатки =====
+  let stPoint = 'Вся сеть';
+  const stSort = { low: { k: 'days_left', dir: 1 }, neg: { k: 'qty', dir: 1 }, dead: { k: 'frozen', dir: -1 } };
+  const stPointSel = $('#st-point'); const stQ = $('#st-q');
+  stPointSel.addEventListener('change', () => { stPoint = stPointSel.value; dash.setParams({ point: stPoint }); draw(); });
+  stQ.addEventListener('input', () => draw());
+  [['#low-table', 'low'], ['#neg-table', 'neg'], ['#dead-table', 'dead']].forEach(([id, k]) => {
+    $(id).querySelectorAll('th').forEach((th) => th.querySelector('button').addEventListener('click', () => {
+      const s = stSort[k]; if (s.k === th.dataset.k) s.dir = -s.dir; else { s.k = th.dataset.k; s.dir = ['name', 'point', 'donors', 'takers', 'last_sale'].includes(th.dataset.k) ? 1 : -1; } draw();
+    }));
+  });
+  const stMark = (id, k) => $(id).querySelectorAll('th').forEach((th) => { if (th.dataset.k === stSort[k].k) th.setAttribute('aria-sort', stSort[k].dir > 0 ? 'ascending' : 'descending'); else th.removeAttribute('aria-sort'); });
+  const stSorted = (rows, k) => { const s = stSort[k]; return rows.slice().sort((a, b) => { const x = a[s.k], y = b[s.k]; if ((x == null || x === '') && (y == null || y === '')) return 0; if (x == null || x === '') return 1; if (y == null || y === '') return -1; return (typeof x === 'string' ? x.localeCompare(y, 'ru') : x - y) * s.dir; }); };
+  const fq = (v) => (v == null ? '—' : nf.format(v));
+  const fd = (v) => (v == null ? '—' : (Math.round(v * 10) / 10).toLocaleString('ru-RU'));
+  const fdate = (iso) => (iso ? fmtDay(iso) : 'давно');
+  let orderText = '';
+  $('#order-copy').addEventListener('click', async () => {
+    const note = $('#order-copied');
+    try { await navigator.clipboard.writeText(orderText); note.textContent = 'Скопировано'; }
+    catch (e) { note.textContent = 'Не получилось скопировать — выдели список вручную'; }
+    setTimeout(() => { note.textContent = ''; }, 2500);
+  });
+
+  function stTable(id, k, rows, cells) {
+    const tb = $(id + ' tbody'); tb.replaceChildren(); stMark(id, k);
+    stSorted(rows, k).forEach((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = enc(r.point) + ',' + enc(r.id);
+      cells(r).forEach(([txt, cls]) => { const c = document.createElement('td'); if (cls) c.className = cls; c.textContent = txt; tr.append(c); });
+      tb.append(tr);
+    });
+    if (!rows.length) { const tr = document.createElement('tr'); const c = document.createElement('td'); c.colSpan = 8; c.className = 'lft mut'; c.textContent = 'Ничего нет — хорошо.'; tr.append(c); tb.append(tr); }
+  }
+
+  function drawStock() {
+    const st = statusOf('stock_flags');
+    ['#kv-low', '#kv-neg', '#kv-dead'].forEach((s) => { if (st === 'error') { $(s).classList.remove('dash-skeleton'); $(s).textContent = '—'; } });
+    if (st === 'error') { fail($('#order-list')); $('#st-take').textContent = 'Остатки не загрузились — проверь доступ к таблице «Отчет».'; return; }
+    if (st !== 'ok') return;
+    const all = dash.data('stock_flags').data;
+    const points = [...new Set(all.map((r) => r.point))].sort((a, b) => a.localeCompare(b, 'ru'));
+    const want = ['Вся сеть', ...points];
+    if ([...stPointSel.options].map((o) => o.value).join() !== want.join()) stPointSel.replaceChildren(...want.map((p) => new Option(p, p)));
+    if (!want.includes(stPoint)) stPoint = 'Вся сеть';
+    stPointSel.value = stPoint;
+    const q = stQ.value.trim().toLowerCase();
+    const inPoint = (r) => stPoint === 'Вся сеть' || r.point === stPoint;
+    const match = (r) => !q || (r.name + ' ' + (r.group || '')).toLowerCase().includes(q);
+    const rows = all.filter((r) => inPoint(r) && match(r));
+    const low = rows.filter((r) => r.low);
+    const neg = rows.filter((r) => r.qty < 0);
+    const dead = rows.filter((r) => r.dead);
+    const frozen = dead.reduce((s, r) => s + (r.frozen || 0), 0);
+    const settings = dash.data('stock_settings').status === 'ok' ? dash.data('stock_settings').data : [];
+    const S = (re, d) => { const r = settings.find((x) => re.test(x.setting)); return r && r.value > 0 ? r.value : d; };
+    const lowDays = S(/хватит меньше/i, 8), orderDays = S(/запас/i, 10), deadDays = S(/лежит/i, 30);
+
+    const kl = $('#kv-low'), kn = $('#kv-neg'), kd = $('#kv-dead');
+    [kl, kn, kd].forEach((e) => e.classList.remove('dash-skeleton'));
+    kl.textContent = nf.format(low.length) + ' поз.'; kn.textContent = nf.format(neg.length) + ' поз.'; kd.textContent = nf.format(dead.length) + ' поз.';
+    $('#ks-low').textContent = `хватит меньше чем на ${lowDays} дн.`;
+    $('#ks-dead').textContent = `${crub(frozen)} по закупке · ${deadDays}+ дн.`;
+    const upd = dash.data('stock').status === 'ok' && dash.data('stock').data[0] ? dash.data('stock').data[0].updated : '';
+    $('#st-upd').textContent = upd || '—';
+    const missing = ['Богаткова', 'Горский', 'Громова', 'Династия', 'Зорге', 'Коротаева', 'Москва', 'Никитина', 'Петухова', 'Планировочная', 'Титова', 'Шлюз'].filter((p) => !points.includes(p));
+    $('#st-take').textContent = (stPoint === 'Вся сеть' ? 'По сети' : stPoint) + `: заказать ${low.length} позиций, ${neg.length} в минусе, ${dead.length} лежат без продаж ${deadDays}+ дней.` + (missing.length && stPoint === 'Вся сеть' ? ` Нет данных по: ${missing.join(', ')}.` : '');
+    $('#low-note').textContent = `Остатка хватит меньше чем на ${lowDays} дн. при продажах последних 14 дней. «Заказать» — чтобы хватило на ${orderDays} дн.; «Где взять» — точки, где этого товара больше, чем им нужно (штук можно забрать).`;
+
+    stTable('#low-table', 'low', low, (r) => [[r.name, 'wrap'], [r.point], [fq(r.qty)], [fd(r.per_day)], [fd(r.days_left)], [fq(r.order_qty)], [r.donors || '—', 'wrap mut']]);
+    stTable('#neg-table', 'neg', neg, (r) => [[r.name, 'wrap'], [r.point], [fq(r.qty)], [fdate(r.last_sale)]]);
+    stTable('#dead-table', 'dead', dead, (r) => [[r.name, 'wrap'], [r.point], [fq(r.qty)], [r.frozen == null ? '—' : rub(r.frozen)], [r.takers || '—', 'wrap mut']]);
+
+    // список к заказу
+    const box = $('#order-list'); box.replaceChildren(); box.classList.remove('dash-skeleton');
+    let items;
+    if (stPoint === 'Вся сеть') {
+      if (statusOf('stock_order') !== 'ok') return;
+      $('#order-note').textContent = 'Сумма по всем точкам; что можно перекинуть между точками — смотри «Где взять» выше';
+      items = dash.data('stock_order').data.filter(match).map((r) => ({ name: r.name, group: r.group, qty: r.need, sub: r.points, src: 'stock_order', where: { name: r.name }, field: 'need' }));
+    } else {
+      $('#order-note').textContent = 'Что заказать на ' + stPoint + ', если не забирать с других точек';
+      items = low.map((r) => ({ name: r.name, group: r.group || 'Без группы', qty: r.order_qty, sub: r.donors ? 'есть: ' + r.donors : '', src: 'stock_flags', where: { point: r.point, id: r.id }, field: 'order_qty' }));
+    }
+    const groups = d3.groups(items, (r) => (r.group || 'Без группы')).sort((a, b) => a[0].localeCompare(b[0], 'ru'));
+    const lines = [];
+    groups.forEach(([g, list]) => {
+      const card = document.createElement('div'); card.className = 'pp-og';
+      const h = document.createElement('div'); h.className = 'pp-ogh';
+      const hn = document.createElement('span'); hn.textContent = g;
+      const hc = document.createElement('span'); hc.textContent = nf.format(list.reduce((s, r) => s + r.qty, 0)) + ' шт';
+      h.append(hn, hc); card.append(h);
+      lines.push(g.toUpperCase());
+      list.sort((a, b) => a.name.localeCompare(b.name, 'ru')).forEach((r) => {
+        const it = document.createElement('div'); it.className = 'pp-oi';
+        const l = document.createElement('span'); l.textContent = r.name;
+        if (r.sub) { const sm = document.createElement('small'); sm.textContent = r.sub; l.append(sm); }
+        const v = document.createElement('b'); v.textContent = nf.format(r.qty);
+        v.setAttribute('data-source', r.src); v.setAttribute('data-where', where(r.where)); v.setAttribute('data-field', r.field);
+        it.append(l, v); card.append(it);
+        lines.push(`${r.name} — ${r.qty}`);
+      });
+      lines.push('');
+      box.append(card);
+    });
+    if (!items.length) { const e = document.createElement('div'); e.className = 'pp-empty'; e.textContent = 'Заказывать нечего.'; box.append(e); }
+    orderText = (stPoint === 'Вся сеть' ? 'Заказ по сети' : 'Заказ ' + stPoint) + '\n\n' + lines.join('\n');
+  }
+
+  function draw() {
+    const nm = dash.data('net_month').status === 'ok' ? dash.data('net_month').data : [];
+    const bp = dash.data('by_point').status === 'ok' ? dash.data('by_point').data : [];
+    if (nm.length) drawMonthSelect(nm);
+    if (!month) {
+      const st = statusOf('net_month');
+      if (st === 'error') { fail($('#plan-bars')); fail($('#daily')); }
+    }
+    sel.hidden = page === 'ostatki';
+    if (page === 'obzor' && month) drawOverview(nm, bp, dash.data('net_daily').status === 'ok' ? dash.data('net_daily').data : []);
+    if (page === 'tochki' && month) drawPoints(bp, dash.data('rev_dated').status === 'ok' ? dash.data('rev_dated').data : []);
+    if (page === 'top' && month) drawTop();
+    if (page === 'ostatki') drawStock();
+    if (page === 'smeny') drawShifts(dash.data('shifts_named').status === 'ok' ? dash.data('shifts_named').data : [], dash.data('person_month').status === 'ok' ? dash.data('person_month').data : []);
+  }
+
+  dash.onData(draw);
+  const named = location.hash.slice(1);
+  if (['obzor', 'ostatki', 'tochki', 'smeny', 'top'].includes(named)) showPage(named, false);
+})();
+</script>
+</div>
+<script>window.__ppLoad();</script>
+</body>
+</html>

@@ -627,6 +627,25 @@ window.__ppRole = 'manager';
         <div class="pp-roster dash-skeleton" id="roster-tomorrow" data-source="shifts_named"></div>
       </div>
     </div>
+    <div class="pp-card" id="card-tests">
+      <div class="pp-ch"><h2 class="pp-ct">Обучение: кто сдал тесты</h2><p class="pp-cn">Лучший результат по каждой теме. Тема сдана от 80%. Результат приходит из «Стажировочной тетради», когда продавец заканчивает тест.</p></div>
+      <div class="pp-tablewrap">
+        <table class="pp-table" id="tests-table" data-source="tests_people" data-row-key="person,point">
+          <thead><tr>
+            <th class="lft" data-field="person" data-k="person"><button class="pp-sort">Продавец</button></th>
+            <th data-field="point" data-k="point"><button class="pp-sort">Точка</button></th>
+            <th data-field="passed" data-k="passed"><button class="pp-sort">Сдано</button></th>
+            <th data-field="zakazy" data-k="zakazy"><button class="pp-sort">Заказы</button></th>
+            <th data-field="zhidkosti" data-k="zhidkosti"><button class="pp-sort">Жидкости</button></th>
+            <th data-field="vape" data-k="vape"><button class="pp-sort">Одноразки и POD</button></th>
+            <th data-field="shaiby" data-k="shaiby"><button class="pp-sort">Шайбы</button></th>
+            <th data-field="kalyany" data-k="kalyany"><button class="pp-sort">Кальяны</button></th>
+            <th data-field="inventar" data-k="inventar"><button class="pp-sort">Инвентаризация</button></th>
+            <th data-field="last" data-k="last"><button class="pp-sort">Последний тест</button></th>
+          </tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </div>
     <div class="pp-card" id="card-people">
       <div class="pp-ch">
         <h2 class="pp-ct">Продавцы за месяц</h2>
@@ -998,6 +1017,37 @@ dash.calc('point_weeks', {
     for (const r of promo_rows) get(r.point, r.day).promos += r.qty;
     const curWeek = maxDay ? monday(maxDay) : '';
     return [...by.values()].map((o) => ({ ...o, avg_check: o.checks ? Math.round(o.evo_revenue / o.checks) : null, complete: o.week < curWeek }));
+  },
+});
+
+dash.loader('tests', {
+  description: 'Строки листа «Обучение»: когда, кто, с какой точки, какая тема, сколько верных из скольких',
+  fn: ({ answer }) => {
+    const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
+    if (!a || !Array.isArray(a.values)) throw new Error('Google Sheets не вернул значения листа «Обучение»');
+    const txt = (x) => (x == null ? '' : String(x).trim());
+    const rows = a.values.slice(1).map((r) => { const m = txt(r[0]).match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/); return m && txt(r[1]) && txt(r[3]) ? { at: `${m[3]}-${m[2]}-${m[1]} ${(m[4] || '00').padStart(2, '0')}:${m[5] || '00'}`, person: txt(r[1]), point: txt(r[2]), lesson: txt(r[3]), right: Number(txt(r[5])) || 0, total: Number(txt(r[6])) || 0 } : null; }).filter(Boolean);
+    return { columns: ['at', 'person', 'point', 'lesson', 'right', 'total'], rows };
+  },
+});
+
+dash.calc('tests_people', {
+  inputs: ['tests'],
+  title: 'Обучение по продавцам',
+  description: 'Для каждого продавца и точки: лучший результат по каждой теме (доля верных), сколько тем сдано (от 80%) и когда был последний тест. Имя сравнивается без учёта регистра.',
+  fn: (tests) => {
+    const LESSONS = ['zakazy', 'zhidkosti', 'vape', 'shaiby', 'kalyany', 'inventar'];
+    const by = new Map();
+    for (const t of tests) {
+      if (!t.total) continue;
+      const k = t.person.toLowerCase().replace(/ё/g, 'е') + '|' + t.point;
+      const o = by.get(k) || { person: t.person, point: t.point, last: '', attempts: 0 };
+      const v = t.right / t.total;
+      if (o[t.lesson] == null || v > o[t.lesson]) o[t.lesson] = Math.round(v * 100) / 100;
+      o.attempts += 1; if (t.at > o.last) o.last = t.at;
+      by.set(k, o);
+    }
+    return [...by.values()].map((o) => { const row = { person: o.person, point: o.point, last: o.last, attempts: o.attempts }; LESSONS.forEach((l) => { row[l] = o[l] == null ? null : o[l]; }); row.passed = LESSONS.filter((l) => row[l] != null && row[l] >= 0.8).length; return row; });
   },
 });
 
@@ -1850,6 +1900,20 @@ dash.calc('promo_point', {
     }
   }
 
+  // ===== Обучение =====
+  gSort.tests = { k: 'passed', dir: -1 };
+  $('#tests-table').querySelectorAll('th').forEach((th) => th.querySelector('button').addEventListener('click', () => { const s = gSort.tests; if (s.k === th.dataset.k) s.dir = -s.dir; else { s.k = th.dataset.k; s.dir = ['person', 'point'].includes(th.dataset.k) ? 1 : -1; } draw(); }));
+  function drawTests() {
+    const st = statusOf('tests_people');
+    if (st !== 'ok') { if (st === 'error') { const tb = $('#tests-table tbody'); tb.replaceChildren(); const tr = document.createElement('tr'); const c = document.createElement('td'); c.colSpan = 10; c.className = 'lft mut'; c.textContent = dash.data('tests').status === 'missing' ? 'Обнови скрипт данных — он ещё не отдаёт лист «Обучение».' : 'Не загрузилось.'; tr.append(c); tb.append(tr); } return; }
+    const L = ['zakazy', 'zhidkosti', 'vape', 'shaiby', 'kalyany', 'inventar'];
+    const chip = (v) => { const sp = document.createElement('span'); if (v == null) { sp.textContent = '—'; sp.style.color = 'var(--t3)'; return sp; } sp.className = 'pp-chip ' + (v >= 0.8 ? 'up' : 'low'); sp.textContent = (v >= 0.8 ? '✓ ' : '✗ ') + Math.round(v * 100) + '%'; return sp; };
+    const fmtAt = (at) => { if (!at) return '—'; const [d, t] = at.split(' '); return fmtDay(d) + ', ' + t; };
+    gTable('#tests-table', 'tests', dash.data('tests_people').data, (r) => enc(r.person) + ',' + enc(r.point),
+      (r) => [[r.person, 'nm'], [r.point], [`${r.passed} из 6`], ...L.map((l) => [chip(r[l])]), [fmtAt(r.last), 'mut']],
+      'Пока никто не прошёл тест. Результаты появятся, когда продавцы пройдут тесты в обучении.');
+  }
+
   function draw() {
     const nm = dash.data('net_month').status === 'ok' ? dash.data('net_month').data : [];
     const bp = dash.data('by_point').status === 'ok' ? dash.data('by_point').data : [];
@@ -1866,6 +1930,7 @@ dash.calc('promo_point', {
     if (page === 'ostatki') drawStock();
     if (page === 'moe') { drawImportant(); drawPrices(); drawDubli(); drawNames(); }
     if (page === 'tochka' && month) drawPoint(dash.data('by_point').status === 'ok' ? dash.data('by_point').data : [], dash.data('rev_dated').status === 'ok' ? dash.data('rev_dated').data : []);
+    if (page === 'smeny') drawTests();
     if (page === 'smeny') drawShifts(dash.data('shifts_named').status === 'ok' ? dash.data('shifts_named').data : [], dash.data('person_month').status === 'ok' ? dash.data('person_month').data : []);
   }
 

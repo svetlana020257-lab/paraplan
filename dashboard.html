@@ -175,7 +175,7 @@ window.__ppRole = 'manager';
 .pp-take { margin: 0; color: var(--t2); font-size: 15px; line-height: 1.5; min-height: 1.5em; max-width: 62rem; }
 .pp .pp-take b { color: var(--t1); font-weight: 600; }
 .pp-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: 10px; }
-.pp-kpi { background: var(--s1); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 4px; align-content: start; }
+.pp-kpi { position: relative; background: var(--s1); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 4px; align-content: start; }
 .pp-kpi.hero { background: linear-gradient(160deg, rgba(232,122,30,.16), var(--s1) 70%); border-color: rgba(232,122,30,.35); }
 .pp-kl { font-size: 10.5px; color: var(--t3); text-transform: uppercase; letter-spacing: .08em; }
 .pp-kv { font-family: var(--fh); font-weight: 700; font-size: clamp(19px, 2.4vw, 25px); font-variant-numeric: tabular-nums; line-height: 1.15; min-height: 1.15em; white-space: nowrap; }
@@ -279,6 +279,17 @@ window.__ppRole = 'manager';
 .pp-sec { font-family: var(--fh); font-weight: 900; font-size: 16px; letter-spacing: .03em; margin: 8px 0 -4px; color: var(--or-l); }
 .pp-tab-me { color: var(--or-l); }
 .pp-tab-me[hidden] { display: none; }
+.pp-bars { align-content: start; }
+.pp-tgrid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); align-items: start; }
+@media (min-width: 1100px) {
+  .pp-tgrid { grid-template-columns: 1fr 1fr 1fr; grid-auto-flow: dense; }
+  .pp-tgrid #card-tp-daily { grid-column: span 2; }
+  .pp-tgrid #card-tp-goods { grid-column: 3; grid-row: span 2; }
+}
+.pp-spark { height: 34px; margin-top: 6px; }
+.pp-spark svg { display: block; }
+.pp-trend { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; min-height: 1.3em; }
+.pp-trend.up { color: var(--green); } .pp-trend.down { color: var(--red); } .pp-trend.flat { color: var(--t2); }
 .pp-foot { font-size: 11.5px; color: var(--t3); }
 @media (max-width: 520px) { .pp-br { grid-template-columns: 5.2rem 1fr 2.8rem; } .pp-hide-n { display: none; } }
 </style>
@@ -353,13 +364,14 @@ window.__ppRole = 'manager';
       <select class="pp-month" id="tp-point" aria-label="Точка" data-source="by_point"></select>
     </div>
     <p class="pp-take" id="tp-take"><span class="dash-skeleton">—</span></p>
+    <p class="pp-cn" style="margin:-6px 0 0">Столбики под цифрами — по неделям (пн–вс); светлый — текущая неделя, она ещё не закончилась. Стрелка — последняя полная неделя к предыдущей.</p>
     <div class="pp-kpis" id="tp-kpi">
-      <div class="pp-kpi hero"><span class="pp-kl">Выручка за месяц</span><span class="pp-kv dash-skeleton" id="tk-fact" data-source="by_point" data-field="fact">—</span><span class="pp-ks"><span id="tk-pct" data-source="by_point" data-field="pct">—</span> плана · прогноз <span id="tk-fc" data-source="by_point" data-field="forecast_pct">—</span></span></div>
-      <div class="pp-kpi"><span class="pp-kl">Средний чек</span><span class="pp-kv dash-skeleton" id="tk-avg" data-source="point_month" data-field="avg_check">—</span><span class="pp-ks"><span id="tk-checks" data-source="point_month" data-field="checks">—</span> чеков по кассе</span></div>
-      <div class="pp-kpi"><span class="pp-kl">Прибыль по кассе</span><span class="pp-kv dash-skeleton" id="tk-profit" data-source="point_month" data-field="profit">—</span><span class="pp-ks">маржа <span id="tk-margin" data-source="point_month" data-field="margin">—</span></span></div>
-      <div class="pp-kpi"><span class="pp-kl">Акций за месяц</span><span class="pp-kv dash-skeleton" id="tk-promo" data-source="promo_point" data-field="qty">—</span><span class="pp-ks">по отметкам в Кэпе</span></div>
+      <div class="pp-kpi hero"><span class="pp-kl">Выручка за месяц</span><span class="pp-kv dash-skeleton" id="tk-fact" data-source="by_point" data-field="fact">—</span><span class="pp-ks"><span id="tk-pct" data-source="by_point" data-field="pct">—</span> плана · прогноз <span id="tk-fc" data-source="by_point" data-field="forecast_pct">—</span></span><div class="pp-spark" id="sp-revenue" data-source="point_weeks"></div><span class="pp-trend" id="tr-revenue"></span></div>
+      <div class="pp-kpi"><span class="pp-kl">Средний чек</span><span class="pp-kv dash-skeleton" id="tk-avg" data-source="point_month" data-field="avg_check">—</span><span class="pp-ks"><span id="tk-checks" data-source="point_month" data-field="checks">—</span> чеков по кассе</span><div class="pp-spark" id="sp-avg_check" data-source="point_weeks"></div><span class="pp-trend" id="tr-avg_check"></span></div>
+      <div class="pp-kpi"><span class="pp-kl">Прибыль по кассе</span><span class="pp-kv dash-skeleton" id="tk-profit" data-source="point_month" data-field="profit">—</span><span class="pp-ks">маржа <span id="tk-margin" data-source="point_month" data-field="margin">—</span></span><div class="pp-spark" id="sp-profit" data-source="point_weeks"></div><span class="pp-trend" id="tr-profit"></span></div>
+      <div class="pp-kpi"><span class="pp-kl">Акций за месяц</span><span class="pp-kv dash-skeleton" id="tk-promo" data-source="promo_point" data-field="qty">—</span><span class="pp-ks">по отметкам в Кэпе</span><div class="pp-spark" id="sp-promos" data-source="point_weeks"></div><span class="pp-trend" id="tr-promos"></span></div>
     </div>
-    <div class="pp-grid">
+    <div class="pp-tgrid">
       <div class="pp-card" id="card-tp-daily">
         <div class="pp-ch"><h2 class="pp-ct">Выручка по дням</h2><p class="pp-cn" id="tp-daily-note">Пунктир — план точки на день</p></div>
         <div class="pp-chart dash-skeleton" id="tp-daily" data-source="rev_dated by_point"></div>
@@ -385,7 +397,7 @@ window.__ppRole = 'manager';
           <thead><tr>
             <th class="lft" data-field="name" data-k="name"><button class="pp-sort">Товар</button></th>
             <th data-field="qty" data-k="qty"><button class="pp-sort">Остаток</button></th>
-            <th data-field="per_day" data-k="per_day"><button class="pp-sort">В день</button></th>
+            <th data-field="sold" data-k="sold"><button class="pp-sort">Продано за 14 дн</button></th>
             <th data-field="days_left" data-k="days_left"><button class="pp-sort">Хватит, дн</button></th>
             <th data-field="order_qty" data-k="order_qty"><button class="pp-sort">Заказать</button></th>
             <th class="lft" data-field="donors" data-k="donors"><button class="pp-sort">Где взять</button></th>
@@ -417,7 +429,7 @@ window.__ppRole = 'manager';
             <th class="lft" data-field="name" data-k="name"><button class="pp-sort">Товар</button></th>
             <th data-field="point" data-k="point"><button class="pp-sort">Точка</button></th>
             <th data-field="qty" data-k="qty"><button class="pp-sort">Остаток</button></th>
-            <th data-field="per_day" data-k="per_day"><button class="pp-sort">В день</button></th>
+            <th data-field="sold" data-k="sold"><button class="pp-sort">Продано за 14 дн</button></th>
             <th data-field="days_left" data-k="days_left"><button class="pp-sort">Хватит, дн</button></th>
             <th data-field="order_qty" data-k="order_qty"><button class="pp-sort">Заказать</button></th>
             <th class="lft" data-field="donors" data-k="donors"><button class="pp-sort">Где взять</button></th>
@@ -765,7 +777,7 @@ dash.calc('stock_flags', {
       const donors = low ? others.filter((o) => surplus(o) > 0).sort((a, b) => surplus(b) - surplus(a)).map((o) => `${o.point} ${surplus(o)}`).join(', ') : '';
       const takers = dead ? others.filter((o) => o.per_day > 0).sort((a, b) => b.per_day - a.per_day).map((o) => o.point).join(', ') : '';
       return {
-        point: r.point, id: r.id, name: r.name, group: r.group, qty: r.qty, per_day: r.per_day,
+        point: r.point, id: r.id, name: r.name, group: r.group, qty: r.qty, per_day: r.per_day, sold: r.sold,
         days_left: r.per_day > 0 ? Math.round(Math.max(0, r.qty) / r.per_day * 10) / 10 : null,
         status: r.qty < 0 ? 'minus' : low ? 'low' : dead ? 'dead' : 'ok',
         low, order_qty: need, donors, dead, takers, frozen: dead && r.cost ? Math.round(r.qty * r.cost) : null,
@@ -957,6 +969,23 @@ dash.calc('name_diffs', {
       if (v.size > 1) out.push({ barcode, variants: v.size, names: [...v.values()].map((x) => `${x.name} — ${[...new Set(x.points)].join(', ')}`).join('\n') });
     }
     return out;
+  },
+});
+
+dash.calc('point_weeks', {
+  inputs: ['rev_dated', 'evo_rev', 'promo_rows'],
+  title: 'Точки по неделям',
+  description: 'По неделям пн–вс: выручка (лист «Выручка»), средний чек и прибыль по кассе Эвотор, число акций. complete = неделя закончилась (есть данные за воскресенье или позже).',
+  fn: (rev_dated, evo_rev, promo_rows) => {
+    const monday = (iso) => { const d = new Date(iso + 'T00:00:00Z'); const w = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - w); return d.toISOString().slice(0, 10); };
+    const by = new Map();
+    const get = (point, day) => { const k = point + '|' + monday(day); if (!by.has(k)) by.set(k, { point, week: monday(day), revenue: 0, checks: 0, evo_revenue: 0, profit: 0, promos: 0 }); return by.get(k); };
+    let maxDay = '';
+    for (const r of rev_dated) { get(r.point, r.day).revenue += r.amount; if (r.day > maxDay) maxDay = r.day; }
+    for (const r of evo_rev) { const o = get(r.point, r.day); o.checks += r.checks; o.evo_revenue += r.revenue; o.profit += r.profit; }
+    for (const r of promo_rows) get(r.point, r.day).promos += r.qty;
+    const curWeek = maxDay ? monday(maxDay) : '';
+    return [...by.values()].map((o) => ({ ...o, avg_check: o.checks ? Math.round(o.evo_revenue / o.checks) : null, complete: o.week < curWeek }));
   },
 });
 
@@ -1558,9 +1587,9 @@ dash.calc('promo_point', {
     $('#st-upd').textContent = upd || '—';
     const missing = ['Богаткова', 'Горский', 'Громова', 'Династия', 'Зорге', 'Коротаева', 'Москва', 'Никитина', 'Петухова', 'Планировочная', 'Титова', 'Шлюз'].filter((p) => !points.includes(p));
     $('#st-take').textContent = (stPoint === 'Вся сеть' ? 'По сети' : stPoint) + `: заказать ${low.length} позиций, ${neg.length} в минусе, ${dead.length} лежат без продаж ${deadDays}+ дней.` + (missing.length && stPoint === 'Вся сеть' ? ` Нет данных по: ${missing.join(', ')}.` : '');
-    $('#low-note').textContent = `Остатка хватит меньше чем на ${lowDays} дн. при продажах последних 14 дней. «Заказать» — чтобы хватило на ${orderDays} дн.; «Где взять» — точки, где этого товара больше, чем им нужно (штук можно забрать).`;
+    $('#low-note').textContent = `Остатка хватит меньше чем на ${lowDays} дн., если продавать так же, как последние 14 дней. «Заказать» — чтобы хватило на ${orderDays} дн.; «Где взять» — точки, где этого товара больше, чем им нужно (штук можно забрать).`;
 
-    stTable('#low-table', 'low', low, (r) => [[r.name, 'wrap'], [r.point], [fq(r.qty)], [fd(r.per_day)], [fd(r.days_left)], [fq(r.order_qty)], [r.donors || '—', 'wrap mut']]);
+    stTable('#low-table', 'low', low, (r) => [[r.name, 'wrap'], [r.point], [fq(r.qty)], [fq(r.sold) + ' шт'], [fd(r.days_left)], [fq(r.order_qty)], [r.donors || '—', 'wrap mut']]);
     stTable('#neg-table', 'neg', neg, (r) => [[r.name, 'wrap'], [r.point], [fq(r.qty)], [fdate(r.last_sale)]]);
     stTable('#dead-table', 'dead', dead, (r) => [[r.name, 'wrap'], [r.point], [fq(r.qty)], [r.frozen == null ? '—' : rub(r.frozen)], [r.takers || '—', 'wrap mut']]);
 
@@ -1732,6 +1761,35 @@ dash.calc('promo_point', {
     if (statusOf('point_month') !== 'loading') { setK('#tk-avg', 'point_month', { month, point: P }, rub(pm && pm.avg_check)); setK('#tk-checks', 'point_month', { month, point: P }, pm ? nf.format(pm.checks) : '—'); setK('#tk-profit', 'point_month', { month, point: P }, rub(pm && pm.profit)); setK('#tk-margin', 'point_month', { month, point: P }, pm && pm.margin != null ? String(pm.margin).replace('.', ',') + '%' : '—'); }
     if (dash.data('evo_rev').status === 'missing') { ['#tk-checks', '#tk-margin'].forEach((id) => { $(id).textContent = '—'; }); $('#tk-avg').nextElementSibling.textContent = 'обнови скрипт данных'; $('#tk-profit').nextElementSibling.textContent = 'обнови скрипт данных'; }
     if (statusOf('promo_point') !== 'loading') setK('#tk-promo', 'promo_point', { month, point: P }, (pr ? nf.format(pr.qty) : '0') + ' шт.');
+    // недельные столбики под цифрами
+    if (statusOf('point_weeks') === 'ok') {
+      const weeks = get('point_weeks').filter((r) => r.point === P).sort((a, c) => (a.week < c.week ? -1 : 1));
+      [['revenue', crub], ['avg_check', rub], ['profit', crub], ['promos', (v) => nf.format(v) + ' шт']].forEach(([f, fmt]) => {
+        const box = $('#sp-' + f), tr = $('#tr-' + f);
+        box.replaceChildren(); tr.textContent = ''; tr.className = 'pp-trend';
+        const firstPromo = f === 'promos' ? (weeks.find((w) => w.promos > 0) || {}).week : null;
+        const rows = weeks.filter((w) => w[f] != null && (f !== 'avg_check' || w.checks > 0) && (f !== 'profit' || w.checks > 0) && (f !== 'promos' || (firstPromo && w.week >= firstPromo))).slice(-8);
+        if (rows.length < 2) { tr.textContent = rows.length ? 'мало данных для сравнения' : ''; tr.classList.add('flat'); return; }
+        const w = Math.max(120, box.clientWidth), h = 34, max = Math.max(...rows.map((r) => r[f])) || 1;
+        const x = d3.scaleBand(rows.map((r) => r.week), [0, w]).paddingInner(0.25);
+        const svg = d3.select(box).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${w} ${h}`);
+        const tp = tip($('#tp-kpi').parentNode === null ? box : box.closest('.pp-kpi'));
+        rows.forEach((r) => {
+          const bh = Math.max(2, r[f] / max * (h - 2));
+          svg.append('rect').attr('x', x(r.week)).attr('width', x.bandwidth()).attr('y', h - bh).attr('height', bh).attr('rx', Math.min(3, x.bandwidth() / 2))
+            .attr('fill', r.complete ? '#E87A1E' : 'rgba(232,122,30,.35)')
+            .on('mousemove', (ev) => { const kpi = box.closest('.pp-kpi'); const t2 = tip(kpi); const end = new Date(r.week + 'T00:00:00Z'); end.setUTCDate(end.getUTCDate() + 6); tipLines(t2, `${fmtDay(r.week)} – ${fmtDay(end.toISOString().slice(0, 10))}` + (r.complete ? '' : ' · неделя идёт'), [fmt(r[f])]); const [mx, my] = d3.pointer(ev, kpi); placeTip(kpi, t2, mx, my); })
+            .on('mouseleave', () => { const t2 = box.closest('.pp-kpi').querySelector('.pp-tip'); if (t2) t2.hidden = true; });
+        });
+        const full = rows.filter((r) => r.complete);
+        if (full.length >= 2) {
+          const a = full[full.length - 1][f], b = full[full.length - 2][f];
+          if (!b) { tr.textContent = a ? `▲ ${fmt(a)} против 0 неделей раньше` : 'на прошлой и позапрошлой неделе — 0'; tr.classList.add(a ? 'up' : 'flat'); }
+          else { const ch = a / b - 1; tr.textContent = (Math.abs(ch) < 0.03 ? '→ на уровне' : (ch > 0 ? '▲ +' : '▼ −') + Math.abs(Math.round(ch * 100)) + '%') + ' к прошлой неделе'; tr.classList.add(Math.abs(ch) < 0.03 ? 'flat' : ch > 0 ? 'up' : 'down'); }
+        } else { tr.textContent = 'полных недель пока мало'; tr.classList.add('flat'); }
+      });
+    }
+
     const t = $('#tp-take'); t.replaceChildren();
     if (b) t.textContent = `${P}: ${rub(b.fact)} за ${monthName(month).toLowerCase()} — ${pct(b.pct)} плана, по темпу выйдет ${pct(b.forecast_pct)}.` + (b.need_per_day ? ` Чтобы сделать план, нужно ${rub(b.need_per_day)} в день, сейчас в среднем ${rub(b.avg_day)}.` : '');
 
@@ -1776,7 +1834,7 @@ dash.calc('promo_point', {
       const set = dash.data('stock_settings').status === 'ok' ? dash.data('stock_settings').data : [];
       const S = (re, d) => { const r = set.find((x) => re.test(x.setting)); return r && r.value > 0 ? r.value : d; };
       $('#tp-order-note').textContent = `Хватит меньше чем на ${S(/хватит меньше/i, 8)} дн.; «Заказать» — чтобы хватило на ${S(/запас/i, 10)} дн.; «Где взять» — точки с лишним`;
-      gTable('#tp-order', 'tpo', get('stock_flags').filter((r) => r.point === P && r.low), (r) => enc(r.point) + ',' + enc(r.id), (r) => [[r.name, 'wrap'], [fq(r.qty)], [fd(r.per_day)], [fd(r.days_left)], [fq(r.order_qty)], [r.donors || '—', 'wrap mut']], dash.data('stock').data.some((r) => r.point === P) ? 'Заказывать нечего.' : 'По этой точке остатки ещё не загружены.');
+      gTable('#tp-order', 'tpo', get('stock_flags').filter((r) => r.point === P && r.low), (r) => enc(r.point) + ',' + enc(r.id), (r) => [[r.name, 'wrap'], [fq(r.qty)], [fq(r.sold) + ' шт'], [fd(r.days_left)], [fq(r.order_qty)], [r.donors || '—', 'wrap mut']], dash.data('stock').data.some((r) => r.point === P) ? 'Заказывать нечего.' : 'По этой точке остатки ещё не загружены.');
     }
   }
 

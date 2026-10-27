@@ -1730,6 +1730,7 @@ dash.calc('promo_point', {
     const setK = (id, src, w, txt) => { const e = $(id); e.classList.remove('dash-skeleton'); e.setAttribute('data-where', where(w)); e.textContent = txt; };
     setK('#tk-fact', 'by_point', { month, point: P }, rub(b && b.fact)); setK('#tk-pct', 'by_point', { month, point: P }, pct(b && b.pct)); setK('#tk-fc', 'by_point', { month, point: P }, pct(b && b.forecast_pct));
     if (statusOf('point_month') !== 'loading') { setK('#tk-avg', 'point_month', { month, point: P }, rub(pm && pm.avg_check)); setK('#tk-checks', 'point_month', { month, point: P }, pm ? nf.format(pm.checks) : '—'); setK('#tk-profit', 'point_month', { month, point: P }, rub(pm && pm.profit)); setK('#tk-margin', 'point_month', { month, point: P }, pm && pm.margin != null ? String(pm.margin).replace('.', ',') + '%' : '—'); }
+    if (dash.data('evo_rev').status === 'missing') { ['#tk-checks', '#tk-margin'].forEach((id) => { $(id).textContent = '—'; }); $('#tk-avg').nextElementSibling.textContent = 'обнови скрипт данных'; $('#tk-profit').nextElementSibling.textContent = 'обнови скрипт данных'; }
     if (statusOf('promo_point') !== 'loading') setK('#tk-promo', 'promo_point', { month, point: P }, (pr ? nf.format(pr.qty) : '0') + ' шт.');
     const t = $('#tp-take'); t.replaceChildren();
     if (b) t.textContent = `${P}: ${rub(b.fact)} за ${monthName(month).toLowerCase()} — ${pct(b.pct)} плана, по темпу выйдет ${pct(b.forecast_pct)}.` + (b.need_per_day ? ` Чтобы сделать план, нужно ${rub(b.need_per_day)} в день, сейчас в среднем ${rub(b.avg_day)}.` : '');

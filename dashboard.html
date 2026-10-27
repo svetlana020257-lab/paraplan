@@ -57,6 +57,7 @@ body { font-family: 'PP Golos', system-ui, sans-serif; -webkit-font-smoothing: a
 
 <script>
 /* ---- Мини-движок дашборда: те же dash.loader / dash.calc / dash.onData, что и в Claude ---- */
+window.__ppRole = 'manager';
 (function () {
   // ▼ Сюда можно вписать ссылку на скрипт (…/exec), тогда на входе будет только пароль
   var API_URL = 'https://script.google.com/macros/s/AKfycbxmHbOp25tuoEoDgn6xcnQsQb9YSMcjh3Flc6tGgWWw3J6kWuFPZiWF1PZnx5POSIZZFA/exec';
@@ -124,7 +125,7 @@ body { font-family: 'PP Golos', system-ui, sans-serif; -webkit-font-smoothing: a
       .then(function (j) {
         if (!j.ok) { LS.del('pp_dash_key'); showLogin(j.error === 'unauthorized' ? 'Неверный пароль' : 'Ошибка: ' + j.error); return; }
         box.hidden = true;
-        raw = j.data || {}; rawErr = j.errors || {}; loaded = true; cache = {};
+        raw = j.data || {}; rawErr = j.errors || {}; loaded = true; cache = {}; window.__ppRole = j.role || 'manager';
         var at = new Date(j.at);
         document.getElementById('ppx-at').textContent = 'Обновлено ' + at.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
         fire();
@@ -252,7 +253,7 @@ body { font-family: 'PP Golos', system-ui, sans-serif; -webkit-font-smoothing: a
 .pp-tag.red { background: rgba(226,75,74,.15); color: var(--red); }
 .pp-tag.or { background: rgba(232,122,30,.15); color: var(--or-l); }
 .pp-tag.gr { background: rgba(76,175,80,.14); color: var(--green); }
-.pp-table td.wrap { white-space: normal; min-width: 12rem; text-align: left; }
+.pp-table td.wrap { white-space: pre-line; min-width: 12rem; text-align: left; }
 .pp-table td.lft, .pp-table th.lft { text-align: left; }
 .pp-table td.mut { color: var(--t2); }
 .pp-order { display: grid; gap: 12px; min-height: 120px; }
@@ -263,6 +264,21 @@ body { font-family: 'PP Golos', system-ui, sans-serif; -webkit-font-smoothing: a
 .pp-oi b { font-variant-numeric: tabular-nums; font-weight: 700; }
 .pp-oi small { display: block; color: var(--t3); font-size: 11px; }
 .pp-note { font-size: 12px; color: var(--t2); }
+.pp-imp { background: linear-gradient(150deg, rgba(232,122,30,.14), var(--s1) 60%); border: 1px solid rgba(232,122,30,.3); border-radius: 14px; padding: 14px; display: grid; gap: 10px; }
+.pp-imp-h { display: flex; align-items: center; gap: 8px; font-family: var(--fh); font-weight: 700; font-size: 14px; margin: 0; }
+.pp-imp-h::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--or); box-shadow: 0 0 10px var(--or); }
+.pp-imp-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 8px; min-height: 64px; }
+.pp-imp-i { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; text-align: left; font: inherit; color: var(--t1); background: var(--s2); border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; cursor: pointer; transition: border-color .15s, background .15s; }
+.pp-imp-i:hover { border-color: var(--or); background: var(--s3); }
+.pp-imp-i:focus-visible { outline: 2px solid var(--or); outline-offset: 2px; }
+.pp-imp-n { font-family: var(--fh); font-weight: 700; font-size: 17px; min-width: 2.2rem; text-align: center; font-variant-numeric: tabular-nums; }
+.pp-imp-t { display: grid; gap: 1px; font-size: 13px; line-height: 1.3; }
+.pp-imp-t small { color: var(--t3); font-size: 11.5px; }
+.pp-imp-go { color: var(--t3); font-size: 12px; white-space: nowrap; }
+.pp-imp-i.red .pp-imp-n { color: var(--red); } .pp-imp-i.or .pp-imp-n { color: var(--or-l); } .pp-imp-i.yl .pp-imp-n { color: var(--warn); } .pp-imp-i.ok .pp-imp-n { color: var(--green); }
+.pp-sec { font-family: var(--fh); font-weight: 900; font-size: 16px; letter-spacing: .03em; margin: 8px 0 -4px; color: var(--or-l); }
+.pp-tab-me { color: var(--or-l); }
+.pp-tab-me[hidden] { display: none; }
 .pp-foot { font-size: 11.5px; color: var(--t3); }
 @media (max-width: 520px) { .pp-br { grid-template-columns: 5.2rem 1fr 2.8rem; } .pp-hide-n { display: none; } }
 </style>
@@ -279,10 +295,12 @@ body { font-family: 'PP Golos', system-ui, sans-serif; -webkit-font-smoothing: a
 
   <nav class="pp-tabs" role="tablist" aria-label="Листы">
     <button class="pp-tab" role="tab" id="tab-obzor" data-page="obzor" aria-selected="true">Обзор</button>
+    <button class="pp-tab" role="tab" id="tab-tochka" data-page="tochka" aria-selected="false">Точка</button>
     <button class="pp-tab" role="tab" id="tab-ostatki" data-page="ostatki" aria-selected="false">Остатки</button>
     <button class="pp-tab" role="tab" id="tab-tochki" data-page="tochki" aria-selected="false">Точки</button>
     <button class="pp-tab" role="tab" id="tab-smeny" data-page="smeny" aria-selected="false">Смены</button>
     <button class="pp-tab" role="tab" id="tab-top" data-page="top" aria-selected="false">Топ</button>
+    <button class="pp-tab pp-tab-me" role="tab" id="tab-moe" data-page="moe" aria-selected="false">Для меня</button>
   </nav>
 
   <!-- ОБЗОР -->
@@ -325,6 +343,54 @@ body { font-family: 'PP Golos', system-ui, sans-serif; -webkit-font-smoothing: a
           <p class="pp-cn" id="daily-note">Пунктир — план сети на день</p>
         </div>
         <div class="pp-chart dash-skeleton" id="daily" data-source="net_daily net_month"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ТОЧКА -->
+  <section class="pp-page" id="tochka" role="tabpanel" aria-labelledby="tab-tochka" hidden>
+    <div class="pp-tools">
+      <select class="pp-month" id="tp-point" aria-label="Точка" data-source="by_point"></select>
+    </div>
+    <p class="pp-take" id="tp-take"><span class="dash-skeleton">—</span></p>
+    <div class="pp-kpis" id="tp-kpi">
+      <div class="pp-kpi hero"><span class="pp-kl">Выручка за месяц</span><span class="pp-kv dash-skeleton" id="tk-fact" data-source="by_point" data-field="fact">—</span><span class="pp-ks"><span id="tk-pct" data-source="by_point" data-field="pct">—</span> плана · прогноз <span id="tk-fc" data-source="by_point" data-field="forecast_pct">—</span></span></div>
+      <div class="pp-kpi"><span class="pp-kl">Средний чек</span><span class="pp-kv dash-skeleton" id="tk-avg" data-source="point_month" data-field="avg_check">—</span><span class="pp-ks"><span id="tk-checks" data-source="point_month" data-field="checks">—</span> чеков по кассе</span></div>
+      <div class="pp-kpi"><span class="pp-kl">Прибыль по кассе</span><span class="pp-kv dash-skeleton" id="tk-profit" data-source="point_month" data-field="profit">—</span><span class="pp-ks">маржа <span id="tk-margin" data-source="point_month" data-field="margin">—</span></span></div>
+      <div class="pp-kpi"><span class="pp-kl">Акций за месяц</span><span class="pp-kv dash-skeleton" id="tk-promo" data-source="promo_point" data-field="qty">—</span><span class="pp-ks">по отметкам в Кэпе</span></div>
+    </div>
+    <div class="pp-grid">
+      <div class="pp-card" id="card-tp-daily">
+        <div class="pp-ch"><h2 class="pp-ct">Выручка по дням</h2><p class="pp-cn" id="tp-daily-note">Пунктир — план точки на день</p></div>
+        <div class="pp-chart dash-skeleton" id="tp-daily" data-source="rev_dated by_point"></div>
+      </div>
+      <div class="pp-card" id="card-tp-sellers">
+        <div class="pp-ch"><h2 class="pp-ct">Продавцы точки</h2><p class="pp-cn">Средняя выручка за смену на этой точке за месяц</p></div>
+        <div class="pp-rank dash-skeleton" id="tp-sellers" data-source="person_point_month"></div>
+      </div>
+      <div class="pp-card" id="card-tp-goods">
+        <div class="pp-ch"><h2 class="pp-ct">Топ товаров</h2><p class="pp-cn">За последние 14 дней по кассе: продано штук и примерная выручка (по текущей цене)</p></div>
+        <div class="pp-rank dash-skeleton" id="tp-goods" data-source="top_goods"></div>
+      </div>
+      <div class="pp-card" id="card-tp-promo">
+        <div class="pp-ch"><h2 class="pp-ct">Акции точки</h2><p class="pp-cn">Сколько продано по каждой акции за месяц и кто продавал</p></div>
+        <div class="pp-bars pp-wide dash-skeleton" id="tp-promo" data-source="promo_rows"></div>
+        <p class="pp-note" id="tp-promo-who"></p>
+      </div>
+    </div>
+    <div class="pp-card" id="card-tp-order">
+      <div class="pp-ch"><h2 class="pp-ct">Что заказать</h2><p class="pp-cn" id="tp-order-note">Хватит меньше чем до следующей поставки</p></div>
+      <div class="pp-tablewrap">
+        <table class="pp-table" id="tp-order" data-source="stock_flags" data-row-key="point,id">
+          <thead><tr>
+            <th class="lft" data-field="name" data-k="name"><button class="pp-sort">Товар</button></th>
+            <th data-field="qty" data-k="qty"><button class="pp-sort">Остаток</button></th>
+            <th data-field="per_day" data-k="per_day"><button class="pp-sort">В день</button></th>
+            <th data-field="days_left" data-k="days_left"><button class="pp-sort">Хватит, дн</button></th>
+            <th data-field="order_qty" data-k="order_qty"><button class="pp-sort">Заказать</button></th>
+            <th class="lft" data-field="donors" data-k="donors"><button class="pp-sort">Где взять</button></th>
+          </tr></thead><tbody></tbody>
+        </table>
       </div>
     </div>
   </section>
@@ -396,6 +462,101 @@ body { font-family: 'PP Golos', system-ui, sans-serif; -webkit-font-smoothing: a
             </tr></thead><tbody></tbody>
           </table>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ДЛЯ МЕНЯ -->
+  <section class="pp-page" id="moe" role="tabpanel" aria-labelledby="tab-moe" hidden>
+    <div class="pp-imp" id="vazhno">
+      <h2 class="pp-imp-h">Важно</h2>
+      <div class="pp-imp-list dash-skeleton" id="imp-list" data-source="price_flags stock_flags card_dups doc_checks"></div>
+    </div>
+    <h2 class="pp-sec" id="sec-ceny">Цены</h2>
+    <div class="pp-tools">
+      <select class="pp-month" id="pr-point" aria-label="Точка" data-source="price_flags"></select>
+      <input class="pp-search" id="pr-q" type="search" placeholder="Найти товар" aria-label="Поиск товара">
+    </div>
+    <p class="pp-take" id="pr-take"><span class="dash-skeleton">—</span></p>
+    <div class="pp-kpis" id="pr-kpi">
+      <div class="pp-kpi hero"><span class="pp-kl">Цена ниже закупки</span><span class="pp-kv dash-skeleton" id="pk-below" data-source="price_flags">—</span><span class="pp-ks">продаём в минус</span></div>
+      <div class="pp-kpi"><span class="pp-kl">Закуп вырос</span><span class="pp-kv dash-skeleton" id="pk-up" data-source="price_flags">—</span><span class="pp-ks">цена не менялась</span></div>
+      <div class="pp-kpi"><span class="pp-kl">Наценка ниже нормы</span><span class="pp-kv dash-skeleton" id="pk-low" data-source="price_flags">—</span><span class="pp-ks" id="pk-low-s"></span></div>
+      <div class="pp-kpi"><span class="pp-kl">Цена не как в сети</span><span class="pp-kv dash-skeleton" id="pk-diff" data-source="price_flags">—</span><span class="pp-ks">на других точках дороже/дешевле</span></div>
+    </div>
+    <div class="pp-card" id="card-prices">
+      <div class="pp-ch"><h2 class="pp-ct">Поменять цену</h2><p class="pp-cn" id="pr-note">Сначала самое срочное. «Поставить» — цена, при которой вернётся норма наценки (округлено до 10 ₽)</p></div>
+      <div class="pp-tools" id="pr-filter" role="group" aria-label="Причина">
+        <button class="pp-btn ghost" data-r="">Все</button><button class="pp-btn ghost" data-r="below">Ниже закупки</button><button class="pp-btn ghost" data-r="up">Закуп вырос</button><button class="pp-btn ghost" data-r="low">Наценка</button><button class="pp-btn ghost" data-r="diff">Не как в сети</button>
+      </div>
+      <div class="pp-tablewrap">
+        <table class="pp-table" id="pr-table" data-source="price_flags" data-row-key="point,id">
+          <thead><tr>
+            <th class="lft" data-field="name" data-k="name"><button class="pp-sort">Товар</button></th>
+            <th data-field="point" data-k="point"><button class="pp-sort">Точка</button></th>
+            <th class="lft" data-field="reason" data-k="rank"><button class="pp-sort">Причина</button></th>
+            <th data-field="cost" data-k="cost"><button class="pp-sort">Закупка</button></th>
+            <th data-field="price" data-k="price"><button class="pp-sort">Цена</button></th>
+            <th data-field="markup" data-k="markup"><button class="pp-sort">Наценка</button></th>
+            <th data-field="suggest" data-k="suggest"><button class="pp-sort">Поставить</button></th>
+            <th data-field="qty" data-k="qty"><button class="pp-sort">Остаток</button></th>
+          </tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <h2 class="pp-sec" id="sec-dubli">Дубли и минуса</h2>
+    <p class="pp-take" id="db-take"><span class="dash-skeleton">—</span></p>
+    <div class="pp-card" id="card-docs">
+      <div class="pp-ch"><h2 class="pp-ct">Документы: дубли и перемещения без пары</h2><p class="pp-cn">Поступления и списания за 30 дней. Дубль — на точке два одинаковых документа в пределах 3 дней. Без пары — списание с точки, которому нет такого же поступления на другой точке (±2 дня), и наоборот.</p></div>
+      <div class="pp-tablewrap">
+        <table class="pp-table" id="doc-table" data-source="doc_checks" data-row-key="key">
+          <thead><tr>
+            <th class="lft" data-field="kind" data-k="kind"><button class="pp-sort">Что</button></th>
+            <th data-field="point" data-k="point"><button class="pp-sort">Точка</button></th>
+            <th data-field="day" data-k="day"><button class="pp-sort">Дата</button></th>
+            <th class="lft" data-field="what" data-k="what"><button class="pp-sort">Товары</button></th>
+            <th class="lft" data-field="docs" data-k="docs"><button class="pp-sort">Документы</button></th>
+          </tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="pp-card" id="card-cards">
+      <div class="pp-ch"><h2 class="pp-ct">Дубли карточек</h2><p class="pp-cn">Две карточки с одинаковым названием или одним штрихкодом на одной точке. Сводить через списание с одной и оприходование на другую.</p></div>
+      <div class="pp-tablewrap">
+        <table class="pp-table" id="cdup-table" data-source="card_dups" data-row-key="point,match">
+          <thead><tr>
+            <th data-field="point" data-k="point" class="lft"><button class="pp-sort">Точка</button></th>
+            <th class="lft" data-field="kind" data-k="kind"><button class="pp-sort">Признак</button></th>
+            <th class="lft" data-field="names" data-k="names"><button class="pp-sort">Карточки</button></th>
+            <th data-field="stocks" data-k="stocks"><button class="pp-sort">Остатки</button></th>
+          </tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="pp-card" id="card-names">
+      <div class="pp-ch"><h2 class="pp-ct">Разные названия одного товара</h2><p class="pp-cn">Один штрихкод, а на точках товар называется по-разному — путает при перемещениях и заказах</p></div>
+      <div class="pp-tablewrap">
+        <table class="pp-table" id="names-table" data-source="name_diffs" data-row-key="barcode">
+          <thead><tr>
+            <th class="lft" data-field="barcode" data-k="barcode"><button class="pp-sort">Штрихкод</button></th>
+            <th data-field="variants" data-k="variants"><button class="pp-sort">Вариантов</button></th>
+            <th class="lft" data-field="names" data-k="names"><button class="pp-sort">Как называется на точках</button></th>
+          </tr></thead><tbody></tbody>
+        </table>
+      </div>
+      <p class="pp-note" id="names-note"></p>
+    </div>
+    <div class="pp-card" id="card-neg2">
+      <div class="pp-ch"><h2 class="pp-ct">Минуса</h2><p class="pp-cn">Часто это продажа с одной карточки при поступлении на другую — сверь с дублями выше</p></div>
+      <div class="pp-tablewrap">
+        <table class="pp-table" id="neg2-table" data-source="stock_flags" data-row-key="point,id">
+          <thead><tr>
+            <th class="lft" data-field="name" data-k="name"><button class="pp-sort">Товар</button></th>
+            <th data-field="point" data-k="point"><button class="pp-sort">Точка</button></th>
+            <th data-field="qty" data-k="qty"><button class="pp-sort">Остаток</button></th>
+            <th data-field="last_sale" data-k="last_sale"><button class="pp-sort">Посл. продажа</button></th>
+          </tr></thead><tbody></tbody>
+        </table>
       </div>
     </div>
   </section>
@@ -570,9 +731,9 @@ dash.loader('stock', {
     const rows = a.values.slice(1).filter((r) => r && txt(r[0]) && txt(r[1])).map((r) => ({
       point: txt(r[0]), id: txt(r[1]), code: txt(r[2]), name: txt(r[3]), group: txt(r[4]), qty: num(r[5]) || 0, unit: txt(r[6]),
       sold: num(r[7]) || 0, per_day: num(r[8]) || 0, days_left: num(r[9]), sold_dead: num(r[10]) || 0, last_sale: date(r[11]),
-      cost: num(r[12]), price: num(r[13]), updated: txt(r[14]),
+      cost: num(r[12]), price: num(r[13]), updated: txt(r[14]), barcodes: txt(r[15]),
     }));
-    return { columns: ['point', 'id', 'code', 'name', 'group', 'qty', 'unit', 'sold', 'per_day', 'days_left', 'sold_dead', 'last_sale', 'cost', 'price', 'updated'], rows };
+    return { columns: ['point', 'id', 'code', 'name', 'group', 'qty', 'unit', 'sold', 'per_day', 'days_left', 'sold_dead', 'last_sale', 'cost', 'price', 'updated', 'barcodes'], rows };
   },
 });
 dash.loader('stock_settings', {
@@ -632,6 +793,170 @@ dash.calc('stock_order', {
     return [...by.values()].filter((o) => o.need > 0).map((o) => ({
       name: o.name, group: gname.get(o.gk), need: o.need, points: o.points.join(', '),
     }));
+  },
+});
+
+dash.loader('cost_hist', {
+  description: 'Строки листа «Эвотор_Закупка_история»: когда у товара на точке изменилась закупка',
+  fn: ({ answer }) => {
+    const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
+    if (!a || !Array.isArray(a.values)) throw new Error('Google Sheets не вернул значения листа «Эвотор_Закупка_история»');
+    const txt = (x) => (x == null ? '' : String(x).trim());
+    const num = (x) => { const t = txt(x).replace(/[\s  ₽%+]/g, '').replace(',', '.'); if (t === '') return null; const n = Number(t); return Number.isFinite(n) ? n : null; };
+    const date = (x) => { const m = txt(x).match(/^(\d{2})\.(\d{2})\.(\d{4})/); return m ? `${m[3]}-${m[2]}-${m[1]}` : ''; };
+    const rows = a.values.slice(1).filter((r) => r && txt(r[1]) && txt(r[2])).map((r) => ({ day: date(r[0]), point: txt(r[1]), id: txt(r[2]), name: txt(r[3]), was: num(r[4]), now: num(r[5]) }));
+    return { columns: ['day', 'point', 'id', 'name', 'was', 'now'], rows };
+  },
+});
+dash.loader('card_dups', {
+  description: 'Строки листа «Эвотор_Дубли_карточек»: точка, признак, что совпадает, названия и остатки карточек',
+  fn: ({ answer }) => {
+    const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
+    if (!a || !Array.isArray(a.values)) throw new Error('Google Sheets не вернул значения листа «Эвотор_Дубли_карточек»');
+    const txt = (x) => (x == null ? '' : String(x).trim());
+    const rows = a.values.slice(1).filter((r) => r && txt(r[0]) && txt(r[2])).map((r) => ({ point: txt(r[0]), kind: txt(r[1]), match: txt(r[2]), count: Number(txt(r[3])) || 0, names: txt(r[4]), stocks: txt(r[5]) }));
+    return { columns: ['point', 'kind', 'match', 'count', 'names', 'stocks'], rows };
+  },
+});
+dash.loader('docs', {
+  description: 'Строки листа «Эвотор_Документы»: позиции поступлений, списаний и других товарных документов за 30 дней',
+  fn: ({ answer }) => {
+    const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
+    if (!a || !Array.isArray(a.values)) throw new Error('Google Sheets не вернул значения листа «Эвотор_Документы»');
+    const txt = (x) => (x == null ? '' : String(x).trim());
+    const num = (x) => { const t = txt(x).replace(/[\s  ₽]/g, '').replace(',', '.'); if (t === '') return null; const n = Number(t); return Number.isFinite(n) ? n : null; };
+    const date = (x) => { const m = txt(x).match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/); return m ? `${m[3]}-${m[2]}-${m[1]}T${(m[4] || '00').padStart(2, '0')}:${m[5] || '00'}` : ''; };
+    const rows = a.values.slice(1).filter((r) => r && txt(r[0]) && txt(r[2])).map((r) => ({ point: txt(r[0]), at: date(r[1]), type: txt(r[2]), number: txt(r[3]), doc: txt(r[4]), name: txt(r[5]), id: txt(r[6]), qty: num(r[7]) || 0 }));
+    return { columns: ['point', 'at', 'type', 'number', 'doc', 'name', 'id', 'qty'], rows };
+  },
+});
+
+dash.calc('price_flags', {
+  inputs: ['stock', 'stock_settings', 'cost_hist'],
+  title: 'Цены, которые стоит поменять',
+  description: 'Ниже закупки; закуп вырос за 30 дней, а цена осталась (из истории закупки); наценка ниже нормы из настроек; цена отличается от самой частой цены этого товара в сети. «Поставить» округлено вверх до 10 ₽.',
+  fn: (stock, stock_settings, cost_hist) => {
+    const r0 = stock_settings.find((x) => /наценка/i.test(x.setting));
+    const minM = (r0 && r0.value > 0 ? r0.value : 30) / 100;
+    const up10 = (v) => Math.ceil(v / 10) * 10;
+    const key = (n) => n.toLowerCase().replace(/ё/g, 'е').replace(/[«»"'`]/g, '').replace(/\s+/g, ' ').trim();
+    const mode = new Map();
+    const byName = new Map();
+    for (const r of stock) { if (!r.price) continue; const k = key(r.name); if (!byName.has(k)) byName.set(k, []); byName.get(k).push(r.price); }
+    for (const [k, list] of byName) { const c = new Map(); list.forEach((p) => c.set(p, (c.get(p) || 0) + 1)); const top = [...c].sort((a, b) => b[1] - a[1] || b[0] - a[0]); if (top.length > 1 && top[0][1] > 1) mode.set(k, top[0][0]); }
+    const last = new Map();
+    for (const h of cost_hist) { const k = h.point + '|' + h.id; const o = last.get(k); if (!o || h.day >= o.day) last.set(k, { ...h, first_was: o ? o.first_was : h.was }); else if (o) o.first_was = h.was; }
+    const out = [];
+    for (const r of stock) {
+      if (!r.cost || !r.price) continue;
+      const markup = (r.price - r.cost) / r.cost;
+      const h = last.get(r.point + '|' + r.id);
+      const m = mode.get(key(r.name));
+      let reason = null, rank = 9, suggest = null, note = '';
+      if (r.price < r.cost) { reason = 'below'; rank = 1; suggest = up10(r.cost * (1 + minM)); note = 'ниже закупки'; }
+      else if (h && h.now > h.first_was && r.price < up10(r.price * h.now / h.first_was)) { reason = 'up'; rank = 2; suggest = up10(r.price * h.now / h.first_was); note = `закуп ${Math.round(h.first_was)} → ${Math.round(h.now)} ₽`; }
+      else if (markup < minM) { reason = 'low'; rank = 3; suggest = up10(r.cost * (1 + minM)); note = `наценка ${Math.round(markup * 100)}%`; }
+      else if (m && m !== r.price) { reason = 'diff'; rank = 4; suggest = m; note = `в сети чаще ${m} ₽`; }
+      if (reason) out.push({ point: r.point, id: r.id, name: r.name, reason, rank, note, cost: r.cost, price: r.price, markup: Math.round(markup * 1000) / 10, suggest, qty: r.qty });
+    }
+    return out;
+  },
+});
+
+dash.calc('doc_checks', {
+  inputs: ['docs'],
+  title: 'Проверка документов',
+  description: 'Дубль: на одной точке два документа одного типа с одинаковым составом в пределах 3 дней. Без пары: списание на точке без такого же поступления (товар и количество) на другой точке в пределах 2 дней, и наоборот для поступлений, у которых есть парное списание где-то в сети за 30 дней, но не рядом по датам.',
+  fn: (docs) => {
+    const byDoc = new Map();
+    for (const r of docs) { const k = r.point + '|' + r.doc; const o = byDoc.get(k) || { point: r.point, doc: r.doc, number: r.number, type: r.type, at: r.at, items: [] }; o.items.push(r); byDoc.set(k, o); }
+    const list = [...byDoc.values()].map((d) => ({ ...d, sig: d.items.map((i) => i.name + ':' + i.qty).sort().join('|'), t: Date.parse(d.at) }));
+    const out = [];
+    const DAY = 864e5;
+    // дубли
+    const seen = new Set();
+    for (const a of list) for (const b of list) {
+      if (a === b || a.point !== b.point || a.type !== b.type || a.sig !== b.sig || Math.abs(a.t - b.t) > 3 * DAY) continue;
+      const k = [a.doc, b.doc].sort().join('+'); if (seen.has(k)) continue; seen.add(k);
+      out.push({ key: 'dup:' + k, kind: 'Дубль документа', point: a.point, day: a.at.slice(0, 10), what: a.items.map((i) => `${i.name} × ${i.qty}`).join(', '), docs: `${a.type} №${a.number} и №${b.number}` });
+    }
+    // перемещения без пары
+    const isOff = (t) => /WRITE_?OFF|OUTCOME|MOVE_OUT/i.test(t), isIn = (t) => /ACCEPT|INCOME|MOVE_IN/i.test(t);
+    const offs = docs.filter((r) => isOff(r.type)), ins = docs.filter((r) => isIn(r.type));
+    const near = (a, b) => Math.abs(Date.parse(a.at) - Date.parse(b.at)) <= 2 * DAY;
+    for (const o of offs) {
+      if (!ins.some((i) => i.point !== o.point && i.name === o.name && i.qty === o.qty && near(i, o)))
+        out.push({ key: 'off:' + o.doc + ':' + o.id, kind: 'Списание без поступления', point: o.point, day: o.at.slice(0, 10), what: `${o.name} × ${o.qty}`, docs: `${o.type} №${o.number}` });
+    }
+    return out;
+  },
+});
+
+dash.loader('evo_rev', {
+  description: 'Строки листа «Эвотор_Выручка»: дата, точка, чеков, выручка, себестоимость, прибыль по кассе',
+  fn: ({ answer }) => {
+    const a = typeof answer === 'string' ? JSON.parse(answer) : answer;
+    if (!a || !Array.isArray(a.values)) throw new Error('Google Sheets не вернул значения листа «Эвотор_Выручка»');
+    const txt = (x) => (x == null ? '' : String(x).trim());
+    const num = (x) => { const t = txt(x).replace(/[\s  ₽%]/g, '').replace(',', '.'); if (t === '') return null; const n = Number(t); return Number.isFinite(n) ? n : null; };
+    const rows = a.values.slice(1).map((r) => { const m = txt(r[0]).match(/^(\d{2})\.(\d{2})\.(\d{4})$/); return m && txt(r[1]) ? { day: `${m[3]}-${m[2]}-${m[1]}`, point: txt(r[1]), checks: num(r[2]) || 0, revenue: num(r[3]) || 0, cost: num(r[8]) || 0, profit: num(r[9]) || 0 } : null; }).filter(Boolean);
+    return { columns: ['day', 'point', 'checks', 'revenue', 'cost', 'profit'], rows };
+  },
+});
+
+dash.calc('point_month', {
+  inputs: ['evo_rev'],
+  title: 'Касса точки за месяц',
+  description: 'По кассе Эвотор: чеков, выручка, прибыль за месяц; средний чек = выручка / чеков; маржа = прибыль / выручка.',
+  fn: (evo_rev) => {
+    const by = new Map();
+    for (const r of evo_rev) { const k = r.day.slice(0, 7) + '|' + r.point; const o = by.get(k) || { month: r.day.slice(0, 7), point: r.point, checks: 0, revenue: 0, profit: 0 }; o.checks += r.checks; o.revenue += r.revenue; o.profit += r.profit; by.set(k, o); }
+    return [...by.values()].map((o) => ({ ...o, avg_check: o.checks ? Math.round(o.revenue / o.checks) : null, margin: o.revenue ? Math.round(o.profit / o.revenue * 1000) / 10 : null }));
+  },
+});
+
+dash.calc('person_point_month', {
+  inputs: ['shifts_named', 'rev_dated'],
+  title: 'Продавцы по точкам за месяц',
+  description: 'Смены продавца на конкретной точке до последнего дня с выручкой; выручка точки за день делится между основным и подменой по часам (пустые часы = 12).',
+  fn: (shifts_named, rev_dated) => {
+    const rev = new Map(); let maxDay = '';
+    for (const r of rev_dated) { rev.set(r.day + '|' + r.point, (rev.get(r.day + '|' + r.point) || 0) + r.amount); if (r.day > maxDay) maxDay = r.day; }
+    const by = new Map();
+    const add = (month, point, person, share) => { if (!person) return; const k = month + '|' + point + '|' + person; const o = by.get(k) || { month, point, person, shifts: 0, revenue: 0 }; o.shifts += 1; o.revenue += share; by.set(k, o); };
+    for (const s of shifts_named) {
+      if (s.date > maxDay) continue;
+      const hm = s.main ? (s.main_hours != null ? s.main_hours : (s.sub ? 0 : 12)) : 0;
+      const hs = s.sub ? (s.sub_hours != null ? s.sub_hours : 12 - hm) : 0;
+      const t = hm + hs, r = rev.get(s.date + '|' + s.point) || 0, m = s.date.slice(0, 7);
+      if (s.main && hm > 0) add(m, s.point, s.main, t ? r * hm / t : 0);
+      if (s.sub && hs > 0) add(m, s.point, s.sub, t ? r * hs / t : 0);
+    }
+    return [...by.values()].map((o) => ({ ...o, revenue: Math.round(o.revenue), per_shift: o.shifts ? Math.round(o.revenue / o.shifts) : null }));
+  },
+});
+
+dash.calc('top_goods', {
+  inputs: ['stock'],
+  title: 'Топ товаров по точкам',
+  description: 'Продано за последние 14 дней по кассе (из ночной выгрузки остатков); выручка примерно = продано × текущая цена.',
+  fn: (stock) => stock.filter((r) => r.sold > 0).map((r) => ({ point: r.point, id: r.id, name: r.name, group: r.group, sold: r.sold, revenue: Math.round(r.sold * (r.price || 0)) })),
+});
+
+dash.calc('name_diffs', {
+  inputs: ['stock'],
+  title: 'Разные названия одного товара',
+  description: 'Товары с одним штрихкодом, которые на разных точках названы по-разному (без учёта регистра и лишних пробелов).',
+  fn: (stock) => {
+    const norm = (n) => n.toLowerCase().replace(/ё/g, 'е').replace(/[«»"'`]/g, '').replace(/\s+/g, ' ').trim();
+    const by = new Map();
+    for (const r of stock) { for (const b of String(r.barcodes || '').split(',').map((x) => x.trim()).filter(Boolean)) { if (!by.has(b)) by.set(b, []); by.get(b).push(r); } }
+    const out = [];
+    for (const [barcode, list] of by) {
+      const v = new Map(); list.forEach((r) => { const k = norm(r.name); if (!v.has(k)) v.set(k, { name: r.name, points: [] }); v.get(k).points.push(r.point); });
+      if (v.size > 1) out.push({ barcode, variants: v.size, names: [...v.values()].map((x) => `${x.name} — ${[...new Set(x.points)].join(', ')}`).join('\n') });
+    }
+    return out;
   },
 });
 
@@ -1110,7 +1435,7 @@ dash.calc('promo_point', {
       w.append(b, sm);
       const t = document.createElement('span'); t.className = 'pp-rt'; const f = document.createElement('i'); f.style.width = (r[opt.field] / max * 100) + '%'; t.append(f);
       const v = document.createElement('span'); v.className = 'pp-rv'; v.textContent = opt.fmt(r[opt.field]);
-      v.setAttribute('data-source', opt.source); v.setAttribute('data-where', where({ month: r.month, person: r.person })); v.setAttribute('data-field', opt.field);
+      v.setAttribute('data-source', opt.source); v.setAttribute('data-where', where(opt.where ? opt.where(r) : { month: r.month, person: r.person })); v.setAttribute('data-field', opt.field);
       row.append(n, w, t, v); el.append(row);
     });
   }
@@ -1275,6 +1600,185 @@ dash.calc('promo_point', {
     orderText = (stPoint === 'Вся сеть' ? 'Заказ по сети' : 'Заказ ' + stPoint) + '\n\n' + lines.join('\n');
   }
 
+  // ===== общая таблица с сортировкой =====
+  const gSort = { pr: { k: 'rank', dir: 1 }, doc: { k: 'day', dir: -1 }, card: { k: 'point', dir: 1 }, neg2: { k: 'qty', dir: 1 } };
+  const TEXTK = ['name', 'point', 'reason', 'kind', 'what', 'docs', 'names', 'stocks', 'day', 'last_sale'];
+  [['#pr-table', 'pr'], ['#doc-table', 'doc'], ['#cdup-table', 'card'], ['#neg2-table', 'neg2']].forEach(([id, k]) => {
+    $(id).querySelectorAll('th').forEach((th) => th.querySelector('button').addEventListener('click', () => {
+      const s = gSort[k]; if (s.k === th.dataset.k) s.dir = -s.dir; else { s.k = th.dataset.k; s.dir = TEXTK.includes(th.dataset.k) || th.dataset.k === 'rank' ? 1 : -1; } draw();
+    }));
+  });
+  function gTable(id, k, rows, keyOf, cells, empty) {
+    const tb = $(id + ' tbody'); tb.replaceChildren();
+    $(id).querySelectorAll('th').forEach((th) => { if (th.dataset.k === gSort[k].k) th.setAttribute('aria-sort', gSort[k].dir > 0 ? 'ascending' : 'descending'); else th.removeAttribute('aria-sort'); });
+    const s = gSort[k];
+    rows.slice().sort((a, b) => { const x = a[s.k], y = b[s.k]; if ((x == null || x === '') && (y == null || y === '')) return 0; if (x == null || x === '') return 1; if (y == null || y === '') return -1; return (typeof x === 'string' ? x.localeCompare(y, 'ru') : x - y) * s.dir; })
+      .forEach((r) => {
+        const tr = document.createElement('tr'); tr.dataset.key = keyOf(r);
+        cells(r).forEach(([v, cls]) => { const c = document.createElement('td'); if (cls) c.className = cls; if (v instanceof Node) c.append(v); else c.textContent = v; tr.append(c); });
+        tb.append(tr);
+      });
+    if (!rows.length) { const tr = document.createElement('tr'); const c = document.createElement('td'); c.colSpan = 9; c.className = 'lft mut'; c.textContent = empty || 'Ничего нет — хорошо.'; tr.append(c); tb.append(tr); }
+  }
+  const tag = (txt, cls) => { const t = document.createElement('span'); t.className = 'pp-tag ' + cls; t.textContent = txt; return t; };
+
+  // ===== Цены =====
+  let prPoint = 'Вся сеть', prReason = '';
+  const prSel = $('#pr-point'), prQ = $('#pr-q');
+  prSel.addEventListener('change', () => { prPoint = prSel.value; draw(); });
+  prQ.addEventListener('input', () => draw());
+  $('#pr-filter').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { prReason = b.dataset.r; draw(); }));
+  const RS = { below: ['ниже закупки', 'red'], up: ['закуп вырос', 'or'], low: ['наценка', 'or'], diff: ['не как в сети', 'gr'] };
+
+  function drawPrices() {
+    const st = statusOf('price_flags');
+    if (st === 'error') { $('#pr-take').textContent = 'Цены не загрузились — проверь доступ к таблице «Отчет».'; return; }
+    if (st !== 'ok') return;
+    const all = dash.data('price_flags').data;
+    const pts = [...new Set((dash.data('stock').data || []).map((r) => r.point))].sort((a, b) => a.localeCompare(b, 'ru'));
+    const want = ['Вся сеть', ...pts];
+    if ([...prSel.options].map((o) => o.value).join() !== want.join()) prSel.replaceChildren(...want.map((p) => new Option(p, p)));
+    if (!want.includes(prPoint)) prPoint = 'Вся сеть'; prSel.value = prPoint;
+    const q = prQ.value.trim().toLowerCase();
+    const rows = all.filter((r) => (prPoint === 'Вся сеть' || r.point === prPoint) && (!q || r.name.toLowerCase().includes(q)));
+    const cnt = (k) => rows.filter((r) => r.reason === k).length;
+    [['#pk-below', 'below'], ['#pk-up', 'up'], ['#pk-low', 'low'], ['#pk-diff', 'diff']].forEach(([id, k]) => { const e = $(id); e.classList.remove('dash-skeleton'); e.textContent = nf.format(cnt(k)) + ' поз.'; });
+    const sset = dash.data('stock_settings').status === 'ok' ? dash.data('stock_settings').data : [];
+    const mr = sset.find((x) => /наценка/i.test(x.setting));
+    $('#pk-low-s').textContent = `меньше ${mr && mr.value > 0 ? mr.value : 30}% к закупке`;
+    $('#pr-take').textContent = (prPoint === 'Вся сеть' ? 'По сети' : prPoint) + `: ${cnt('below')} позиций продаются ниже закупки, у ${cnt('up')} вырос закуп, ${cnt('low')} с низкой наценкой, ${cnt('diff')} стоят не как в сети.` + ((dash.data('cost_hist').data || []).length ? '' : ' История закупки начнёт копиться со следующей ночной загрузки.');
+    $('#pr-filter').querySelectorAll('button').forEach((b) => { b.className = 'pp-btn' + (b.dataset.r === prReason ? '' : ' ghost'); });
+    gTable('#pr-table', 'pr', rows.filter((r) => !prReason || r.reason === prReason), (r) => enc(r.point) + ',' + enc(r.id),
+      (r) => [[r.name, 'wrap'], [r.point], [(() => { const w = document.createElement('span'); w.append(tag(RS[r.reason][0], RS[r.reason][1])); const n = document.createElement('small'); n.style.cssText = 'display:block;color:var(--t3);font-size:11px;margin-top:2px'; n.textContent = r.note; w.append(n); return w; })(), 'lft'], [rub(r.cost)], [rub(r.price)], [r.markup + '%'], [rub(r.suggest)], [fq(r.qty)]]);
+  }
+
+  // ===== Дубли =====
+  function drawDubli() {
+    const dc = statusOf('doc_checks'), cd = statusOf('card_dups'), sf = statusOf('stock_flags');
+    const docsRaw = dash.data('docs').status === 'ok' ? dash.data('docs').data : [];
+    const checks = dc === 'ok' ? dash.data('doc_checks').data : [];
+    const cards = cd === 'ok' ? dash.data('card_dups').data : [];
+    const neg = sf === 'ok' ? dash.data('stock_flags').data.filter((r) => r.qty < 0) : [];
+    if (dc === 'ok') gTable('#doc-table', 'doc', checks, (r) => enc(r.key), (r) => [[r.kind, 'lft'], [r.point], [fmtDay(r.day)], [r.what, 'wrap'], [r.docs, 'wrap mut']],
+      docsRaw.length ? 'Дублей и перемещений без пары нет.' : 'Эвотор пока не отдал ни одного поступления или списания — лист «Эвотор_Документы» пустой. Нужно проверить, какие типы документов видит скрипт.');
+    if (cd === 'ok') gTable('#cdup-table', 'card', cards, (r) => enc(r.point) + ',' + enc(r.match), (r) => [[r.point, 'lft'], [(() => { const w = document.createElement('span'); w.append(tag(r.kind === 'Общий штрихкод' ? 'штрихкод ' + r.match : 'название', 'or')); return w; })(), 'lft'], [r.names.split(' | ').join('\n'), 'wrap'], [r.stocks]]);
+    if (sf === 'ok') gTable('#neg2-table', 'neg2', neg, (r) => enc(r.point) + ',' + enc(r.id), (r) => [[r.name, 'wrap'], [r.point], [fq(r.qty)], [fdate(r.last_sale)]]);
+    if (dc === 'ok' && cd === 'ok' && sf === 'ok') $('#db-take').textContent = `К понедельнику проверить: ${checks.length} по документам, ${cards.length} дублей карточек, ${neg.length} минусов.` + (docsRaw.length ? '' : ' Документы Эвотор пока не отдаёт.');
+  }
+
+  // ===== Разные названия =====
+  gSort.names = { k: 'variants', dir: -1 };
+  $('#names-table').querySelectorAll('th').forEach((th) => th.querySelector('button').addEventListener('click', () => { const s = gSort.names; if (s.k === th.dataset.k) s.dir = -s.dir; else { s.k = th.dataset.k; s.dir = th.dataset.k === 'variants' ? -1 : 1; } draw(); }));
+  function drawNames() {
+    if (statusOf('name_diffs') !== 'ok') return;
+    const hasCodes = (dash.data('stock').data || []).some((r) => r.barcodes);
+    gTable('#names-table', 'names', dash.data('name_diffs').data, (r) => enc(r.barcode), (r) => [[r.barcode, 'lft'], [nf.format(r.variants)], [r.names, 'wrap']], hasCodes ? 'Расхождений в названиях нет.' : 'Штрихкоды появятся после ночной загрузки обновлённого скрипта остатков.');
+  }
+
+  // ===== Важно =====
+  function drawImportant() {
+    const el = $('#imp-list');
+    const ok = (id) => statusOf(id) === 'ok';
+    if (!ok('price_flags') && !ok('stock_flags') && !ok('card_dups')) { if (['price_flags', 'stock_flags', 'card_dups'].every((id) => statusOf(id) === 'error')) fail(el); return; }
+    el.classList.remove('dash-skeleton'); el.replaceChildren();
+    const pf = ok('price_flags') ? dash.data('price_flags').data : [];
+    const sfl = ok('stock_flags') ? dash.data('stock_flags').data : [];
+    const cards = ok('card_dups') ? dash.data('card_dups').data : [];
+    const checks = ok('doc_checks') ? dash.data('doc_checks').data : [];
+    const items = [
+      [pf.filter((r) => r.reason === 'below').length, 'продаются ниже закупки', 'поставить новую цену', 'card-prices', 'below', 'red'],
+      [pf.filter((r) => r.reason === 'up').length, 'вырос закуп, цена прежняя', 'поднять цену', 'card-prices', 'up', 'or'],
+      [sfl.filter((r) => r.low).length, 'заканчиваются до поставки', 'заказ в понедельник', 'ostatki', null, 'or'],
+      [sfl.filter((r) => r.qty < 0).length, 'позиций в минусе', 'проверить поступления', 'card-neg2', null, 'red'],
+      [checks.length, 'документов под вопросом', 'дубли и перемещения без пары', 'card-docs', null, 'yl'],
+      [cards.length, 'дублей карточек', 'свести списанием/оприходованием', 'card-cards', null, 'yl'],
+      [(dash.data('name_diffs').status === 'ok' ? dash.data('name_diffs').data.length : 0), 'товаров с разными названиями', 'один штрихкод — разные имена', 'card-names', null, 'yl'],
+      [pf.filter((r) => r.reason === 'low').length, 'с наценкой ниже нормы', 'проверить цену', 'card-prices', 'low', 'yl'],
+    ];
+    items.forEach(([n, t, sub, pg, reason, cls]) => {
+      const b = document.createElement('button'); b.className = 'pp-imp-i ' + (n ? cls : 'ok');
+      const nn = document.createElement('span'); nn.className = 'pp-imp-n'; nn.textContent = nf.format(n);
+      const tt = document.createElement('span'); tt.className = 'pp-imp-t'; tt.textContent = t; const sm = document.createElement('small'); sm.textContent = n ? sub : 'всё в порядке'; tt.append(sm);
+      const go = document.createElement('span'); go.className = 'pp-imp-go'; go.textContent = '→';
+      b.append(nn, tt, go);
+      b.addEventListener('click', () => { if (reason) prReason = reason; if (pg === 'ostatki') { showPage('ostatki', true); window.scrollTo({ top: 0 }); return; } if (reason) draw(); const t = document.getElementById(pg); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+      el.append(b);
+    });
+  }
+
+  // ===== Точка =====
+  let tpPoint = null;
+  const tpSel = $('#tp-point');
+  tpSel.addEventListener('change', () => { tpPoint = tpSel.value; dash.setParams({ tochka: tpPoint }); draw(); });
+  const tpOrderSort = { k: 'days_left', dir: 1 };
+  gSort.tpo = tpOrderSort;
+  $('#tp-order').querySelectorAll('th').forEach((th) => th.querySelector('button').addEventListener('click', () => {
+    const s = gSort.tpo; if (s.k === th.dataset.k) s.dir = -s.dir; else { s.k = th.dataset.k; s.dir = ['name', 'donors'].includes(th.dataset.k) ? 1 : -1; } draw();
+  }));
+
+  function drawPoint(bp, rd) {
+    const get = (id) => (dash.data(id).status === 'ok' ? dash.data(id).data : []);
+    const pts = bp.filter((r) => r.month === month).sort((a, b) => (b.plan || 0) - (a.plan || 0)).map((r) => r.point);
+    if (!pts.length) return;
+    if (!tpPoint || !pts.includes(tpPoint)) tpPoint = (dash.params().tochka && pts.includes(dash.params().tochka)) ? dash.params().tochka : pts[0];
+    if ([...tpSel.options].map((o) => o.value).join() !== pts.join()) tpSel.replaceChildren(...pts.map((p) => new Option(p, p)));
+    tpSel.value = tpPoint;
+    const P = tpPoint;
+    const b = bp.find((r) => r.month === month && r.point === P);
+    const pm = get('point_month').find((r) => r.month === month && r.point === P);
+    const pr = get('promo_point').find((r) => r.month === month && r.point === P);
+    const setK = (id, src, w, txt) => { const e = $(id); e.classList.remove('dash-skeleton'); e.setAttribute('data-where', where(w)); e.textContent = txt; };
+    setK('#tk-fact', 'by_point', { month, point: P }, rub(b && b.fact)); setK('#tk-pct', 'by_point', { month, point: P }, pct(b && b.pct)); setK('#tk-fc', 'by_point', { month, point: P }, pct(b && b.forecast_pct));
+    if (statusOf('point_month') !== 'loading') { setK('#tk-avg', 'point_month', { month, point: P }, rub(pm && pm.avg_check)); setK('#tk-checks', 'point_month', { month, point: P }, pm ? nf.format(pm.checks) : '—'); setK('#tk-profit', 'point_month', { month, point: P }, rub(pm && pm.profit)); setK('#tk-margin', 'point_month', { month, point: P }, pm && pm.margin != null ? String(pm.margin).replace('.', ',') + '%' : '—'); }
+    if (statusOf('promo_point') !== 'loading') setK('#tk-promo', 'promo_point', { month, point: P }, (pr ? nf.format(pr.qty) : '0') + ' шт.');
+    const t = $('#tp-take'); t.replaceChildren();
+    if (b) t.textContent = `${P}: ${rub(b.fact)} за ${monthName(month).toLowerCase()} — ${pct(b.pct)} плана, по темпу выйдет ${pct(b.forecast_pct)}.` + (b.need_per_day ? ` Чтобы сделать план, нужно ${rub(b.need_per_day)} в день, сейчас в среднем ${rub(b.avg_day)}.` : '');
+
+    // выручка по дням
+    const box = $('#tp-daily'); box.querySelectorAll('svg, .pp-fail').forEach((e) => e.remove());
+    if (statusOf('rev_dated') === 'ok' && b) {
+      box.classList.remove('dash-skeleton');
+      const days = rd.filter((r) => r.month === month && r.point === P);
+      const w = Math.max(280, box.clientWidth), h = 200, n = b.days_in_month;
+      const ymax = Math.max(b.plan_per_day || 0, ...days.map((d) => d.amount)) * 1.08 || 1;
+      const svg = d3.select(box).insert('svg', ':first-child').attr('width', '100%').attr('viewBox', `0 0 ${w} ${h}`).style('display', 'block').style('font-family', 'var(--fb)');
+      const y = d3.scaleLinear([0, ymax], [h - 24, 8]).nice(4); const ticks = y.ticks(4);
+      const tmp = svg.append('g'); let left = 0; ticks.forEach((v) => { const tt = tmp.append('text').style('font-size', '11px').text(cf.format(v)); left = Math.max(left, tt.node().getComputedTextLength()); }); tmp.remove(); left += 10;
+      const x = d3.scaleBand(d3.range(1, n + 1), [left, w - 4]).paddingInner(0.22);
+      ticks.forEach((v) => { svg.append('line').attr('x1', left).attr('x2', w - 4).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', '#232323'); svg.append('text').attr('x', left - 6).attr('y', y(v)).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', '#6A6058').style('font-size', '11px').text(v === 0 ? '0' : cf.format(v)); });
+      d3.range(1, n + 1).filter((d) => d === 1 || d % 5 === 0).forEach((d) => svg.append('text').attr('x', x(d) + x.bandwidth() / 2).attr('y', h - 6).attr('text-anchor', 'middle').attr('fill', '#6A6058').style('font-size', '11px').text(d));
+      const bw = Math.min(22, x.bandwidth()), off = (x.bandwidth() - bw) / 2, tp = tip(box);
+      days.forEach((d) => { const dn = Number(d.day.slice(8)), open = dn > b.done_days;
+        svg.append('rect').attr('x', x(dn) + off).attr('width', bw).attr('y', y(d.amount)).attr('height', Math.max(0, y(0) - y(d.amount))).attr('rx', Math.min(4, bw / 2)).attr('fill', open ? 'rgba(232,122,30,.35)' : (d.amount >= (b.plan_per_day || 0) ? '#E87A1E' : '#B85C0A'))
+          .on('mousemove', (ev) => { tipLines(tp, fmtDay(d.day) + (open ? ' · день идёт' : ''), [rub(d.amount)]); const [mx, my] = d3.pointer(ev, box); placeTip(box, tp, mx, my); }).on('mouseleave', () => { tp.hidden = true; }); });
+      if (b.plan_per_day) svg.append('line').attr('x1', left).attr('x2', w - 4).attr('y1', y(b.plan_per_day)).attr('y2', y(b.plan_per_day)).attr('stroke', '#F2EDE6').attr('stroke-opacity', .55).attr('stroke-dasharray', '4 4');
+      $('#tp-daily-note').textContent = b.plan_per_day ? `Пунктир — план на день, ${rub(b.plan_per_day)}. Яркий столбик — день в плане.` : '';
+    }
+    // продавцы
+    if (statusOf('person_point_month') === 'ok') rankList($('#tp-sellers'), get('person_point_month').filter((r) => r.month === month && r.point === P).sort((a, c) => c.per_shift - a.per_shift).map((r) => ({ ...r, month: r.month })), { field: 'per_shift', source: 'person_point_month', fmt: crub, sub: (r) => `${r.shifts} смен · ${crub(r.revenue)}`, empty: 'В графике нет смен за этот месяц.', where: (r) => ({ month: r.month, point: r.point, person: r.person }) });
+    // товары
+    if (statusOf('top_goods') === 'ok') rankList($('#tp-goods'), get('top_goods').filter((r) => r.point === P).sort((a, c) => c.revenue - a.revenue).slice(0, 10).map((r) => ({ ...r, person: r.name })), { field: 'revenue', source: 'top_goods', fmt: crub, sub: (r) => `${nf.format(r.sold)} шт · ${r.group || ''}`, empty: 'Нет данных по продажам.', where: (r) => ({ point: r.point, id: r.id }) });
+    // акции
+    const pe = $('#tp-promo');
+    if (statusOf('promo_rows') === 'ok') {
+      const rows = get('promo_rows').filter((r) => r.month === month && r.point === P);
+      const kinds = d3.rollups(rows, (v) => d3.sum(v, (r) => r.qty), (r) => r.promo).map(([promo, qty]) => ({ month, promo, qty, point: P })).sort((a, c) => c.qty - a.qty);
+      pe.replaceChildren(); pe.classList.remove('dash-skeleton');
+      if (!kinds.length) { const e = document.createElement('div'); e.className = 'pp-empty'; e.textContent = 'В этом месяце акций не отмечали.'; pe.append(e); }
+      const max = Math.max(1, ...kinds.map((k) => k.qty));
+      kinds.forEach((k) => { const row = document.createElement('div'); row.className = 'pp-br'; const n = document.createElement('span'); n.className = 'pp-bn'; n.textContent = k.promo; const tr = document.createElement('div'); tr.className = 'pp-track'; const f = document.createElement('div'); f.className = 'pp-fill'; f.style.width = (k.qty / max * 100) + '%'; tr.append(f); const v = document.createElement('span'); v.className = 'pp-bv'; v.textContent = nf.format(k.qty); row.append(n, tr, v); pe.append(row); });
+      const who = d3.rollups(rows, (v) => d3.sum(v, (r) => r.qty), (r) => r.person).sort((a, c) => c[1] - a[1]);
+      $('#tp-promo-who').textContent = who.length ? 'Продавали: ' + who.map(([p, q]) => `${p} ${q}`).join(', ') : '';
+    }
+    // заказать
+    if (statusOf('stock_flags') === 'ok') {
+      const set = dash.data('stock_settings').status === 'ok' ? dash.data('stock_settings').data : [];
+      const S = (re, d) => { const r = set.find((x) => re.test(x.setting)); return r && r.value > 0 ? r.value : d; };
+      $('#tp-order-note').textContent = `Хватит меньше чем на ${S(/хватит меньше/i, 8)} дн.; «Заказать» — чтобы хватило на ${S(/запас/i, 10)} дн.; «Где взять» — точки с лишним`;
+      gTable('#tp-order', 'tpo', get('stock_flags').filter((r) => r.point === P && r.low), (r) => enc(r.point) + ',' + enc(r.id), (r) => [[r.name, 'wrap'], [fq(r.qty)], [fd(r.per_day)], [fd(r.days_left)], [fq(r.order_qty)], [r.donors || '—', 'wrap mut']], dash.data('stock').data.some((r) => r.point === P) ? 'Заказывать нечего.' : 'По этой точке остатки ещё не загружены.');
+    }
+  }
+
   function draw() {
     const nm = dash.data('net_month').status === 'ok' ? dash.data('net_month').data : [];
     const bp = dash.data('by_point').status === 'ok' ? dash.data('by_point').data : [];
@@ -1283,17 +1787,20 @@ dash.calc('promo_point', {
       const st = statusOf('net_month');
       if (st === 'error') { fail($('#plan-bars')); fail($('#daily')); }
     }
-    sel.hidden = page === 'ostatki';
+    sel.hidden = ['ostatki', 'moe'].includes(page);
+    $('#tab-moe').hidden = window.__ppRole === 'manager';
     if (page === 'obzor' && month) drawOverview(nm, bp, dash.data('net_daily').status === 'ok' ? dash.data('net_daily').data : []);
     if (page === 'tochki' && month) drawPoints(bp, dash.data('rev_dated').status === 'ok' ? dash.data('rev_dated').data : []);
     if (page === 'top' && month) drawTop();
     if (page === 'ostatki') drawStock();
+    if (page === 'moe') { drawImportant(); drawPrices(); drawDubli(); drawNames(); }
+    if (page === 'tochka' && month) drawPoint(dash.data('by_point').status === 'ok' ? dash.data('by_point').data : [], dash.data('rev_dated').status === 'ok' ? dash.data('rev_dated').data : []);
     if (page === 'smeny') drawShifts(dash.data('shifts_named').status === 'ok' ? dash.data('shifts_named').data : [], dash.data('person_month').status === 'ok' ? dash.data('person_month').data : []);
   }
 
   dash.onData(draw);
   const named = location.hash.slice(1);
-  if (['obzor', 'ostatki', 'tochki', 'smeny', 'top'].includes(named)) showPage(named, false);
+  if (['obzor', 'tochka', 'ostatki', 'tochki', 'smeny', 'top'].concat(window.__ppRole === 'manager' ? [] : ['moe']).includes(named)) showPage(named, false);
 })();
 </script>
 </div>

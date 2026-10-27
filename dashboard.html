@@ -280,11 +280,15 @@ window.__ppRole = 'manager';
 .pp-tab-me { color: var(--or-l); }
 .pp-tab-me[hidden] { display: none; }
 .pp-bars { align-content: start; }
-.pp-tgrid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); align-items: start; }
-@media (min-width: 1100px) {
-  .pp-tgrid { grid-template-columns: 1fr 1fr 1fr; grid-auto-flow: dense; }
-  .pp-tgrid #card-tp-daily { grid-column: span 2; }
-  .pp-tgrid #card-tp-goods { grid-column: 3; grid-row: span 2; }
+.pp-trow1, .pp-trow2 { display: grid; gap: 12px; grid-template-columns: 1fr; }
+.pp-tcol { display: grid; gap: 12px; align-content: start; }
+.pp-trow1 > .pp-card, .pp-trow2 > .pp-card { display: flex; flex-direction: column; }
+.pp-fill-chart { flex: 1 1 auto; min-height: 220px; position: relative; }
+.pp-fill-chart > svg { position: absolute; left: 0; top: 0; }
+@media (min-width: 900px) {
+  .pp-trow1 { grid-template-columns: 2fr 1fr; align-items: stretch; }
+  .pp-trow2 { grid-template-columns: 1fr 1fr; align-items: stretch; }
+  .pp-trow2 #card-tp-order .pp-fill-table { flex: 1 1 0; min-height: 0; max-height: none; }
 }
 .pp-spark { height: 34px; margin-top: 6px; }
 .pp-spark svg { display: block; }
@@ -371,28 +375,31 @@ window.__ppRole = 'manager';
       <div class="pp-kpi"><span class="pp-kl">Прибыль по кассе</span><span class="pp-kv dash-skeleton" id="tk-profit" data-source="point_month" data-field="profit">—</span><span class="pp-ks">маржа <span id="tk-margin" data-source="point_month" data-field="margin">—</span></span><div class="pp-spark" id="sp-profit" data-source="point_weeks"></div><span class="pp-trend" id="tr-profit"></span></div>
       <div class="pp-kpi"><span class="pp-kl">Акций за месяц</span><span class="pp-kv dash-skeleton" id="tk-promo" data-source="promo_point" data-field="qty">—</span><span class="pp-ks">по отметкам в Кэпе</span><div class="pp-spark" id="sp-promos" data-source="point_weeks"></div><span class="pp-trend" id="tr-promos"></span></div>
     </div>
-    <div class="pp-tgrid">
+    <div class="pp-trow1">
       <div class="pp-card" id="card-tp-daily">
         <div class="pp-ch"><h2 class="pp-ct">Выручка по дням</h2><p class="pp-cn" id="tp-daily-note">Пунктир — план точки на день</p></div>
-        <div class="pp-chart dash-skeleton" id="tp-daily" data-source="rev_dated by_point"></div>
+        <div class="pp-chart pp-fill-chart dash-skeleton" id="tp-daily" data-source="rev_dated by_point"></div>
       </div>
-      <div class="pp-card" id="card-tp-sellers">
+      <div class="pp-tcol">
+        <div class="pp-card" id="card-tp-sellers">
         <div class="pp-ch"><h2 class="pp-ct">Продавцы точки</h2><p class="pp-cn">Средняя выручка за смену на этой точке за месяц</p></div>
         <div class="pp-rank dash-skeleton" id="tp-sellers" data-source="person_point_month"></div>
       </div>
-      <div class="pp-card" id="card-tp-goods">
-        <div class="pp-ch"><h2 class="pp-ct">Топ товаров</h2><p class="pp-cn">За последние 14 дней по кассе: продано штук и примерная выручка (по текущей цене)</p></div>
-        <div class="pp-rank dash-skeleton" id="tp-goods" data-source="top_goods"></div>
-      </div>
-      <div class="pp-card" id="card-tp-promo">
+        <div class="pp-card" id="card-tp-promo">
         <div class="pp-ch"><h2 class="pp-ct">Акции точки</h2><p class="pp-cn">Сколько продано по каждой акции за месяц и кто продавал</p></div>
         <div class="pp-bars pp-wide dash-skeleton" id="tp-promo" data-source="promo_rows"></div>
         <p class="pp-note" id="tp-promo-who"></p>
       </div>
+      </div>
     </div>
-    <div class="pp-card" id="card-tp-order">
+    <div class="pp-trow2">
+      <div class="pp-card" id="card-tp-goods">
+        <div class="pp-ch"><h2 class="pp-ct">Топ товаров</h2><p class="pp-cn">За последние 14 дней по кассе: продано штук и примерная выручка (по текущей цене)</p></div>
+        <div class="pp-rank dash-skeleton" id="tp-goods" data-source="top_goods"></div>
+      </div>
+      <div class="pp-card" id="card-tp-order">
       <div class="pp-ch"><h2 class="pp-ct">Что заказать</h2><p class="pp-cn" id="tp-order-note">Хватит меньше чем до следующей поставки</p></div>
-      <div class="pp-tablewrap">
+      <div class="pp-tablewrap pp-fill-table">
         <table class="pp-table" id="tp-order" data-source="stock_flags" data-row-key="point,id">
           <thead><tr>
             <th class="lft" data-field="name" data-k="name"><button class="pp-sort">Товар</button></th>
@@ -404,6 +411,7 @@ window.__ppRole = 'manager';
           </tr></thead><tbody></tbody>
         </table>
       </div>
+    </div>
     </div>
   </section>
 
@@ -1793,26 +1801,6 @@ dash.calc('promo_point', {
     const t = $('#tp-take'); t.replaceChildren();
     if (b) t.textContent = `${P}: ${rub(b.fact)} за ${monthName(month).toLowerCase()} — ${pct(b.pct)} плана, по темпу выйдет ${pct(b.forecast_pct)}.` + (b.need_per_day ? ` Чтобы сделать план, нужно ${rub(b.need_per_day)} в день, сейчас в среднем ${rub(b.avg_day)}.` : '');
 
-    // выручка по дням
-    const box = $('#tp-daily'); box.querySelectorAll('svg, .pp-fail').forEach((e) => e.remove());
-    if (statusOf('rev_dated') === 'ok' && b) {
-      box.classList.remove('dash-skeleton');
-      const days = rd.filter((r) => r.month === month && r.point === P);
-      const w = Math.max(280, box.clientWidth), h = 200, n = b.days_in_month;
-      const ymax = Math.max(b.plan_per_day || 0, ...days.map((d) => d.amount)) * 1.08 || 1;
-      const svg = d3.select(box).insert('svg', ':first-child').attr('width', '100%').attr('viewBox', `0 0 ${w} ${h}`).style('display', 'block').style('font-family', 'var(--fb)');
-      const y = d3.scaleLinear([0, ymax], [h - 24, 8]).nice(4); const ticks = y.ticks(4);
-      const tmp = svg.append('g'); let left = 0; ticks.forEach((v) => { const tt = tmp.append('text').style('font-size', '11px').text(cf.format(v)); left = Math.max(left, tt.node().getComputedTextLength()); }); tmp.remove(); left += 10;
-      const x = d3.scaleBand(d3.range(1, n + 1), [left, w - 4]).paddingInner(0.22);
-      ticks.forEach((v) => { svg.append('line').attr('x1', left).attr('x2', w - 4).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', '#232323'); svg.append('text').attr('x', left - 6).attr('y', y(v)).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', '#6A6058').style('font-size', '11px').text(v === 0 ? '0' : cf.format(v)); });
-      d3.range(1, n + 1).filter((d) => d === 1 || d % 5 === 0).forEach((d) => svg.append('text').attr('x', x(d) + x.bandwidth() / 2).attr('y', h - 6).attr('text-anchor', 'middle').attr('fill', '#6A6058').style('font-size', '11px').text(d));
-      const bw = Math.min(22, x.bandwidth()), off = (x.bandwidth() - bw) / 2, tp = tip(box);
-      days.forEach((d) => { const dn = Number(d.day.slice(8)), open = dn > b.done_days;
-        svg.append('rect').attr('x', x(dn) + off).attr('width', bw).attr('y', y(d.amount)).attr('height', Math.max(0, y(0) - y(d.amount))).attr('rx', Math.min(4, bw / 2)).attr('fill', open ? 'rgba(232,122,30,.35)' : (d.amount >= (b.plan_per_day || 0) ? '#E87A1E' : '#B85C0A'))
-          .on('mousemove', (ev) => { tipLines(tp, fmtDay(d.day) + (open ? ' · день идёт' : ''), [rub(d.amount)]); const [mx, my] = d3.pointer(ev, box); placeTip(box, tp, mx, my); }).on('mouseleave', () => { tp.hidden = true; }); });
-      if (b.plan_per_day) svg.append('line').attr('x1', left).attr('x2', w - 4).attr('y1', y(b.plan_per_day)).attr('y2', y(b.plan_per_day)).attr('stroke', '#F2EDE6').attr('stroke-opacity', .55).attr('stroke-dasharray', '4 4');
-      $('#tp-daily-note').textContent = b.plan_per_day ? `Пунктир — план на день, ${rub(b.plan_per_day)}. Яркий столбик — день в плане.` : '';
-    }
     // продавцы
     if (statusOf('person_point_month') === 'ok') rankList($('#tp-sellers'), get('person_point_month').filter((r) => r.month === month && r.point === P).sort((a, c) => c.per_shift - a.per_shift).map((r) => ({ ...r, month: r.month })), { field: 'per_shift', source: 'person_point_month', fmt: crub, sub: (r) => `${r.shifts} смен · ${crub(r.revenue)}`, empty: 'В графике нет смен за этот месяц.', where: (r) => ({ month: r.month, point: r.point, person: r.person }) });
     // товары
@@ -1835,6 +1823,26 @@ dash.calc('promo_point', {
       const S = (re, d) => { const r = set.find((x) => re.test(x.setting)); return r && r.value > 0 ? r.value : d; };
       $('#tp-order-note').textContent = `Хватит меньше чем на ${S(/хватит меньше/i, 8)} дн.; «Заказать» — чтобы хватило на ${S(/запас/i, 10)} дн.; «Где взять» — точки с лишним`;
       gTable('#tp-order', 'tpo', get('stock_flags').filter((r) => r.point === P && r.low), (r) => enc(r.point) + ',' + enc(r.id), (r) => [[r.name, 'wrap'], [fq(r.qty)], [fq(r.sold) + ' шт'], [fd(r.days_left)], [fq(r.order_qty)], [r.donors || '—', 'wrap mut']], dash.data('stock').data.some((r) => r.point === P) ? 'Заказывать нечего.' : 'По этой точке остатки ещё не загружены.');
+    }
+    // выручка по дням
+    const box = $('#tp-daily'); box.querySelectorAll('svg, .pp-fail').forEach((e) => e.remove());
+    if (statusOf('rev_dated') === 'ok' && b) {
+      box.classList.remove('dash-skeleton');
+      const days = rd.filter((r) => r.month === month && r.point === P);
+      const w = Math.max(280, box.clientWidth), h = Math.max(200, box.clientHeight), n = b.days_in_month;
+      const ymax = Math.max(b.plan_per_day || 0, ...days.map((d) => d.amount)) * 1.08 || 1;
+      const svg = d3.select(box).insert('svg', ':first-child').attr('width', w).attr('height', h).attr('viewBox', `0 0 ${w} ${h}`).style('display', 'block').style('font-family', 'var(--fb)');
+      const y = d3.scaleLinear([0, ymax], [h - 24, 8]).nice(Math.max(4, Math.round(h / 60))); const ticks = y.ticks(Math.max(4, Math.round(h / 60)));
+      const tmp = svg.append('g'); let left = 0; ticks.forEach((v) => { const tt = tmp.append('text').style('font-size', '11px').text(cf.format(v)); left = Math.max(left, tt.node().getComputedTextLength()); }); tmp.remove(); left += 10;
+      const x = d3.scaleBand(d3.range(1, n + 1), [left, w - 4]).paddingInner(0.22);
+      ticks.forEach((v) => { svg.append('line').attr('x1', left).attr('x2', w - 4).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', '#232323'); svg.append('text').attr('x', left - 6).attr('y', y(v)).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', '#6A6058').style('font-size', '11px').text(v === 0 ? '0' : cf.format(v)); });
+      d3.range(1, n + 1).filter((d) => d === 1 || d % 5 === 0).forEach((d) => svg.append('text').attr('x', x(d) + x.bandwidth() / 2).attr('y', h - 6).attr('text-anchor', 'middle').attr('fill', '#6A6058').style('font-size', '11px').text(d));
+      const bw = Math.min(22, x.bandwidth()), off = (x.bandwidth() - bw) / 2, tp = tip(box);
+      days.forEach((d) => { const dn = Number(d.day.slice(8)), open = dn > b.done_days;
+        svg.append('rect').attr('x', x(dn) + off).attr('width', bw).attr('y', y(d.amount)).attr('height', Math.max(0, y(0) - y(d.amount))).attr('rx', Math.min(4, bw / 2)).attr('fill', open ? 'rgba(232,122,30,.35)' : (d.amount >= (b.plan_per_day || 0) ? '#E87A1E' : '#B85C0A'))
+          .on('mousemove', (ev) => { tipLines(tp, fmtDay(d.day) + (open ? ' · день идёт' : ''), [rub(d.amount)]); const [mx, my] = d3.pointer(ev, box); placeTip(box, tp, mx, my); }).on('mouseleave', () => { tp.hidden = true; }); });
+      if (b.plan_per_day) svg.append('line').attr('x1', left).attr('x2', w - 4).attr('y1', y(b.plan_per_day)).attr('y2', y(b.plan_per_day)).attr('stroke', '#F2EDE6').attr('stroke-opacity', .55).attr('stroke-dasharray', '4 4');
+      $('#tp-daily-note').textContent = b.plan_per_day ? `Пунктир — план на день, ${rub(b.plan_per_day)}. Яркий столбик — день в плане.` : '';
     }
   }
 

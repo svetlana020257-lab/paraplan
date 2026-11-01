@@ -1083,13 +1083,18 @@ dash.calc('rev_dated', {
 dash.calc('by_point', {
   inputs: ['rev_dated', 'plans'],
   title: 'План и факт по точкам',
-  description: 'По точке и месяцу: факт, план, выполнение, прогноз по среднему закрытому дню, сколько нужно в день до плана. Последний день в данных считается незакрытым.',
+  description: 'По точке и месяцу: факт, план, выполнение, прогноз по среднему закрытому дню, сколько нужно в день до плана. Прошедший месяц считается закрытым целиком; в текущем незакрыт только сегодняшний день.',
   fn: (rev_dated, plans) => {
     const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
-    const maxDay = rev_dated.reduce((m, r) => (r.day > m ? r.day : m), '');
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Novosibirsk', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const lastByMonth = new Map();
     for (const r of rev_dated) lastByMonth.set(r.month, Math.max(lastByMonth.get(r.month) || 0, Number(r.day.slice(8))));
-    const doneDays = (month) => lastByMonth.get(month) - (maxDay.slice(0, 7) === month ? 1 : 0);
+    // Прошедший месяц закрыт целиком; в текущем открыт только сегодняшний день (и позже).
+    const doneDays = (month) => {
+      const [yy, mm] = month.split('-').map(Number);
+      if (month < today.slice(0, 7)) return new Date(Date.UTC(yy, mm, 0)).getUTCDate();
+      return Math.min(lastByMonth.get(month) || 0, Number(today.slice(8)) - 1);
+    };
     const k = (m, p) => m + '|' + p;
     const fact = new Map(); const done = new Map(); const lastFull = new Map();
     for (const r of rev_dated) {
@@ -1330,7 +1335,7 @@ dash.calc('promo_point', {
 
   function drawMonthSelect(nm) {
     const months = nm.map((r) => r.month);
-    if (!month || !months.includes(month)) month = (dash.params().month && months.includes(dash.params().month)) ? dash.params().month : months[months.length - 1];
+    if (!month || !months.includes(month)) month = (dash.params().month && months.includes(dash.params().month)) ? dash.params().month : (nm.length > 1 && !nm[nm.length - 1].done_days ? months[months.length - 2] : months[months.length - 1]);
     const cur = [...sel.options].map((o) => o.value).join();
     if (cur !== months.slice().reverse().join()) sel.replaceChildren(...months.slice().reverse().map((m) => new Option(monthName(m), m)));
     sel.value = month;
@@ -1349,6 +1354,16 @@ dash.calc('promo_point', {
       if (f === 'delta' && v != null) el.classList.add(v >= 0 ? 'pp-up' : 'pp-down');
       if (f === 'forecast_pct' && v != null) el.classList.add(v >= 1 ? 'pp-up' : v >= 0.9 ? 'pp-mid' : 'pp-down');
     });
+    // закрытый месяц: «Прогноз» → «Итог», «Нужно в день» → сколько не хватило / сверх плана
+    const closed = o && o.done_days >= o.days_in_month;
+    $('#k-fc .pp-kl').textContent = closed ? 'Итог месяца' : 'Прогноз на месяц';
+    const needKl = $('#k-need .pp-kl'), needKv = $('#k-need .pp-kv');
+    if (closed && o.plan) {
+      const diff = o.fact - o.plan;
+      needKl.textContent = diff >= 0 ? 'Сверх плана' : 'Не хватило до плана';
+      needKv.textContent = rub(Math.abs(diff));
+      needKv.classList.add(diff >= 0 ? 'pp-up' : 'pp-down');
+    } else if (!closed) needKl.textContent = 'Нужно в день до плана';
     $('#k-fact-n').textContent = o && o.delta != null && prev ? `к тем же ${o.done_days} дн. ${MG[Number(prev.month.slice(5)) - 1]}` : '';
 
     // takeaway

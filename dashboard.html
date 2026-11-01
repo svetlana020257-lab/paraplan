@@ -198,9 +198,6 @@ window.__ppRole = 'manager';
 .pp-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11.5px; color: var(--t2); }
 .pp-legend i { display: inline-block; vertical-align: middle; margin-right: 6px; }
 .pp-chart { position: relative; min-height: 220px; }
-.pp-yoy-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 10px; }
-.pp-yoy-kpis > div { background: var(--s2, rgba(255,255,255,.03)); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 2px; }
-.pp-yoy-kpis .l { font-size: 11.5px; color: var(--t2); } .pp-yoy-kpis .v { font-size: 20px; font-weight: 700; } .pp-yoy-kpis .s { font-size: 11.5px; color: var(--t2); }
 .pp-tip { position: absolute; pointer-events: none; background: var(--s3); border: 1px solid var(--s4); border-radius: 10px; padding: 7px 10px; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; z-index: 3; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
 .pp-tip .k { color: var(--t2); }
 .pp-tablewrap { overflow: auto; max-height: 34rem; border-radius: 10px; }
@@ -211,6 +208,7 @@ window.__ppRole = 'manager';
 .pp-sort:hover, th[aria-sort] .pp-sort { color: var(--or-l); }
 .pp-table td { padding: 9px 10px; border-bottom: 1px solid var(--s2); text-align: right; white-space: nowrap; }
 .pp-table tbody tr:hover td { background: var(--s2); }
+.pp-table tr.pp-total td { font-weight: 700; border-top: 1px solid var(--line); background: var(--s2); }
 .pp-table td.nm { font-weight: 600; }
 .pp-chip { display: inline-block; min-width: 3.2rem; text-align: center; padding: 2px 8px; border-radius: 20px; font-weight: 600; font-size: 12px; }
 .pp-chip.up { background: rgba(76,175,80,.14); color: var(--green); }
@@ -326,6 +324,7 @@ window.__ppRole = 'manager';
     <button class="pp-tab" role="tab" id="tab-tochka" data-page="tochka" aria-selected="false">Точка</button>
     <button class="pp-tab" role="tab" id="tab-ostatki" data-page="ostatki" aria-selected="false">Остатки</button>
     <button class="pp-tab" role="tab" id="tab-tochki" data-page="tochki" aria-selected="false">Точки</button>
+    <button class="pp-tab" role="tab" id="tab-god" data-page="god" aria-selected="false">Год к году</button>
     <button class="pp-tab" role="tab" id="tab-smeny" data-page="smeny" aria-selected="false">Смены</button>
     <button class="pp-tab" role="tab" id="tab-top" data-page="top" aria-selected="false">Топ</button>
     <button class="pp-tab pp-tab-me" role="tab" id="tab-moe" data-page="moe" aria-selected="false">Для меня</button>
@@ -338,7 +337,7 @@ window.__ppRole = 'manager';
       <div class="pp-kpi hero" id="k-fact">
         <span class="pp-kl">Выручка за месяц</span>
         <span class="pp-kv dash-skeleton" data-source="net_month" data-field="fact" data-fetchpriority="high">—</span>
-        <span class="pp-ks"><span data-source="net_month" data-field="delta">—</span> <span class="pp-hide-n" id="k-fact-n"></span><span id="k-fact-yoy"></span></span>
+        <span class="pp-ks"><span data-source="net_month" data-field="delta">—</span> <span class="pp-hide-n" id="k-fact-n"></span></span>
       </div>
       <div class="pp-kpi" id="k-plan">
         <span class="pp-kl">Выполнено плана</span>
@@ -371,15 +370,6 @@ window.__ppRole = 'manager';
           <p class="pp-cn" id="daily-note">Пунктир — план сети на день</p>
         </div>
         <div class="pp-chart dash-skeleton" id="daily" data-source="net_daily net_month"></div>
-      </div>
-      <div class="pp-card" id="card-yoy" style="grid-column: 1 / -1">
-        <div class="pp-ch">
-          <h2 class="pp-ct">Год к году</h2>
-          <p class="pp-cn" id="yoy-note">Выручка сети по месяцам: 2025 и 2026</p>
-        </div>
-        <div class="pp-yoy-kpis" id="yoy-kpis" data-source="yoy_net"></div>
-        <div class="pp-chart dash-skeleton" id="yoy" data-source="yoy_net"></div>
-        <div class="pp-legend"><span><i style="width:12px;height:8px;border-radius:3px;background:#5A524B"></i>2025</span><span><i style="width:12px;height:8px;border-radius:3px;background:var(--or)"></i>2026</span><span><i style="width:12px;height:8px;border-radius:3px;background:rgba(232,122,30,.35)"></i>2026, прогноз идущего месяца</span></div>
       </div>
     </div>
   </section>
@@ -628,7 +618,6 @@ window.__ppRole = 'manager';
             <th data-field="need_per_day" data-k="need_per_day"><button class="pp-sort">Нужно/день</button></th>
             <th data-field="avg_day" data-k="avg_day"><button class="pp-sort">Средний день</button></th>
             <th data-field="last_full" data-k="last_full"><button class="pp-sort">Посл. день</button></th>
-            <th data-field="yoy" data-k="yoy"><button class="pp-sort">К 2025</button></th>
           </tr></thead>
           <tbody></tbody>
         </table>
@@ -695,6 +684,49 @@ window.__ppRole = 'manager';
     </div>
   </section>
 
+  <!-- ГОД К ГОДУ -->
+  <section class="pp-page" id="god" role="tabpanel" aria-labelledby="tab-god" hidden>
+    <p class="pp-take" id="god-take"><span class="dash-skeleton">—</span></p>
+    <div class="pp-kpis" id="god-kpis">
+      <div class="pp-kpi hero"><span class="pp-kl" id="gk-rev-l">Выручка за месяц</span><span class="pp-kv dash-skeleton" id="gk-rev" data-source="yoy_net" data-field="rev">—</span><span class="pp-ks" id="gk-rev-s">—</span></div>
+      <div class="pp-kpi"><span class="pp-kl" id="gk-prof-l">Прибыль за месяц</span><span class="pp-kv dash-skeleton" id="gk-prof" data-source="yoy_net" data-field="prof">—</span><span class="pp-ks" id="gk-prof-s">—</span></div>
+      <div class="pp-kpi"><span class="pp-kl" id="gk-ytd-l">С начала года</span><span class="pp-kv dash-skeleton" id="gk-ytd" data-source="yoy_net">—</span><span class="pp-ks" id="gk-ytd-s">—</span></div>
+      <div class="pp-kpi"><span class="pp-kl">Без новых точек</span><span class="pp-kv dash-skeleton" id="gk-lfl" data-source="yoy_net" data-field="lfl">—</span><span class="pp-ks" id="gk-lfl-s">—</span></div>
+    </div>
+    <div class="pp-grid">
+      <div class="pp-card">
+        <div class="pp-ch"><h2 class="pp-ct">Выручка сети по месяцам</h2><p class="pp-cn" id="god-rev-note">—</p></div>
+        <div class="pp-chart dash-skeleton" id="god-rev" data-source="yoy_net"></div>
+        <div class="pp-legend"><span><i style="width:12px;height:8px;border-radius:3px;background:#5A524B"></i><span class="god-ly">2025</span></span><span><i style="width:12px;height:8px;border-radius:3px;background:var(--or)"></i><span class="god-cy">2026</span></span><span><i style="width:12px;height:8px;border-radius:3px;background:rgba(232,122,30,.35)"></i>прогноз идущего месяца</span></div>
+      </div>
+      <div class="pp-card">
+        <div class="pp-ch"><h2 class="pp-ct">Прибыль сети по месяцам</h2><p class="pp-cn" id="god-prof-note">—</p></div>
+        <div class="pp-chart dash-skeleton" id="god-prof" data-source="yoy_net"></div>
+        <div class="pp-legend"><span><i style="width:12px;height:8px;border-radius:3px;background:#5A524B"></i><span class="god-ly">2025</span></span><span><i style="width:12px;height:8px;border-radius:3px;background:#4CAF50"></i><span class="god-cy">2026</span></span><span><i style="width:12px;height:8px;border-radius:3px;background:rgba(76,175,80,.35)"></i>прогноз идущего месяца</span></div>
+      </div>
+    </div>
+    <div class="pp-card">
+      <div class="pp-ch"><h2 class="pp-ct" id="god-tt">Точки к прошлому году</h2><p class="pp-cn">«Нов.» — точки не было в том же месяце прошлого года. Нажми на заголовок, чтобы отсортировать.</p></div>
+      <div class="pp-tablewrap">
+        <table class="pp-table" id="gy-table" data-source="yoy_point" data-row-key="month,point">
+          <thead><tr>
+            <th data-k="point"><button class="pp-sort">Точка</button></th>
+            <th data-k="rev"><button class="pp-sort gy-cy">Выручка</button></th>
+            <th data-k="rev_ly"><button class="pp-sort gy-ly">Выручка год назад</button></th>
+            <th data-k="rev_d"><button class="pp-sort">Δ выручки</button></th>
+            <th data-k="prof"><button class="pp-sort">Прибыль</button></th>
+            <th data-k="prof_ly"><button class="pp-sort">Прибыль год назад</button></th>
+            <th data-k="prof_d"><button class="pp-sort">Δ прибыли</button></th>
+            <th data-k="margin"><button class="pp-sort">Маржа</button></th>
+            <th data-k="margin_ly"><button class="pp-sort">Маржа год назад</button></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <p class="pp-cn">Откуда цифры: 2025 год — файл «Анализ 2025-2026»; январь–сентябрь 2026 — «Оборот 2026» (выручка и валовая прибыль); с октября 2026 — выручка из листа «Выручка», прибыль = выручка × маржа кассы Эвотор за этот месяц. В идущем месяце — прогноз.</p>
+  </section>
+
   <!-- ТОП -->
   <section class="pp-page" id="top" role="tabpanel" aria-labelledby="tab-top" hidden>
     <div class="pp-kpis" id="top-kpi">
@@ -736,7 +768,7 @@ window.__ppRole = 'manager';
     </div>
   </section>
 
-  <p class="pp-foot">Данные — таблица «Приложение»: листы «Выручка», «Планы», «График»; остатки — «Отчет», лист «Эвотор_Остатки» (обновляется ночью); акции — таблица «Инструктор Кэп», лист «Продажи по акциям». Сегодняшний день в выручке считается незакрытым и в прогноз не входит. Сравнение год к году: 2025 год — файл «Анализ 2025-2026», январь–май 2026 — «Оборот 2026».</p>
+  <p class="pp-foot">Данные — таблица «Приложение»: листы «Выручка», «Планы», «График»; остатки — «Отчет», лист «Эвотор_Остатки» (обновляется ночью); акции — таблица «Инструктор Кэп», лист «Продажи по акциям». Сегодняшний день в выручке считается незакрытым и в прогноз не входит.</p>
 </div>
 
 <script>
@@ -1174,58 +1206,73 @@ dash.calc('net_month', {
   },
 });
 
-// Архив выручки по точкам: 2025 год — файл «Анализ 2025-2026», январь–май 2026 — «Оборот 2026».
-// С июня 2026 берутся живые данные листа «Выручка».
-const PP_HIST = {"Титова":{"2025-01":1265689,"2025-02":1208013,"2025-03":1463153,"2025-04":1554661,"2025-05":1525481,"2025-06":1598094,"2025-07":1810398,"2025-08":1864823,"2025-09":1809050,"2025-10":1880970,"2025-11":1929421,"2025-12":1938921,"2026-01":1640654,"2026-02":1507686,"2026-03":1647531,"2026-04":1702384,"2026-05":1711396},"Громова":{"2025-01":605617,"2025-02":716436,"2025-03":941828,"2025-04":1042949,"2025-05":1067174,"2025-06":1084161,"2025-07":1180297,"2025-08":1254299,"2025-09":1216468,"2025-10":1359651,"2025-11":1393904,"2025-12":1244484,"2026-01":887323,"2026-02":791080,"2026-03":871481,"2026-04":903894,"2026-05":927557},"Династия":{"2025-01":643212,"2025-02":798368,"2025-03":941632,"2025-04":870572,"2025-05":899508,"2025-06":814329,"2025-07":899256,"2025-08":947192,"2025-09":956569,"2025-10":982345,"2025-11":1069186,"2025-12":950235,"2026-01":750080,"2026-02":782699,"2026-03":805954,"2026-04":795784,"2026-05":822922},"Коротаева":{"2025-01":869530,"2025-02":859814,"2025-03":911315,"2025-04":926185,"2025-05":1003498,"2025-06":986588,"2025-07":969798,"2025-08":1081873,"2025-09":1019307,"2025-10":1112651,"2025-11":1040782,"2025-12":1183081,"2026-01":1128806,"2026-02":1144320,"2026-03":1329969,"2026-04":1323041,"2026-05":1340708},"Москва":{"2025-01":605835,"2025-02":559977,"2025-03":691322,"2025-04":678023,"2025-05":623448,"2025-06":669309,"2025-07":676243,"2025-08":695517,"2025-09":671774,"2025-10":661459,"2025-11":639613,"2025-12":683615,"2026-01":613820,"2026-02":633820,"2026-03":804536,"2026-04":613220,"2026-05":598738},"Зорге":{"2025-01":1084383,"2025-02":1153893,"2025-03":1116705,"2025-04":1131858,"2025-05":1152417,"2025-06":1063952,"2025-07":830811,"2025-08":851818,"2025-09":939262,"2025-10":1116502,"2025-11":1022727,"2025-12":1183158,"2026-01":1021446,"2026-02":1000662,"2026-03":1149601,"2026-04":772222,"2026-05":861838},"Горский":{"2025-02":60021,"2025-03":372826,"2025-04":398605,"2025-05":507881,"2025-06":567201,"2025-07":571023,"2025-08":587882,"2025-09":644367,"2025-10":648929,"2025-11":674134,"2025-12":795607,"2026-01":696676,"2026-02":689034,"2026-03":764405,"2026-04":834706,"2026-05":864501},"Планировочная":{"2025-04":16570,"2025-05":183210,"2025-06":194820,"2025-07":210993,"2025-08":250898,"2025-09":267625,"2025-10":260346,"2025-11":276644,"2025-12":313823,"2026-01":318018,"2026-02":327501,"2026-03":416146,"2026-04":431835,"2026-05":547215},"Петухова":{"2025-05":43730,"2025-06":208680,"2025-07":306651,"2025-08":329176,"2025-09":377098,"2025-10":433666,"2025-11":467769,"2025-12":595839,"2026-01":563516,"2026-02":523914,"2026-03":729363,"2026-04":750926,"2026-05":776489},"Никитина":{"2026-01":51830,"2026-02":99190,"2026-03":128736,"2026-04":145880,"2026-05":160297},"Шлюз":{"2026-01":80940,"2026-02":231625,"2026-03":264230,"2026-04":296420,"2026-05":426730},"Богаткова":{"2026-05":49245}};
-const ppYoyBase = (by_point) => {
-  const m = new Map();
-  for (const [point, months] of Object.entries(PP_HIST)) for (const [month, v] of Object.entries(months)) m.set(month + '|' + point, { month, point, fact: v, value: v, closed: true });
+// Архив по точкам [выручка, прибыль]: 2025 — файл «Анализ 2025-2026», январь–сентябрь 2026 — «Оборот 2026».
+const PP_HIST = {"Титова":{"2025-01":[1265689,410110],"2025-02":[1208013,391666],"2025-03":[1463153,448259],"2025-04":[1554661,483189],"2025-05":[1525481,474646],"2025-06":[1598094,496588],"2025-07":[1810398,563947],"2025-08":[1864823,581612],"2025-09":[1809050,597160],"2025-10":[1880970,529215],"2025-11":[1929421,524933],"2025-12":[1938921,714236],"2026-01":[1640654,685637],"2026-02":[1507686,661829],"2026-03":[1647531,746578],"2026-04":[1702384,786823],"2026-05":[1711396,785574],"2026-06":[1793082,797797],"2026-07":[1672334,761402],"2026-08":[1655928,761389],"2026-09":[1509397,687472]},"Громова":{"2025-01":[605617,169447],"2025-02":[716436,186976],"2025-03":[941828,254072],"2025-04":[1042949,275789],"2025-05":[1067174,287896],"2025-06":[1084161,303666],"2025-07":[1180297,309098],"2025-08":[1254299,353870],"2025-09":[1216468,344381],"2025-10":[1359651,398329],"2025-11":[1393904,376276],"2025-12":[1244484,434480],"2026-01":[887323,369605],"2026-02":[791080,371301],"2026-03":[871481,402901],"2026-04":[903894,428502],"2026-05":[927556,444487],"2026-06":[868367,421297],"2026-07":[845286,418090],"2026-08":[893037,440511],"2026-09":[793748,395527]},"Династия":{"2025-01":[643212,207321],"2025-02":[798368,227472],"2025-03":[941632,286326],"2025-04":[870572,239594],"2025-05":[899508,264324],"2025-06":[814329,246922],"2025-07":[899256,282493],"2025-08":[947192,296556],"2025-09":[956569,307923],"2025-10":[982345,330434],"2025-11":[1069186,353631],"2025-12":[950235,363901],"2026-01":[750080,334408],"2026-02":[782699,373555],"2026-03":[805954,382426],"2026-04":[795784,377342],"2026-05":[822922,379366],"2026-06":[849790,395052],"2026-07":[869756,415981],"2026-08":[875111,417134],"2026-09":[804430,378348]},"Коротаева":{"2025-01":[869530,357333],"2025-02":[859814,345033],"2025-03":[911315,367498],"2025-04":[926185,379924],"2025-05":[1003498,405987],"2025-06":[986588,418713],"2025-07":[969798,415751],"2025-08":[1081873,467669],"2025-09":[1019307,462609],"2025-10":[1112651,523048],"2025-11":[1040782,490279],"2025-12":[1183081,576147],"2026-01":[1128806,552888],"2026-02":[1144320,573881],"2026-03":[1329969,662733],"2026-04":[1323041,651323],"2026-05":[1340708,664433],"2026-06":[1269286,611682],"2026-07":[1341117,654314],"2026-08":[1229474,611224],"2026-09":[1183080,581984]},"Москва":{"2025-01":[605835,252036],"2025-02":[559977,227486],"2025-03":[691322,281486],"2025-04":[678023,289098],"2025-05":[623448,270091],"2025-06":[669309,289208],"2025-07":[676243,297481],"2025-08":[695517,318495],"2025-09":[671774,301009],"2025-10":[661459,292469],"2025-11":[639613,281543],"2025-12":[683615,293786],"2026-01":[613820,274366],"2026-02":[633820,306118],"2026-03":[804536,388683],"2026-04":[613220,284582],"2026-05":[598738,279711],"2026-06":[737511,355486],"2026-07":[667794,319040],"2026-08":[525263,286272],"2026-09":[615297,291420]},"Зорге":{"2025-01":[1084383,486160],"2025-02":[1153893,521938],"2025-03":[1116705,501411],"2025-04":[1131858,524710],"2025-05":[1152417,531595],"2025-06":[1063952,508415],"2025-07":[830811,405305],"2025-08":[851818,422951],"2025-09":[939262,458369],"2025-10":[1116502,563999],"2025-11":[1022727,503173],"2025-12":[1183158,575632],"2026-01":[1021446,497858],"2026-02":[1000662,508879],"2026-03":[1149601,575305],"2026-04":[772222,375953],"2026-05":[861838,404685],"2026-06":[936600,469593],"2026-07":[929874,455855],"2026-08":[960643,470003],"2026-09":[1025162,501110]},"Горский":{"2025-02":[60021,22382],"2025-03":[372826,134257],"2025-04":[398605,162867],"2025-05":[507881,215582],"2025-06":[567201,245306],"2025-07":[571023,260586],"2025-08":[587882,272277],"2025-09":[644367,300651],"2025-10":[648929,302001],"2025-11":[674134,310420],"2025-12":[795607,370114],"2026-01":[696676,337384],"2026-02":[689034,334787],"2026-03":[764405,361920],"2026-04":[834706,387527],"2026-05":[864501,421567],"2026-06":[917803,435273],"2026-07":[962749,457184],"2026-08":[940261,447103],"2026-09":[951217,451495]},"Планировочная":{"2025-04":[16570,9077],"2025-05":[183210,86205],"2025-06":[194820,85450],"2025-07":[210993,96322],"2025-08":[250898,116637],"2025-09":[267625,126422],"2025-10":[260346,119922],"2025-11":[276644,122008],"2025-12":[313823,130794],"2026-01":[318018,148515],"2026-02":[327501,158384],"2026-03":[416146,206598],"2026-04":[431835,196453],"2026-05":[547215,247283],"2026-06":[571921,265500],"2026-07":[562698,268846],"2026-08":[592705,290040],"2026-09":[524974,256896]},"Петухова":{"2025-05":[43730,21410],"2025-06":[208680,98807],"2025-07":[306651,155044],"2025-08":[329176,161918],"2025-09":[377098,186903],"2025-10":[433666,210041],"2025-11":[467769,226611],"2025-12":[595839,280376],"2026-01":[563516,283811],"2026-02":[523914,261798],"2026-03":[729363,361229],"2026-04":[750926,366055],"2026-05":[776489,364368],"2026-06":[884486,429214],"2026-07":[990881,490993],"2026-08":[997379,488984],"2026-09":[977113,482043]},"Никитина":{"2026-01":[51830,25191],"2026-02":[99190,47099],"2026-03":[128736,64250],"2026-04":[145880,72995],"2026-05":[160297,76369],"2026-06":[180531,91463],"2026-07":[175232,87286],"2026-08":[236463,121286],"2026-09":[257328,131987]},"Шлюз":{"2026-01":[80940,37005],"2026-02":[231625,107420],"2026-03":[264230,118808],"2026-04":[296420,125321],"2026-05":[426730,185969],"2026-06":[489740,220261],"2026-07":[517480,232457],"2026-08":[531920,245819],"2026-09":[598358,288832]},"Богаткова":{"2026-05":[49245,21207],"2026-06":[91882,43110],"2026-07":[118975,54788],"2026-08":[173742,78083],"2026-09":[191075,93812]}};
+const PP_HIST_TO = '2026-09';
+const ppLastYear = (month) => (Number(month.slice(0, 4)) - 1) + month.slice(4);
+const ppYoyBase = (by_point, evo_rev) => {
+  const m = new Map(); const lastMargin = new Map();
+  for (const [point, months] of Object.entries(PP_HIST)) for (const [month, [rev, prof]] of Object.entries(months).sort()) {
+    m.set(month + '|' + point, { month, point, rev, prof, closed: true });
+    if (rev && prof) lastMargin.set(point, prof / rev);
+  }
+  const evo = new Map();
+  for (const r of evo_rev) { const k = r.day.slice(0, 7) + '|' + r.point; const o = evo.get(k) || { rev: 0, prof: 0 }; o.rev += r.revenue; o.prof += r.profit; evo.set(k, o); }
   for (const r of by_point) {
+    if (r.month <= PP_HIST_TO) continue;
     const closed = r.done_days >= r.days_in_month;
-    if (!closed && r.forecast == null) continue; // месяц только начался — сравнивать нечего
-    m.set(r.month + '|' + r.point, { month: r.month, point: r.point, fact: r.fact, value: closed ? r.fact : r.forecast, closed });
+    const rev = closed ? r.fact : r.forecast;
+    if (rev == null) continue;
+    const e = evo.get(r.month + '|' + r.point);
+    const margin = e && e.rev > 0 ? e.prof / e.rev : lastMargin.get(r.point);
+    m.set(r.month + '|' + r.point, { month: r.month, point: r.point, rev, prof: margin != null ? rev * margin : null, closed });
   }
   return m;
 };
-const ppLastYear = (month) => (Number(month.slice(0, 4)) - 1) + month.slice(4);
 
 dash.calc('yoy_point', {
-  inputs: ['by_point'],
+  inputs: ['by_point', 'evo_rev'],
   title: 'Точки год к году',
-  description: 'Выручка точки за месяц против того же месяца прошлого года. В идущем месяце сравнивается прогноз. Прошлый год — из архива.',
-  fn: (by_point) => {
-    const m = ppYoyBase(by_point);
+  description: 'Выручка и прибыль точки за месяц против того же месяца прошлого года. В идущем месяце — прогноз. Прибыль с октября 2026 — выручка × маржа кассы Эвотор.',
+  fn: (by_point, evo_rev) => {
+    const m = ppYoyBase(by_point, evo_rev);
     return [...m.values()].filter((r) => r.month >= '2026-01').map((r) => {
       const ly = m.get(ppLastYear(r.month) + '|' + r.point);
-      return { ...r, ly: ly ? ly.fact : null, yoy: ly && ly.fact && r.value != null ? r.value / ly.fact - 1 : null };
+      const d = (a, b) => (a != null && b ? a / b - 1 : null);
+      return {
+        month: r.month, point: r.point, closed: r.closed,
+        rev: r.rev, rev_ly: ly ? ly.rev : null, rev_d: ly ? d(r.rev, ly.rev) : null,
+        prof: r.prof, prof_ly: ly ? ly.prof : null, prof_d: ly ? d(r.prof, ly.prof) : null,
+        margin: r.prof != null && r.rev ? r.prof / r.rev : null, margin_ly: ly && ly.rev ? ly.prof / ly.rev : null,
+      };
     });
   },
 });
 
 dash.calc('yoy_net', {
-  inputs: ['by_point'],
+  inputs: ['by_point', 'evo_rev'],
   title: 'Сеть год к году',
-  description: 'Выручка сети по месяцам двух лет. Сопоставимые точки — те, что работали в том же месяце прошлого года. В идущем месяце — прогноз.',
-  fn: (by_point) => {
-    const m = ppYoyBase(by_point);
+  description: 'Выручка и прибыль сети по месяцам. Без новых точек — только точки, что работали в том же месяце прошлого года.',
+  fn: (by_point, evo_rev) => {
+    const m = ppYoyBase(by_point, evo_rev);
     const by = new Map();
     for (const r of m.values()) {
-      const o = by.get(r.month) || { month: r.month, fact: 0, value: 0, closed: true, points: 0 };
-      o.fact += r.fact; o.value += r.value == null ? r.fact : r.value; o.closed = o.closed && r.closed; o.points += 1;
-      by.set(r.month, o);
+      const o = by.get(r.month) || { month: r.month, rev: 0, prof: 0, closed: true };
+      o.rev += r.rev; o.prof += r.prof || 0; o.closed = o.closed && r.closed; by.set(r.month, o);
     }
     return [...by.values()].sort((a, b) => (a.month < b.month ? -1 : 1)).map((o) => {
-      const lyMonth = ppLastYear(o.month); const ly = by.get(lyMonth);
-      let lflCur = 0, lflLy = 0, lflN = 0; const fresh = [];
+      const lyM = ppLastYear(o.month); const ly = by.get(lyM);
+      let lc = 0, ll = 0, lpc = 0, lpl = 0, n = 0; const fresh = [];
       for (const r of m.values()) {
         if (r.month !== o.month) continue;
-        const p = m.get(lyMonth + '|' + r.point);
-        if (p && p.fact) { lflCur += r.value == null ? r.fact : r.value; lflLy += p.fact; lflN += 1; } else fresh.push(r.point);
+        const p = m.get(lyM + '|' + r.point);
+        if (p && p.rev) { lc += r.rev; ll += p.rev; lpc += r.prof || 0; lpl += p.prof || 0; n += 1; } else fresh.push(r.point);
       }
       return {
-        month: o.month, fact: o.fact, value: o.value, closed: o.closed,
-        ly: ly ? ly.fact : null, yoy: ly && ly.fact ? o.value / ly.fact - 1 : null,
-        lfl: lflLy ? lflCur / lflLy - 1 : null, lfl_points: lflN, new_points: fresh.join(', '),
+        month: o.month, closed: o.closed, rev: o.rev, prof: o.prof,
+        rev_ly: ly ? ly.rev : null, prof_ly: ly ? ly.prof : null,
+        rev_d: ly && ly.rev ? o.rev / ly.rev - 1 : null, prof_d: ly && ly.prof ? o.prof / ly.prof - 1 : null,
+        lfl: ll ? lc / ll - 1 : null, lfl_prof: lpl ? lpc / lpl - 1 : null, lfl_points: n, new_points: fresh.join(', '),
       };
     });
   },
@@ -1357,6 +1404,7 @@ dash.calc('promo_point', {
   const pct = (v) => (v == null ? '—' : Math.round(v * 100) + '%');
   const signed = (v) => (v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(Math.round(v * 100)) + '%');
   const signed1 = (v) => (v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + (Math.abs(v) * 100).toFixed(1).replace('.', ',') + '%');
+  const pct1 = (v) => (v == null ? '—' : (v * 100).toFixed(1).replace('.', ',') + '%');
   const monthName = (m) => { const [y, mm] = m.split('-').map(Number); return MN[mm - 1][0].toUpperCase() + MN[mm - 1].slice(1) + ' ' + y; };
   const tone = (fp) => (fp == null ? '' : fp >= 1 ? 'up' : fp >= 0.9 ? 'mid' : 'low');
   const enc = (s) => encodeURIComponent(s);
@@ -1370,7 +1418,7 @@ dash.calc('promo_point', {
   const sel = $('#pp-month');
   let page = 'obzor';
   let month = null;
-  const sortState = { pt: { k: 'fact', dir: -1 }, ps: { k: 'revenue', dir: -1 } };
+  const sortState = { pt: { k: 'fact', dir: -1 }, ps: { k: 'revenue', dir: -1 }, gy: { k: 'rev', dir: -1 } };
 
   const fail = (el) => { el.classList.remove('dash-skeleton'); el.replaceChildren(); const d = document.createElement('div'); d.className = 'pp-fail'; d.textContent = 'Не загрузилось'; el.append(d); };
   const statusOf = (...ids) => { const st = ids.map((id) => dash.data(id).status); if (st.some((s) => s === 'error' || s === 'connect' || s === 'declined' || s === 'missing')) return 'error'; if (st.every((s) => s === 'ok')) return 'ok'; return 'loading'; };
@@ -1394,7 +1442,7 @@ dash.calc('promo_point', {
       draw();
     }));
   };
-  bindSort('#pt-table', 'pt'); bindSort('#ps-table', 'ps');
+  bindSort('#pt-table', 'pt'); bindSort('#ps-table', 'ps'); bindSort('#gy-table', 'gy');
   const markSort = (tableId, key) => $(tableId).querySelectorAll('th').forEach((th) => {
     if (th.dataset.k === sortState[key].k) th.setAttribute('aria-sort', sortState[key].dir > 0 ? 'ascending' : 'descending'); else th.removeAttribute('aria-sort');
   });
@@ -1437,12 +1485,6 @@ dash.calc('promo_point', {
     } else if (!closed) needKl.textContent = 'Нужно в день до плана';
     $('#k-fact-n').textContent = o && o.delta != null && prev ? (closed ? `к ${MP[Number(prev.month.slice(5)) - 1]}` : `к тем же ${o.done_days} дн. ${MG[Number(prev.month.slice(5)) - 1]}`) : '';
 
-    const yn = dash.data('yoy_net').status === 'ok' ? dash.data('yoy_net').data : [];
-    const yo = yn.find((r) => r.month === month);
-    const yEl = $('#k-fact-yoy'); yEl.className = '';
-    yEl.textContent = yo && yo.yoy != null ? ` · к ${MP[Number(month.slice(5)) - 1]} ${ppLastYear(month).slice(0, 4)}: ${signed1(yo.yoy)}` : '';
-    if (yo && yo.yoy != null) yEl.classList.add(yo.yoy >= 0 ? 'pp-up' : 'pp-down');
-
     // takeaway
     const take = $('#take'); take.replaceChildren();
     if (o) {
@@ -1454,7 +1496,6 @@ dash.calc('promo_point', {
       const finished = o.done_days >= o.days_in_month;
       if (finished) {
         take.append(t(`${monthName(month)} закрыт: `), b(rub(o.fact), 'fact'), t(', это '), b(pct(o.pct), 'pct'), t(' плана сети.'));
-        if (yo && yo.yoy != null) take.append(t(` К ${MP[Number(month.slice(5)) - 1]} ${ppLastYear(month).slice(0, 4)}: ${signed1(yo.yoy)}` + (yo.lfl != null && yo.new_points ? `, без новых точек ${signed1(yo.lfl)}.` : '.')));
       } else if (o.forecast_pct != null) {
         take.append(t('Сеть идёт на '), b(pct(o.forecast_pct), 'forecast_pct'), t(' плана: прогноз '), b(crub(o.forecast), 'forecast'), t(' при плане '), b(crub(o.plan), 'plan'), t('. '));
         take.append(t(`В плане ${ahead} из ${rows.length} точек`));
@@ -1529,36 +1570,16 @@ dash.calc('promo_point', {
     $('#daily-note').textContent = o.plan_per_day ? `Пунктир — план сети на день, ${rub(o.plan_per_day)}. Светлый столбик — день ещё идёт.` : 'Светлый столбик — день ещё идёт.';
   }
 
-  function drawYoy() {
-    const box = $('#yoy'); const kp = $('#yoy-kpis');
-    const st = statusOf('yoy_net');
-    box.querySelectorAll('svg, .pp-fail').forEach((e) => e.remove());
-    if (st === 'error') { fail(box); return; }
-    if (st !== 'ok') return;
-    box.classList.remove('dash-skeleton');
-    const yn = dash.data('yoy_net').data;
-    const by = new Map(yn.map((r) => [r.month, r]));
-    const yr = Number(month.slice(0, 4)); const ly = yr - 1;
-    const o = by.get(month);
-    // плитки: месяц, с начала года, сопоставимые точки
-    kp.replaceChildren();
-    const tile = (l, v, sub, val) => { const d = document.createElement('div'); const a = document.createElement('span'); a.className = 'l'; a.textContent = l; const b = document.createElement('span'); b.className = 'v' + (val == null ? '' : val >= 0 ? ' pp-up' : ' pp-down'); b.textContent = v; const c = document.createElement('span'); c.className = 's'; c.textContent = sub; d.append(a, b, c); kp.append(d); };
-    if (o) tile(`${MN[Number(month.slice(5)) - 1][0].toUpperCase() + MN[Number(month.slice(5)) - 1].slice(1)} к ${ly}`, signed1(o.yoy), `${crub(o.closed ? o.fact : o.value)}${o.closed ? '' : ' (прогноз)'} против ${crub(o.ly)}`, o.yoy);
-    const ytdM = yn.filter((r) => r.month.startsWith(yr + '-') && r.month <= month && r.closed);
-    const ytd = ytdM.reduce((a, r) => a + r.fact, 0); const ytdLy = ytdM.reduce((a, r) => a + (r.ly || 0), 0);
-    if (ytdM.length && ytdLy) tile(`С начала ${yr} года`, signed1(ytd / ytdLy - 1), `${crub(ytd)} против ${crub(ytdLy)} · ${ytdM.length} мес.`, ytd / ytdLy - 1);
-    if (o && o.lfl != null) tile('Без новых точек', signed1(o.lfl), `${o.lfl_points} точек, что работали и в ${ly}`, o.lfl);
-    $('#yoy-note').textContent = `Выручка сети по месяцам, ${ly} и ${yr}.` + (o && o.new_points ? ` Новые точки, которых не было в ${ly}: ${o.new_points}.` : '');
-    // график: 12 месяцев, по две колонки
-    const w = Math.max(280, box.clientWidth); const h = 240;
-    const rows = d3.range(1, 13).map((mn) => { const k = (y) => `${y}-${String(mn).padStart(2, '0')}`; const a = by.get(k(ly)), c = by.get(k(yr)); return { mn, ly: a ? a.fact : (c && c.ly) || null, cur: c ? (c.closed ? c.fact : c.value) : null, open: c ? !c.closed : false, sel: k(yr) === month, yoy: c ? c.yoy : null }; });
-    const ymax = Math.max(...rows.map((r) => Math.max(r.ly || 0, r.cur || 0))) * 1.08 || 1;
+  // ГОД К ГОДУ
+  function yoyChart(box, rows, field, color, colorOpen, yr, ly) {
+    const w = Math.max(280, box.clientWidth); const h = 230;
+    const ymax = Math.max(...rows.map((r) => Math.max(r[field + '_ly'] || 0, r[field] || 0))) * 1.08 || 1;
     const svg = d3.select(box).insert('svg', ':first-child').attr('width', '100%').attr('viewBox', `0 0 ${w} ${h}`).style('display', 'block').style('font-family', 'var(--fb)');
     const y = d3.scaleLinear([0, ymax], [h - 24, 8]).nice(4);
     const ticks = y.ticks(4);
     const tmp = svg.append('g'); let left = 0; ticks.forEach((v) => { const tt = tmp.append('text').style('font-size', '11px').text(cf.format(v)); left = Math.max(left, tt.node().getComputedTextLength()); }); tmp.remove(); left += 10;
     const x = d3.scaleBand(d3.range(1, 13), [left, w - 4]).paddingInner(0.25);
-    const x2 = d3.scaleBand(['ly', 'cur'], [0, x.bandwidth()]).paddingInner(0.12);
+    const x2 = d3.scaleBand(['ly', 'cy'], [0, x.bandwidth()]).paddingInner(0.12);
     ticks.forEach((v) => {
       svg.append('line').attr('x1', left).attr('x2', w - 4).attr('y1', y(v)).attr('y2', y(v)).attr('stroke', '#232323');
       svg.append('text').attr('x', left - 6).attr('y', y(v)).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', '#6A6058').style('font-size', '11px').text(v === 0 ? '0' : cf.format(v));
@@ -1566,15 +1587,91 @@ dash.calc('promo_point', {
     const tp = tip(box);
     rows.forEach((r) => {
       if (r.sel) svg.append('rect').attr('x', x(r.mn) - 3).attr('width', x.bandwidth() + 6).attr('y', 4).attr('height', h - 26).attr('rx', 6).attr('fill', 'rgba(232,122,30,.08)');
-      svg.append('text').attr('x', x(r.mn) + x.bandwidth() / 2).attr('y', h - 6).attr('text-anchor', 'middle').attr('fill', r.sel ? '#F5A04A' : '#6A6058').style('font-size', '11px').style('font-weight', r.sel ? 700 : 400).text(MN[r.mn - 1].slice(0, 3));
-      [['ly', r.ly, '#5A524B'], ['cur', r.cur, r.open ? 'rgba(232,122,30,.35)' : '#E87A1E']].forEach(([k, v, c]) => {
+      svg.append('text').attr('x', x(r.mn) + x.bandwidth() / 2).attr('y', h - 6).attr('text-anchor', 'middle').attr('fill', r.sel ? '#F5A04A' : '#6A6058').style('font-size', '11px').style('font-weight', r.sel ? 700 : 400).text(x.bandwidth() < 30 ? r.mn : MN[r.mn - 1].slice(0, 3));
+      [['ly', r[field + '_ly'], '#5A524B'], ['cy', r[field], r.open ? colorOpen : color]].forEach(([k, v, c]) => {
         if (v == null) return;
-        const bw = Math.min(22, x2.bandwidth()); const off = (x2.bandwidth() - bw) / 2;
+        const bw = Math.min(20, x2.bandwidth()); const off = (x2.bandwidth() - bw) / 2;
         svg.append('rect').attr('x', x(r.mn) + x2(k) + off).attr('width', bw).attr('y', y(v)).attr('height', Math.max(0, y(0) - y(v))).attr('rx', Math.min(3, bw / 2)).attr('fill', c)
-          .on('mousemove', (ev) => { tipLines(tp, MN[r.mn - 1][0].toUpperCase() + MN[r.mn - 1].slice(1), [r.ly != null ? `${ly}: ${rub(r.ly)}` : '', r.cur != null ? `${yr}: ${rub(r.cur)}${r.open ? ' (прогноз)' : ''}` : '', r.yoy != null ? `разница ${signed1(r.yoy)}` : ''].filter(Boolean)); const [mx, my] = d3.pointer(ev, box); placeTip(box, tp, mx, my); })
+          .on('mousemove', (ev) => {
+            const a = r[field + '_ly'], b = r[field];
+            tipLines(tp, MN[r.mn - 1][0].toUpperCase() + MN[r.mn - 1].slice(1), [a != null ? `${ly}: ${rub(a)}` : '', b != null ? `${yr}: ${rub(b)}${r.open ? ' (прогноз)' : ''}` : '', a && b != null ? `разница ${signed1(b / a - 1)}` : ''].filter(Boolean));
+            const [mx, my] = d3.pointer(ev, box); placeTip(box, tp, mx, my);
+          })
           .on('mouseleave', () => { tp.hidden = true; });
       });
     });
+  }
+
+  function drawGod() {
+    const st = statusOf('yoy_net');
+    const boxes = [$('#god-rev'), $('#god-prof')];
+    boxes.forEach((b) => b.querySelectorAll('svg, .pp-fail').forEach((e) => e.remove()));
+    if (st === 'error') { boxes.forEach(fail); return; }
+    if (st !== 'ok') return;
+    const yn = dash.data('yoy_net').data; const by = new Map(yn.map((r) => [r.month, r]));
+    const yr = Number(month.slice(0, 4)); const ly = yr - 1; const mi = Number(month.slice(5)) - 1;
+    const o = by.get(month);
+    const Mon = MN[mi][0].toUpperCase() + MN[mi].slice(1);
+    $('#god').querySelectorAll('.god-ly').forEach((e) => { e.textContent = ly; });
+    $('#god').querySelectorAll('.god-cy').forEach((e) => { e.textContent = yr; });
+    const tone = (el, v) => { el.classList.remove('pp-up', 'pp-down'); if (v != null) el.classList.add(v >= 0 ? 'pp-up' : 'pp-down'); };
+    const setKpi = (id, label, val, sub, d) => {
+      const v = $('#' + id); v.classList.remove('dash-skeleton'); v.textContent = val;
+      $('#' + id + '-l').textContent = label;
+      const s2 = $('#' + id + '-s'); s2.replaceChildren();
+      if (d !== undefined) { const b = document.createElement('b'); b.textContent = signed1(d); tone(b, d); s2.append(b, document.createTextNode(' ')); }
+      s2.append(document.createTextNode(sub));
+    };
+    const open = o && !o.closed ? ' · прогноз' : '';
+    if (o) {
+      setKpi('gk-rev', `Выручка · ${MN[mi]}${open}`, rub(o.rev), o.rev_ly != null ? `к ${MP[mi]} ${ly} (${crub(o.rev_ly)})` : `в ${ly} данных нет`, o.rev_d);
+      setKpi('gk-prof', `Прибыль · ${MN[mi]}${open}`, rub(o.prof), o.prof_ly != null ? `к ${MP[mi]} ${ly} (${crub(o.prof_ly)}) · маржа ${pct1(o.rev ? o.prof / o.rev : null)}` : `в ${ly} данных нет`, o.prof_d);
+    }
+    const ytdM = yn.filter((r) => r.month.startsWith(yr + '-') && r.month <= month && r.closed && r.rev_ly);
+    const s = (k) => ytdM.reduce((a, r) => a + (r[k] || 0), 0);
+    if (ytdM.length) {
+      const rd = s('rev') / s('rev_ly') - 1, pd = s('prof_ly') ? s('prof') / s('prof_ly') - 1 : null;
+      setKpi('gk-ytd', `С начала ${yr} · ${ytdM.length} мес.`, signed1(rd), `выручка ${crub(s('rev'))} против ${crub(s('rev_ly'))}; прибыль ${signed1(pd)}`);
+      tone($('#gk-ytd'), rd);
+    }
+    const lv = $('#gk-lfl'); lv.classList.remove('dash-skeleton');
+    lv.textContent = o && o.lfl != null ? signed1(o.lfl) : '—'; tone(lv, o ? o.lfl : null);
+    $('#gk-lfl-s').textContent = o && o.lfl != null ? `выручка ${o.lfl_points} точек, что работали и в ${ly}; прибыль ${signed1(o.lfl_prof)}` : '';
+    // вывод
+    const take = $('#god-take'); take.replaceChildren();
+    if (o && o.rev_d != null) {
+      const b = (t) => { const e = document.createElement('b'); e.textContent = t; return e; };
+      const t = (x) => document.createTextNode(x);
+      take.append(t(`${Mon} ${yr}${o.closed ? '' : ' (прогноз)'} к ${MP[mi]} ${ly}: выручка `), b(signed1(o.rev_d)), t(', прибыль '), b(signed1(o.prof_d)), t('.'));
+      if (o.new_points) take.append(t(` Без новых точек (${o.new_points}) выручка `), b(signed1(o.lfl)), t('.'));
+    } else take.textContent = `За ${MP[mi].replace(/ю$/, '')} ${ly} данных нет — сравнивать не с чем.`;
+    // графики
+    const rows = d3.range(1, 13).map((mn) => {
+      const c = by.get(`${yr}-${String(mn).padStart(2, '0')}`); const a = by.get(`${ly}-${String(mn).padStart(2, '0')}`);
+      return { mn, sel: mn === mi + 1, open: c ? !c.closed : false, rev: c ? c.rev : null, prof: c ? c.prof : null, rev_ly: a ? a.rev : c ? c.rev_ly : null, prof_ly: a ? a.prof : c ? c.prof_ly : null };
+    });
+    boxes.forEach((b) => b.classList.remove('dash-skeleton'));
+    yoyChart($('#god-rev'), rows, 'rev', '#E87A1E', 'rgba(232,122,30,.35)', yr, ly);
+    yoyChart($('#god-prof'), rows, 'prof', '#4CAF50', 'rgba(76,175,80,.35)', yr, ly);
+    $('#god-rev-note').textContent = `${ly} и ${yr}, все точки. Наведи на столбик — цифры и разница.`;
+    $('#god-prof-note').textContent = `Валовая прибыль: выручка минус закупка, ${ly} и ${yr}.`;
+    // таблица
+    $('#god-tt').textContent = `Точки: ${MN[mi]} ${yr} к ${MP[mi]} ${ly}`;
+    const tb = $('#gy-table tbody'); tb.replaceChildren(); markSort('#gy-table', 'gy');
+    if (statusOf('yoy_point') !== 'ok') return;
+    const td = (txt, cls) => { const c = document.createElement('td'); if (cls) c.className = cls; c.textContent = txt; return c; };
+    const dc = (v, isNew) => { const c = document.createElement('td'); if (v == null) { c.textContent = isNew ? 'нов.' : '—'; return c; } const sp = document.createElement('span'); sp.className = 'pp-chip ' + (v >= 0 ? 'up' : v >= -0.05 ? 'mid' : 'low'); sp.textContent = signed1(v); c.append(sp); return c; };
+    const pts = dash.data('yoy_point').data.filter((r) => r.month === month);
+    sortRows(pts, 'gy').forEach((r) => {
+      const tr = document.createElement('tr'); tr.dataset.key = enc(r.month) + ',' + enc(r.point);
+      const isNew = r.rev_ly == null;
+      tr.append(td(r.point, 'nm'), td(rub(r.rev)), td(rub(r.rev_ly)), dc(r.rev_d, isNew), td(rub(r.prof)), td(rub(r.prof_ly)), dc(r.prof_d, isNew), td(pct1(r.margin)), td(pct1(r.margin_ly)));
+      tb.append(tr);
+    });
+    const tot = (k) => pts.reduce((a, r) => a + (r[k] || 0), 0);
+    const tr = document.createElement('tr'); tr.className = 'pp-total';
+    tr.append(td('Вся сеть', 'nm'), td(rub(tot('rev'))), td(rub(o ? o.rev_ly : null)), dc(o ? o.rev_d : null), td(rub(tot('prof'))), td(rub(o ? o.prof_ly : null)), dc(o ? o.prof_d : null), td(pct1(tot('rev') ? tot('prof') / tot('rev') : null)), td(pct1(o && o.rev_ly ? o.prof_ly / o.rev_ly : null)));
+    tb.append(tr);
   }
 
   function drawPoints(bp, rd) {
@@ -1582,16 +1679,11 @@ dash.calc('promo_point', {
     const st = statusOf('by_point');
     markSort('#pt-table', 'pt');
     if (st === 'ok') {
-      const yp = dash.data('yoy_point').status === 'ok' ? dash.data('yoy_point').data : [];
-      const ym = new Map(yp.filter((x) => x.month === month).map((x) => [x.point, x]));
-      sortRows(bp.filter((r) => r.month === month).map((r) => { const y = ym.get(r.point); return { ...r, yoy: y ? y.yoy : null, ly: y ? y.ly : null }; }), 'pt').forEach((r) => {
+      sortRows(bp.filter((r) => r.month === month), 'pt').forEach((r) => {
         const tr = document.createElement('tr'); tr.dataset.key = enc(r.month) + ',' + enc(r.point);
         const td = (txt, cls) => { const c = document.createElement('td'); if (cls) c.className = cls; c.textContent = txt; return c; };
         const chip = (v, t) => { const c = document.createElement('td'); const s = document.createElement('span'); s.className = 'pp-chip ' + t; s.textContent = pct(v); c.append(s); return c; };
-        const yc = document.createElement('td');
-        if (r.yoy == null) yc.textContent = r.ly === null ? 'нов.' : '—';
-        else { const sp = document.createElement('span'); sp.className = 'pp-chip ' + (r.yoy >= 0 ? 'up' : r.yoy >= -0.05 ? 'mid' : 'low'); sp.textContent = signed1(r.yoy); sp.title = monthName(ppLastYear(month)) + ': ' + rub(r.ly); yc.append(sp); }
-        tr.append(td(r.point, 'nm'), td(rub(r.fact)), td(rub(r.plan)), td(pct(r.pct)), chip(r.forecast_pct, tone(r.forecast_pct)), td(rub(r.need_per_day)), td(rub(r.avg_day)), td(rub(r.last_full)), yc);
+        tr.append(td(r.point, 'nm'), td(rub(r.fact)), td(rub(r.plan)), td(pct(r.pct)), chip(r.forecast_pct, tone(r.forecast_pct)), td(rub(r.need_per_day)), td(rub(r.avg_day)), td(rub(r.last_full)));
         tb.append(tr);
       });
     }
@@ -2219,9 +2311,10 @@ dash.calc('promo_point', {
     }
     sel.hidden = ['ostatki', 'moe'].includes(page);
     $('#tab-moe').hidden = window.__ppRole === 'manager';
-    if (page === 'obzor' && month) { drawOverview(nm, bp, dash.data('net_daily').status === 'ok' ? dash.data('net_daily').data : []); drawYoy(); }
+    if (page === 'obzor' && month) drawOverview(nm, bp, dash.data('net_daily').status === 'ok' ? dash.data('net_daily').data : []);
     if (page === 'tochki' && month) drawPoints(bp, dash.data('rev_dated').status === 'ok' ? dash.data('rev_dated').data : []);
     if (page === 'top' && month) drawTop();
+    if (page === 'god' && month) drawGod();
     if (page === 'ostatki') drawStock();
     if (page === 'moe') { drawImportant(); drawPrices(); drawDubli(); drawNames(); }
     if (page === 'tochka' && month) drawPoint(dash.data('by_point').status === 'ok' ? dash.data('by_point').data : [], dash.data('rev_dated').status === 'ok' ? dash.data('rev_dated').data : []);
@@ -2231,7 +2324,7 @@ dash.calc('promo_point', {
 
   dash.onData(draw);
   const named = location.hash.slice(1);
-  if (['obzor', 'tochka', 'ostatki', 'tochki', 'smeny', 'top'].concat(window.__ppRole === 'manager' ? [] : ['moe']).includes(named)) showPage(named, false);
+  if (['obzor', 'tochka', 'ostatki', 'tochki', 'god', 'smeny', 'top'].concat(window.__ppRole === 'manager' ? [] : ['moe']).includes(named)) showPage(named, false);
 })();
 </script>
 </div>

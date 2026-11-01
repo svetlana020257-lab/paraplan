@@ -686,11 +686,15 @@ window.__ppRole = 'manager';
 
   <!-- ГОД К ГОДУ -->
   <section class="pp-page" id="god" role="tabpanel" aria-labelledby="tab-god" hidden>
+    <div class="pp-tools" id="god-per" role="group" aria-label="Период">
+      <button class="pp-btn ghost" data-p="1">Месяц</button><button class="pp-btn ghost" data-p="3">Квартал</button><button class="pp-btn ghost" data-p="6">Полгода</button><button class="pp-btn ghost" data-p="9">9 месяцев</button><button class="pp-btn ghost" data-p="ytd">С начала года</button><button class="pp-btn ghost" data-p="own">Свой период</button>
+      <span id="god-own" hidden><select class="pp-month" id="god-from" aria-label="С месяца"></select> — <select class="pp-month" id="god-to" aria-label="По месяц"></select></span>
+    </div>
     <p class="pp-take" id="god-take"><span class="dash-skeleton">—</span></p>
     <div class="pp-kpis" id="god-kpis">
       <div class="pp-kpi hero"><span class="pp-kl" id="gk-rev-l">Выручка за месяц</span><span class="pp-kv dash-skeleton" id="gk-rev" data-source="yoy_net" data-field="rev">—</span><span class="pp-ks" id="gk-rev-s">—</span></div>
       <div class="pp-kpi"><span class="pp-kl" id="gk-prof-l">Прибыль за месяц</span><span class="pp-kv dash-skeleton" id="gk-prof" data-source="yoy_net" data-field="prof">—</span><span class="pp-ks" id="gk-prof-s">—</span></div>
-      <div class="pp-kpi"><span class="pp-kl" id="gk-ytd-l">С начала года</span><span class="pp-kv dash-skeleton" id="gk-ytd" data-source="yoy_net">—</span><span class="pp-ks" id="gk-ytd-s">—</span></div>
+      <div class="pp-kpi"><span class="pp-kl" id="gk-mar-l">Маржа</span><span class="pp-kv dash-skeleton" id="gk-mar" data-source="yoy_point">—</span><span class="pp-ks" id="gk-mar-s">—</span></div>
       <div class="pp-kpi"><span class="pp-kl">Без новых точек</span><span class="pp-kv dash-skeleton" id="gk-lfl" data-source="yoy_net" data-field="lfl">—</span><span class="pp-ks" id="gk-lfl-s">—</span></div>
     </div>
     <div class="pp-grid">
@@ -706,7 +710,7 @@ window.__ppRole = 'manager';
       </div>
     </div>
     <div class="pp-card">
-      <div class="pp-ch"><h2 class="pp-ct" id="god-tt">Точки к прошлому году</h2><p class="pp-cn">«Нов.» — точки не было в том же месяце прошлого года. Нажми на заголовок, чтобы отсортировать.</p></div>
+      <div class="pp-ch"><h2 class="pp-ct" id="god-tt">Точки к прошлому году</h2><p class="pp-cn">«Нов.» — точки не было год назад. Звёздочка — год назад точка работала не весь период. Нажми на заголовок, чтобы отсортировать.</p></div>
       <div class="pp-tablewrap">
         <table class="pp-table" id="gy-table" data-source="yoy_point" data-row-key="month,point">
           <thead><tr>
@@ -1602,75 +1606,115 @@ dash.calc('promo_point', {
     });
   }
 
+  // период: '1' | '3' | '6' | '9' | 'ytd' | 'own'
+  let godPer = '1'; let godFrom = null; let godTo = null;
+  const mAdd = (m, n) => { const [y, mm] = m.split('-').map(Number); const d = new Date(Date.UTC(y, mm - 1 + n, 1)); return d.toISOString().slice(0, 7); };
+  const mRange = (from, to) => { const out = []; for (let m = from; m <= to; m = mAdd(m, 1)) out.push(m); return out; };
+  const mShort = (m) => MN[Number(m.slice(5)) - 1].slice(0, 3) + ' ' + m.slice(2, 4);
+  const periodLabel = (ms) => ms.length === 1 ? `${MN[Number(ms[0].slice(5)) - 1]} ${ms[0].slice(0, 4)}` : (ms[0].slice(0, 4) === ms[ms.length - 1].slice(0, 4) ? `${MN[Number(ms[0].slice(5)) - 1]}–${MN[Number(ms[ms.length - 1].slice(5)) - 1]} ${ms[0].slice(0, 4)}` : `${mShort(ms[0])} – ${mShort(ms[ms.length - 1])}`);
+  $('#god-per').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { godPer = b.dataset.p; if (godPer === 'own' && !godTo) { godTo = month; godFrom = mAdd(month, -2); } draw(); }));
+  $('#god-from').addEventListener('change', (e) => { godFrom = e.target.value; if (godFrom > godTo) godTo = godFrom; draw(); });
+  $('#god-to').addEventListener('change', (e) => { godTo = e.target.value; if (godFrom > godTo) godFrom = godTo; draw(); });
+
   function drawGod() {
-    const st = statusOf('yoy_net');
+    const st = statusOf('yoy_net', 'yoy_point');
     const boxes = [$('#god-rev'), $('#god-prof')];
     boxes.forEach((b) => b.querySelectorAll('svg, .pp-fail').forEach((e) => e.remove()));
     if (st === 'error') { boxes.forEach(fail); return; }
     if (st !== 'ok') return;
-    const yn = dash.data('yoy_net').data; const by = new Map(yn.map((r) => [r.month, r]));
-    const yr = Number(month.slice(0, 4)); const ly = yr - 1; const mi = Number(month.slice(5)) - 1;
-    const o = by.get(month);
-    const Mon = MN[mi][0].toUpperCase() + MN[mi].slice(1);
-    $('#god').querySelectorAll('.god-ly').forEach((e) => { e.textContent = ly; });
-    $('#god').querySelectorAll('.god-cy').forEach((e) => { e.textContent = yr; });
+    const yn = dash.data('yoy_net').data; const yp = dash.data('yoy_point').data;
+    const avail = yn.filter((r) => r.rev_ly != null).map((r) => r.month); // месяцы, где есть прошлый год
+    // кнопки и свой период
+    $('#god-per').querySelectorAll('button').forEach((b) => { b.className = 'pp-btn' + (b.dataset.p === godPer ? '' : ' ghost'); });
+    $('#god-own').hidden = godPer !== 'own';
+    const fillSel = (sl, val) => { const opts = avail.slice().reverse(); if ([...sl.options].map((o) => o.value).join() !== opts.join()) sl.replaceChildren(...opts.map((m) => new Option(monthName(m), m))); sl.value = val; };
+    let from, to;
+    if (godPer === 'own') {
+      if (!avail.includes(godTo)) godTo = avail[avail.length - 1];
+      if (!avail.includes(godFrom)) godFrom = avail[0];
+      fillSel($('#god-from'), godFrom); fillSel($('#god-to'), godTo);
+      from = godFrom; to = godTo;
+    } else {
+      to = month;
+      from = godPer === 'ytd' ? month.slice(0, 4) + '-01' : mAdd(month, -(Number(godPer) - 1));
+    }
+    const ms = mRange(from, to).filter((m) => avail.includes(m));
+    const label = ms.length ? periodLabel(ms) : '—';
+    const lyLabel = !ms.length ? '—' : ms.length === 1 ? `${MP[Number(ms[0].slice(5)) - 1]} ${ppLastYear(ms[0]).slice(0, 4)}` : `тем же месяцам ${ppLastYear(ms[0]).slice(0, 4)}${ppLastYear(ms[0]).slice(0, 4) !== ppLastYear(ms[ms.length - 1]).slice(0, 4) ? '–' + ppLastYear(ms[ms.length - 1]).slice(0, 4) : ''}`;
+    const open = ms.some((m) => { const r = yn.find((x) => x.month === m); return r && !r.closed; });
+    const short = ms.length && ms.length < mRange(from, to).length;
+    // суммы по точкам за период
+    const pts = new Map();
+    for (const r of yp) {
+      if (!ms.includes(r.month)) continue;
+      const o = pts.get(r.point) || { month: to, point: r.point, rev: 0, prof: 0, rev_ly: 0, prof_ly: 0, lc: 0, ll: 0, lpc: 0, lpl: 0, months: 0, lyM: 0 };
+      o.rev += r.rev || 0; o.prof += r.prof || 0; o.months += 1;
+      if (r.rev_ly) { o.lyM += 1; o.rev_ly += r.rev_ly; o.prof_ly += r.prof_ly || 0; o.lc += r.rev || 0; o.ll += r.rev_ly; o.lpc += r.prof || 0; o.lpl += r.prof_ly || 0; }
+      pts.set(r.point, o);
+    }
+    const d = (a, b) => (b ? a / b - 1 : null);
+    const rows = [...pts.values()].map((o) => ({ ...o, rev_ly: o.rev_ly || null, prof_ly: o.rev_ly ? o.prof_ly : null, rev_d: d(o.rev, o.rev_ly), prof_d: o.rev_ly ? d(o.prof, o.prof_ly) : null, margin: o.rev ? o.prof / o.rev : null, margin_ly: o.rev_ly ? o.prof_ly / o.rev_ly : null }));
+    const S = (k) => rows.reduce((a, r) => a + (r[k] || 0), 0);
+    const N = { rev: S('rev'), prof: S('prof'), rev_ly: S('rev_ly'), prof_ly: S('prof_ly') };
+    // в сумме сети прошлый год — все точки прошлого года, не только сегодняшние
+    N.rev_ly = ms.reduce((a, m) => a + ((yn.find((x) => x.month === m) || {}).rev_ly || 0), 0);
+    N.prof_ly = ms.reduce((a, m) => a + ((yn.find((x) => x.month === m) || {}).prof_ly || 0), 0);
+    N.rev_d = d(N.rev, N.rev_ly); N.prof_d = d(N.prof, N.prof_ly);
+    const lfl = d(S('lc'), S('ll')), lflP = d(S('lpc'), S('lpl'));
+    const fresh = rows.filter((r) => !r.rev_ly).map((r) => r.point);
+    const partial = rows.filter((r) => r.lyM > 0 && r.lyM < r.months).map((r) => r.point);
+    // карточки
     const tone = (el, v) => { el.classList.remove('pp-up', 'pp-down'); if (v != null) el.classList.add(v >= 0 ? 'pp-up' : 'pp-down'); };
-    const setKpi = (id, label, val, sub, d) => {
-      const v = $('#' + id); v.classList.remove('dash-skeleton'); v.textContent = val;
-      $('#' + id + '-l').textContent = label;
+    const setKpi = (id, lab, val, sub, dv) => {
+      const v = $('#' + id); v.classList.remove('dash-skeleton'); v.textContent = val; $('#' + id + '-l').textContent = lab;
       const s2 = $('#' + id + '-s'); s2.replaceChildren();
-      if (d !== undefined) { const b = document.createElement('b'); b.textContent = signed1(d); tone(b, d); s2.append(b, document.createTextNode(' ')); }
+      if (dv !== undefined) { const bb = document.createElement('b'); bb.textContent = signed1(dv); tone(bb, dv); s2.append(bb, document.createTextNode(' ')); }
       s2.append(document.createTextNode(sub));
     };
-    const open = o && !o.closed ? ' · прогноз' : '';
-    if (o) {
-      setKpi('gk-rev', `Выручка · ${MN[mi]}${open}`, rub(o.rev), o.rev_ly != null ? `к ${MP[mi]} ${ly} (${crub(o.rev_ly)})` : `в ${ly} данных нет`, o.rev_d);
-      setKpi('gk-prof', `Прибыль · ${MN[mi]}${open}`, rub(o.prof), o.prof_ly != null ? `к ${MP[mi]} ${ly} (${crub(o.prof_ly)}) · маржа ${pct1(o.rev ? o.prof / o.rev : null)}` : `в ${ly} данных нет`, o.prof_d);
-    }
-    const ytdM = yn.filter((r) => r.month.startsWith(yr + '-') && r.month <= month && r.closed && r.rev_ly);
-    const s = (k) => ytdM.reduce((a, r) => a + (r[k] || 0), 0);
-    if (ytdM.length) {
-      const rd = s('rev') / s('rev_ly') - 1, pd = s('prof_ly') ? s('prof') / s('prof_ly') - 1 : null;
-      setKpi('gk-ytd', `С начала ${yr} · ${ytdM.length} мес.`, signed1(rd), `выручка ${crub(s('rev'))} против ${crub(s('rev_ly'))}; прибыль ${signed1(pd)}`);
-      tone($('#gk-ytd'), rd);
-    }
-    const lv = $('#gk-lfl'); lv.classList.remove('dash-skeleton');
-    lv.textContent = o && o.lfl != null ? signed1(o.lfl) : '—'; tone(lv, o ? o.lfl : null);
-    $('#gk-lfl-s').textContent = o && o.lfl != null ? `выручка ${o.lfl_points} точек, что работали и в ${ly}; прибыль ${signed1(o.lfl_prof)}` : '';
+    const pl = open ? ' · с прогнозом' : '';
+    setKpi('gk-rev', `Выручка · ${label}${pl}`, rub(N.rev), `к тому же периоду год назад (${crub(N.rev_ly)})`, N.rev_d);
+    setKpi('gk-prof', `Прибыль · ${label}${pl}`, rub(N.prof), `к тому же периоду год назад (${crub(N.prof_ly)})`, N.prof_d);
+    const mNow = N.rev ? N.prof / N.rev : null, mLy = N.rev_ly ? N.prof_ly / N.rev_ly : null;
+    setKpi('gk-mar', 'Маржа сети', pct1(mNow), `год назад ${pct1(mLy)} · ${mNow != null && mLy != null ? (mNow >= mLy ? '+' : '−') + Math.abs((mNow - mLy) * 100).toFixed(1).replace('.', ',') + ' п.п.' : ''}`);
+    const lv = $('#gk-lfl'); lv.classList.remove('dash-skeleton'); lv.textContent = signed1(lfl); tone(lv, lfl);
+    $('#gk-lfl-s').textContent = lfl != null ? `выручка точек, что работали и год назад; прибыль ${signed1(lflP)}` : '';
     // вывод
     const take = $('#god-take'); take.replaceChildren();
-    if (o && o.rev_d != null) {
-      const b = (t) => { const e = document.createElement('b'); e.textContent = t; return e; };
-      const t = (x) => document.createTextNode(x);
-      take.append(t(`${Mon} ${yr}${o.closed ? '' : ' (прогноз)'} к ${MP[mi]} ${ly}: выручка `), b(signed1(o.rev_d)), t(', прибыль '), b(signed1(o.prof_d)), t('.'));
-      if (o.new_points) take.append(t(` Без новых точек (${o.new_points}) выручка `), b(signed1(o.lfl)), t('.'));
-    } else take.textContent = `За ${MP[mi].replace(/ю$/, '')} ${ly} данных нет — сравнивать не с чем.`;
-    // графики
-    const rows = d3.range(1, 13).map((mn) => {
-      const c = by.get(`${yr}-${String(mn).padStart(2, '0')}`); const a = by.get(`${ly}-${String(mn).padStart(2, '0')}`);
-      return { mn, sel: mn === mi + 1, open: c ? !c.closed : false, rev: c ? c.rev : null, prof: c ? c.prof : null, rev_ly: a ? a.rev : c ? c.rev_ly : null, prof_ly: a ? a.prof : c ? c.prof_ly : null };
+    const bt = (t) => { const e = document.createElement('b'); e.textContent = t; return e; }; const tx = (x) => document.createTextNode(x);
+    if (!ms.length) take.textContent = 'За этот период прошлого года данных нет — сравнивать не с чем.';
+    else {
+      take.append(tx(`${label[0].toUpperCase() + label.slice(1)}${open ? ' (с прогнозом идущего месяца)' : ''} к ${lyLabel}: выручка `), bt(signed1(N.rev_d)), tx(', прибыль '), bt(signed1(N.prof_d)), tx('.'));
+      if (fresh.length || partial.length) take.append(tx(' Без новых точек выручка '), bt(signed1(lfl)), tx('.'));
+      if (short) take.append(tx(' Месяцы без данных прошлого года в период не вошли.'));
+    }
+    // графики: год последнего месяца периода, подсвечен период
+    const yr = Number(to.slice(0, 4)); const ly = yr - 1;
+    $('#god').querySelectorAll('.god-ly').forEach((e) => { e.textContent = ly; });
+    $('#god').querySelectorAll('.god-cy').forEach((e) => { e.textContent = yr; });
+    const by = new Map(yn.map((r) => [r.month, r]));
+    const crow = d3.range(1, 13).map((mn) => {
+      const k = `${yr}-${String(mn).padStart(2, '0')}`; const c = by.get(k); const a = by.get(`${ly}-${String(mn).padStart(2, '0')}`);
+      return { mn, sel: ms.includes(k), open: c ? !c.closed : false, rev: c ? c.rev : null, prof: c ? c.prof : null, rev_ly: a ? a.rev : c ? c.rev_ly : null, prof_ly: a ? a.prof : c ? c.prof_ly : null };
     });
     boxes.forEach((b) => b.classList.remove('dash-skeleton'));
-    yoyChart($('#god-rev'), rows, 'rev', '#E87A1E', 'rgba(232,122,30,.35)', yr, ly);
-    yoyChart($('#god-prof'), rows, 'prof', '#4CAF50', 'rgba(76,175,80,.35)', yr, ly);
-    $('#god-rev-note').textContent = `${ly} и ${yr}, все точки. Наведи на столбик — цифры и разница.`;
-    $('#god-prof-note').textContent = `Валовая прибыль: выручка минус закупка, ${ly} и ${yr}.`;
+    yoyChart($('#god-rev'), crow, 'rev', '#E87A1E', 'rgba(232,122,30,.35)', yr, ly);
+    yoyChart($('#god-prof'), crow, 'prof', '#4CAF50', 'rgba(76,175,80,.35)', yr, ly);
+    $('#god-rev-note').textContent = `${ly} и ${yr}, все точки. Подсвечен выбранный период.`;
+    $('#god-prof-note').textContent = `Валовая прибыль (выручка минус закупка), ${ly} и ${yr}.`;
     // таблица
-    $('#god-tt').textContent = `Точки: ${MN[mi]} ${yr} к ${MP[mi]} ${ly}`;
+    $('#god-tt').textContent = `Точки: ${label} к ${lyLabel}`;
     const tb = $('#gy-table tbody'); tb.replaceChildren(); markSort('#gy-table', 'gy');
-    if (statusOf('yoy_point') !== 'ok') return;
-    const td = (txt, cls) => { const c = document.createElement('td'); if (cls) c.className = cls; c.textContent = txt; return c; };
+    const td = (t, cls) => { const c = document.createElement('td'); if (cls) c.className = cls; c.textContent = t; return c; };
     const dc = (v, isNew) => { const c = document.createElement('td'); if (v == null) { c.textContent = isNew ? 'нов.' : '—'; return c; } const sp = document.createElement('span'); sp.className = 'pp-chip ' + (v >= 0 ? 'up' : v >= -0.05 ? 'mid' : 'low'); sp.textContent = signed1(v); c.append(sp); return c; };
-    const pts = dash.data('yoy_point').data.filter((r) => r.month === month);
-    sortRows(pts, 'gy').forEach((r) => {
+    sortRows(rows, 'gy').forEach((r) => {
       const tr = document.createElement('tr'); tr.dataset.key = enc(r.month) + ',' + enc(r.point);
-      const isNew = r.rev_ly == null;
-      tr.append(td(r.point, 'nm'), td(rub(r.rev)), td(rub(r.rev_ly)), dc(r.rev_d, isNew), td(rub(r.prof)), td(rub(r.prof_ly)), dc(r.prof_d, isNew), td(pct1(r.margin)), td(pct1(r.margin_ly)));
+      const nm = td(r.point + (partial.includes(r.point) ? ' *' : ''), 'nm');
+      if (partial.includes(r.point)) nm.title = 'Год назад точка работала не все месяцы периода';
+      tr.append(nm, td(rub(r.rev)), td(rub(r.rev_ly)), dc(r.rev_d, !r.rev_ly), td(rub(r.prof)), td(rub(r.prof_ly)), dc(r.prof_d, !r.rev_ly), td(pct1(r.margin)), td(pct1(r.margin_ly)));
       tb.append(tr);
     });
-    const tot = (k) => pts.reduce((a, r) => a + (r[k] || 0), 0);
     const tr = document.createElement('tr'); tr.className = 'pp-total';
-    tr.append(td('Вся сеть', 'nm'), td(rub(tot('rev'))), td(rub(o ? o.rev_ly : null)), dc(o ? o.rev_d : null), td(rub(tot('prof'))), td(rub(o ? o.prof_ly : null)), dc(o ? o.prof_d : null), td(pct1(tot('rev') ? tot('prof') / tot('rev') : null)), td(pct1(o && o.rev_ly ? o.prof_ly / o.rev_ly : null)));
+    tr.append(td('Вся сеть', 'nm'), td(rub(N.rev)), td(rub(N.rev_ly)), dc(N.rev_d), td(rub(N.prof)), td(rub(N.prof_ly)), dc(N.prof_d), td(pct1(mNow)), td(pct1(mLy)));
     tb.append(tr);
   }
 

@@ -393,7 +393,7 @@ async function addFiles(list){
   for(const f of list){ try{ok.push(await readFile(f));}catch(e){errs.push(f.name+": "+e.message);} }
   if(ok.length){ if(S.demo){S={files:[],owner:"",scans:[],sound:S.sound,demo:false};} S.files.push(...ok); if(!S.owner) S.owner=ok[0].owner; refresh(true); }
   if(errs.length){ const el=$("last"); el.className="last s-bad"; el.innerHTML=`<div class="verdict">Файл не прочитан</div><div class="name">${esc(errs.join(" · "))}</div>`; }
-  else if(ok.length){ const el=$("last"); el.className="last s-idle"; el.innerHTML=`<div class="verdict">Выгрузка загружена</div><div class="name">${esc(ok.map(f=>f.owner+": "+f.rows.length+" марок").join(", "))}. Можно сканировать.</div>`; $("scan").focus(); }
+  else if(ok.length){ const el=$("last"); el.className="last s-idle"; el.innerHTML=`<div class="verdict">Выгрузка загружена</div><div class="name">${esc(ok.map(f=>f.owner+": "+f.rows.length+" марок").join(", "))}. Можно сканировать.</div>`; $("scan").focus(); setTimeout(()=>{ try{document.activeElement&&document.activeElement.blur();}catch(e){} $("scan").focus(); },400); }
 }
 
 /* ---------- sound ---------- */
@@ -426,11 +426,14 @@ scan.addEventListener("paste",e=>{
   if(/[\r\n]/.test(t.trim())){ e.preventDefault(); addScans(t.split(/\r?\n/)); }
 });
 // если фокус ушёл со сканера, а сканер продолжает «печатать» — перехватываем
+// фокус может остаться на кнопке или на выборе файла после загрузки — тогда сканер «печатал» в пустоту, а Enter жал кнопку
 document.addEventListener("keydown",e=>{
   const a=document.activeElement;
-  if(a===scan||(a&&/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(a.tagName))||e.ctrlKey||e.metaKey||e.altKey) return;
-  if(e.key.length===1){ e.preventDefault(); scan.focus(); scan.value+=e.key; }
-});
+  if(a===scan||e.ctrlKey||e.metaKey||e.altKey) return;
+  if(a&&(a.tagName==="TEXTAREA"||(a.tagName==="INPUT"&&/^(text|search|number)$/.test(a.type)))) return;
+  if(e.key.length===1){ e.preventDefault(); e.stopPropagation(); scan.value+=e.key; scan.focus(); }
+  else if((e.key==="Enter"||e.key==="Tab")&&scan.value){ e.preventDefault(); e.stopPropagation(); const v=scan.value; scan.value=""; scan.focus(); addScans([v]); }
+},true);
 
 /* ---------- controls ---------- */
 $("fileIn").addEventListener("change",e=>{ addFiles([...e.target.files]); e.target.value=""; });

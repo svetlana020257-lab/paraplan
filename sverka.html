@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Сверка марок Параплан</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Unbounded:wght@600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* Layout: рабочий стол сверки — слева загрузка и сканер, справа списки; на телефоне в одну колонку */
+:root{
+  --bg:#f3f4f2; --surface:#ffffff; --ink:#1c2321; --muted:#5f6b67; --line:#d9dedb;
+  --accent:#1f5f5b; --accent-ink:#ffffff; --accent-soft:#e1efed;
+  --ok:#1e7a45; --ok-soft:#e2f3e8; --warn:#9a6200; --warn-soft:#fbf0d9; --bad:#b3261e; --bad-soft:#fbe4e1; --dup:#5f6b67; --dup-soft:#eceeed;
+  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121615; --surface:#1a201e; --ink:#e7ecea; --muted:#9aa6a2; --line:#2c3532;
+  --accent:#5fb8b0; --accent-ink:#0d1413; --accent-soft:#1d3331;
+  --ok:#5cc98a; --ok-soft:#173023; --warn:#e3a943; --warn-soft:#33270f; --bad:#f08079; --bad-soft:#3a1c1a; --dup:#9aa6a2; --dup-soft:#232a28; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121615; --surface:#1a201e; --ink:#e7ecea; --muted:#9aa6a2; --line:#2c3532;
+  --accent:#5fb8b0; --accent-ink:#0d1413; --accent-soft:#1d3331;
+  --ok:#5cc98a; --ok-soft:#173023; --warn:#e3a943; --warn-soft:#33270f; --bad:#f08079; --bad-soft:#3a1c1a; --dup:#9aa6a2; --dup-soft:#232a28; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px}
+h1{font-family:var(--f-display);font-weight:600;font-size:clamp(20px,3vw,26px);margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0;max-width:62ch}
+.grid{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.step{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,.btn{font:inherit;font-weight:500;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 12px;cursor:pointer}
+button:hover,.btn:hover{border-color:var(--accent)}
+button.primary,.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.danger{color:var(--bad);border-color:var(--bad)}
+button:focus-visible,.btn:focus-within,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn input{position:absolute;width:1px;height:1px;opacity:0}
+.btn{position:relative;display:inline-flex}
+select{font:inherit;padding:7px 10px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink);max-width:100%}
+.files{display:flex;flex-direction:column;gap:6px}
+.file{display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.file b{display:block;font-weight:600;overflow-wrap:anywhere}
+.file small{color:var(--muted);overflow-wrap:anywhere}
+.file button{padding:4px 9px;flex:none}
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:14px;text-align:center;color:var(--muted)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.demo{background:var(--warn-soft);color:var(--ink);border-radius:8px;padding:9px 12px;font-size:14px}
+.demo b{color:var(--warn)}
+#scan{width:100%;font-family:var(--f-mono);font-size:16px;padding:14px 14px;border-radius:9px;border:2px solid var(--accent);background:var(--surface);color:var(--ink)}
+#scan:not(:focus){border-style:dashed;border-color:var(--line)}
+.hint{font-size:13px;color:var(--muted)}
+.last{border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;border:1px solid transparent;min-height:94px}
+.last .verdict{font-weight:700;font-size:19px}
+.last .name{font-weight:500;overflow-wrap:anywhere}
+.last code{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.s-ok{background:var(--ok-soft);border-color:var(--ok)} .s-ok .verdict{color:var(--ok)}
+.s-other{background:var(--warn-soft);border-color:var(--warn)} .s-other .verdict{color:var(--warn)}
+.s-bad{background:var(--bad-soft);border-color:var(--bad)} .s-bad .verdict{color:var(--bad)}
+.s-dup,.s-idle{background:var(--dup-soft);border-color:var(--line)} .s-dup .verdict{color:var(--dup)}
+.flash{animation:fl .35s ease-out}
+@keyframes fl{from{transform:scale(.985);filter:brightness(1.08)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.flash{animation:none}}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:440px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:1px}
+.stat span{font-size:12px;color:var(--muted)}
+.stat b{font-size:22px;font-variant-numeric:tabular-nums;font-weight:600}
+.stat.ok b{color:var(--ok)} .stat.other b{color:var(--warn)} .stat.bad b{color:var(--bad)}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line)}
+.tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;background:none;padding:8px 10px;color:var(--muted)}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.tabs .n{font-variant-numeric:tabular-nums;font-size:12px;background:var(--dup-soft);border-radius:10px;padding:1px 7px;margin-left:4px}
+.tablewrap{overflow-x:auto;max-height:620px;overflow-y:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{position:sticky;top:0;background:var(--surface);font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;z-index:1}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td code{font-family:var(--f-mono);font-size:12px;overflow-wrap:anywhere}
+.pill{display:inline-block;font-size:12px;font-weight:600;border-radius:10px;padding:2px 8px;white-space:nowrap}
+.p-ok{background:var(--ok-soft);color:var(--ok)} .p-other{background:var(--warn-soft);color:var(--warn)} .p-bad{background:var(--bad-soft);color:var(--bad)} .p-dup{background:var(--dup-soft);color:var(--dup)}
+.bar{height:6px;border-radius:3px;background:var(--dup-soft);overflow:hidden;min-width:60px}
+.bar i{display:block;height:100%;background:var(--ok)}
+.empty{padding:28px 12px;text-align:center;color:var(--muted)}
+.note{font-size:13px;color:var(--muted);max-width:75ch}
+.toast{font-size:13px;color:var(--ok);min-height:1em}
+td button{padding:2px 8px;font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Сверка марок с Честным знаком</h1>
+      <p class="sub">Сканируете товар на точке, и страница сразу говорит, числится ли марка на нашем ИП. Выгрузка открывается только в вашем браузере и никуда не отправляется.</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <section class="panel" aria-labelledby="st1">
+        <div class="step" id="st1">1 · Выгрузка из Честного знака</div>
+        <div id="demoNote" class="demo" hidden><b>Сейчас открыт пример.</b> Загрузите свою выгрузку, и пример исчезнет.</div>
+        <div class="files" id="files"></div>
+        <div class="drop" id="drop">
+          <div class="row" style="justify-content:center">
+            <label class="btn primary">Загрузить выгрузку (.xlsx / .csv)<input type="file" id="fileIn" accept=".xlsx,.xls,.csv" multiple></label>
+          </div>
+          <div class="hint" style="margin-top:6px">или перетащите файл сюда. Можно несколько: разные ИП или товарные группы</div>
+        </div>
+        <div class="row" id="ownerRow" hidden>
+          <label for="owner" class="hint">Проверяем точку на ИП:</label>
+          <select id="owner"></select>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="st2">
+        <div class="step" id="st2">2 · Сканирование</div>
+        <input id="scan" type="text" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="Нажмите сюда и сканируйте марки подряд">
+        <div class="hint">Сканер вводит код и сам жмёт Enter. Можно вставить сразу список кодов, по одному на строку. Раскладка и Caps Lock не мешают.</div>
+        <div id="last" class="last s-idle" aria-live="polite">
+          <div class="verdict">Ждём первый скан</div>
+          <div class="name">Сканируйте квадратный код DataMatrix на пачке, не обычный штрихкод.</div>
+        </div>
+        <div class="row">
+          <button id="sound" type="button" aria-pressed="true">Звук: вкл</button>
+          <span id="clearBox"><button id="clear" type="button">Новая сверка</button></span>
+        </div>
+      </section>
+
+      <div class="stats">
+        <div class="stat"><span>Сканов</span><b id="cAll">0</b></div>
+        <div class="stat ok"><span>Наши</span><b id="cOk">0</b></div>
+        <div class="stat other"><span>Другое ИП</span><b id="cOther">0</b></div>
+        <div class="stat bad"><span>Не в выгрузке</span><b id="cBad">0</b></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <section class="panel">
+        <div class="tabs" role="tablist">
+          <button role="tab" data-tab="problems" aria-selected="true">Проблемные<span class="n" id="nProblems">0</span></button>
+          <button role="tab" data-tab="products" aria-selected="false">По товарам<span class="n" id="nProducts">0</span></button>
+          <button role="tab" data-tab="missing" aria-selected="false">На балансе, не найдено<span class="n" id="nMissing">0</span></button>
+          <button role="tab" data-tab="log" aria-selected="false">Все сканы<span class="n" id="nLog">0</span></button>
+        </div>
+        <div class="row" style="justify-content:space-between">
+          <p class="note" id="tabNote" style="margin:0"></p>
+          <div class="row"><button id="copy" type="button">Скопировать в Excel</button><span class="toast" id="toast"></span></div>
+        </div>
+        <div class="tablewrap" id="view"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const STORE="sverka-cz-v1";
+
+/* ---------- state ---------- */
+let S={files:[],owner:"",scans:[],sound:true,demo:false};
+// files: [{id,name,owner,inn,group,rows:[[code,gtin,name,parent]]}]
+let IDX=null; // built index
+
+/* ---------- code parsing ---------- */
+const RU_LO="йцукенгшщзхъфывапролджэячсмитьбю.ё", EN_LO="qwertyuiop[]asdfghjkl;'zxcvbnm,./`";
+const RU_UP="ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ,Ё", EN_UP="QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?~";
+const RU_SH="\"№;:?", EN_SH="@#$^&";
+const LAY={}; [[RU_LO,EN_LO],[RU_UP,EN_UP],[RU_SH,EN_SH]].forEach(([a,b])=>{for(let i=0;i<a.length;i++)LAY[a[i]]=b[i];});
+const ruToEn=s=>Array.from(s).map(c=>LAY[c]??c).join("");
+const swapCase=s=>Array.from(s).map(c=>c===c.toUpperCase()?c.toLowerCase():c.toUpperCase()).join("");
+function clean(raw){
+  let s=String(raw).replace(/[\x00-\x1f␝]/g,"").replace(/<GS>/gi,"").trim();
+  s=s.replace(/^\]d2|^\]C1|^\]Q3/,"");
+  return s;
+}
+function splitCode(s){ // -> list of [gtin, rest]
+  const out=[];
+  if(s.length>=19&&s.startsWith("01")&&s.substr(16,2)==="21") out.push([s.substr(2,14),s.slice(18)]);
+  if(/^\d{14}/.test(s)) out.push([s.substr(0,14),s.slice(14)]);
+  return out;
+}
+function exportKey(code){
+  const c=clean(code);
+  if(c.length>=25&&c.startsWith("01")&&c.substr(16,2)==="21") return [c.substr(2,14),c.slice(18)];
+  if(/^\d{14}/.test(c)) return [c.substr(0,14),c.slice(14)];
+  return null;
+}
+
+/* ---------- index ---------- */
+function buildIndex(){
+  const codes=new Map(), lens=new Map(), names=new Map(), parents=new Map(), plens=new Map();
+  for(const f of S.files){
+    for(const [code,gtin0,name,parent] of f.rows){
+      const k=exportKey(code); if(!k) continue;
+      const [g,ser]=k, key=g+"|"+ser;
+      codes.set(key,{code,gtin:g,name,owner:f.owner,parent});
+      if(!lens.has(g)) lens.set(g,new Set()); lens.get(g).add(ser.length);
+      if(name&&!names.has(g)) names.set(g,name);
+      if(parent){const pk=exportKey(parent); if(pk){const pkey=pk[0]+"|"+pk[1];
+        if(!parents.has(pkey)) parents.set(pkey,[]); parents.get(pkey).push(key);
+        if(!plens.has(pk[0])) plens.set(pk[0],new Set()); plens.get(pk[0]).add(pk[1].length);}}
+    }
+  }
+  IDX={codes,lens,names,parents,plens};
+}
+function lookup(raw){
+  const base=clean(raw);
+  if(!base) return null;
+  if(/^\d{8}$|^\d{12,13}$/.test(base)) return {type:"ean",norm:base};
+  const cands=[...new Set([base,ruToEn(base),swapCase(base),ruToEn(swapCase(base))])];
+  for(const c of cands) for(const [g,rest] of splitCode(c)){
+    const L=IDX.lens.get(g); if(L) for(const l of L){ if(rest.length>=l){const key=g+"|"+rest.slice(0,l); if(IDX.codes.has(key)) return {type:"unit",key,norm:key};}}
+  }
+  for(const c of cands) for(const [g,rest] of splitCode(c)){
+    const L=IDX.plens.get(g); if(L) for(const l of L){ if(rest.length>=l){const key=g+"|"+rest.slice(0,l); if(IDX.parents.has(key)) return {type:"pack",key,norm:"P:"+key,children:IDX.parents.get(key)};}}
+  }
+  let gtin="",name="";
+  for(const c of cands) for(const [g] of splitCode(c)){ if(IDX.names.has(g)){gtin=g;name=IDX.names.get(g);break;} }
+  if(!gtin){const sp=splitCode(base)[0]; if(sp) gtin=sp[0];}
+  if(base.length<20||!splitCode(base).length) return {type:"notcode",norm:"X:"+base};
+  return {type:"unknown",gtin,name,norm:"U:"+base.slice(0,31)};
+}
+
+/* ---------- evaluation ---------- */
+let R=null;
+function evaluate(){
+  const seen=new Set(), found=new Set(), viaPack=new Set();
+  const rows=[]; const cnt={all:0,ok:0,other:0,bad:0};
+  for(const sc of S.scans){
+    const res=lookup(sc.raw); if(!res) continue;
+    let st, name="", owner="", detail="";
+    if(seen.has(res.norm)){st="dup";}
+    else{
+      seen.add(res.norm);
+      if(res.type==="unit"){
+        const c=IDX.codes.get(res.key); name=c.name; owner=c.owner;
+        found.add(res.key); st=(c.owner===S.owner)?"ok":"other";
+      }else if(res.type==="pack"){
+        const kids=res.children.map(k=>IDX.codes.get(k));
+        res.children.forEach(k=>{found.add(k);viaPack.add(k);});
+        const o=kids[0]?.owner||""; owner=o; name=(kids[0]?.name||"")+" — упаковка, "+kids.length+" шт.";
+        st=(o===S.owner)?"ok":"other"; detail="pack";
+      }else if(res.type==="ean"){st="ean";}
+      else if(res.type==="notcode"){st="notcode";}
+      else {st="bad"; name=res.name||"Товар не найден в выгрузке"; detail=res.gtin;}
+    }
+    if(st!=="dup"){cnt.all++; if(st==="ok")cnt.ok++; else if(st==="other")cnt.other++; else cnt.bad++;}
+    rows.push({sc,res,st,name,owner,detail});
+  }
+  // products for selected owner
+  const prod=new Map();
+  for(const [key,c] of IDX.codes){ if(c.owner!==S.owner) continue;
+    if(!prod.has(c.gtin)) prod.set(c.gtin,{gtin:c.gtin,name:c.name,bal:0,found:0,miss:[]});
+    const p=prod.get(c.gtin); p.bal++; if(found.has(key)) p.found++; else p.miss.push(c.code);
+  }
+  R={rows,cnt,prod:[...prod.values()],found,viaPack};
+}
+
+/* ---------- rendering ---------- */
+const VERD={
+  ok:["Наша марка","s-ok","p-ok","Наш ИП"],
+  other:["Марка другого ИП","s-other","p-other","Другое ИП"],
+  bad:["Нет в выгрузке","s-bad","p-bad","Нет в выгрузке"],
+  ean:["Это обычный штрихкод","s-bad","p-bad","Штрихкод"],
+  notcode:["Не похоже на код маркировки","s-bad","p-bad","Не код"],
+  dup:["Уже сканировали","s-dup","p-dup","Повтор"]
+};
+function showLast(r){
+  const el=$("last"); const v=VERD[r.st];
+  let line="", sub="";
+  if(r.st==="ok"){line=r.name; sub=r.detail==="pack"?"Засчитано всё содержимое упаковки":r.owner;}
+  else if(r.st==="other"){line=r.name; sub="Числится на: "+r.owner+". Касса этого ИП её не продаст.";}
+  else if(r.st==="bad"){line=r.name; sub="На загруженных ИП этой марки нет: чужая, уже выбыла или не введена в оборот.";}
+  else if(r.st==="ean"){line="Сканируйте квадратный DataMatrix на пачке, а не полосатый штрихкод.";}
+  else if(r.st==="notcode"){line="Сканер прочитал что-то другое. Попробуйте ещё раз.";}
+  else if(r.st==="dup"){line=r.res.type==="unit"?(IDX.codes.get(r.res.key)?.name||""):"Эта марка уже есть в списке и второй раз не считается.";}
+  el.className="last "+v[1];
+  el.innerHTML=`<div class="verdict">${esc(v[0])}</div><div class="name">${esc(line)}</div>${sub?`<div class="hint">${esc(sub)}</div>`:""}<code>${esc(clean(r.sc.raw))}</code>`;
+  void el.offsetWidth; el.classList.add("flash");
+}
+let tab="problems";
+function render(){
+  const c=R.cnt;
+  $("cAll").textContent=c.all; $("cOk").textContent=c.ok; $("cOther").textContent=c.other; $("cBad").textContent=c.bad;
+  const problems=R.rows.filter(r=>["other","bad","ean","notcode"].includes(r.st));
+  const missTotal=R.prod.reduce((a,p)=>a+p.miss.length,0);
+  $("nProblems").textContent=problems.length; $("nProducts").textContent=R.prod.length;
+  $("nMissing").textContent=missTotal; $("nLog").textContent=R.rows.length;
+  document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===tab)));
+  const v=$("view"); let html="", note="";
+  if(tab==="problems"){
+    note="Марки, которые нельзя продать с кассы выбранного ИП. Их стоит проверить в приложении Честный знак.";
+    html=problems.length?`<table><thead><tr><th>Статус</th><th>Товар</th><th>Код</th></tr></thead><tbody>${
+      problems.slice().reverse().map(r=>`<tr><td><span class="pill ${VERD[r.st][2]}">${VERD[r.st][3]}</span></td><td>${esc(r.name||"—")}${r.st==="other"?`<div class="hint">${esc(r.owner)}</div>`:""}</td><td><code>${esc(clean(r.sc.raw))}</code></td></tr>`).join("")
+    }</tbody></table>`:`<div class="empty">${c.all?"Проблемных марок нет. Всё отсканированное числится на выбранном ИП.":"Пока ничего не отсканировано."}</div>`;
+  }else if(tab==="products"){
+    note="Сколько марок каждого товара числится на ИП и сколько из них нашли на полке. Если ИП работает на нескольких точках, «не найдено» включает товар других точек.";
+    const list=R.prod.slice().sort((a,b)=>(b.found>0)-(a.found>0)||b.miss.length-a.miss.length||a.name.localeCompare(b.name,"ru"));
+    html=list.length?`<table><thead><tr><th>Товар</th><th class="num">На балансе</th><th class="num">Найдено</th><th class="num">Не найдено</th><th style="width:90px"></th></tr></thead><tbody>${
+      list.map(p=>`<tr><td>${esc(p.name)}<div class="hint"><code>${esc(p.gtin)}</code></div></td><td class="num">${p.bal}</td><td class="num">${p.found}</td><td class="num">${p.miss.length}</td><td><div class="bar"><i style="width:${Math.round(p.found/p.bal*100)}%"></i></div></td></tr>`).join("")
+    }</tbody></table>`:`<div class="empty">Загрузите выгрузку, чтобы увидеть товары.</div>`;
+  }else if(tab==="missing"){
+    note="Марки на балансе ИП, которые не отсканировали. Если весь товар ИП на этой точке и сверка полная, это кандидаты на вывод из оборота: продано без скана или потеряно.";
+    const items=[]; R.prod.forEach(p=>p.miss.forEach(code=>items.push([p.name,code])));
+    items.sort((a,b)=>a[0].localeCompare(b[0],"ru"));
+    const shown=items.slice(0,1500);
+    html=items.length?`<table><thead><tr><th>Товар</th><th>Код</th></tr></thead><tbody>${
+      shown.map(([n,code])=>`<tr><td>${esc(n)}</td><td><code>${esc(code)}</code></td></tr>`).join("")
+    }</tbody></table>${items.length>shown.length?`<div class="empty">Показаны первые ${shown.length} из ${items.length}. Кнопка «Скопировать» берёт все.</div>`:""}`:`<div class="empty">${R.prod.length?"Всё, что числится на ИП, найдено.":"Загрузите выгрузку."}</div>`;
+  }else{
+    note="Все сканы по порядку, последние сверху. Ошибочный скан можно удалить.";
+    const list=R.rows.map((r,i)=>[r,i]).reverse().slice(0,800);
+    html=list.length?`<table><thead><tr><th class="num">№</th><th>Статус</th><th>Товар</th><th>Код</th><th></th></tr></thead><tbody>${
+      list.map(([r,i])=>`<tr><td class="num">${i+1}</td><td><span class="pill ${VERD[r.st][2]}">${VERD[r.st][3]}</span></td><td>${esc(r.name||"—")}</td><td><code>${esc(clean(r.sc.raw))}</code></td><td><button type="button" data-del="${i}" aria-label="Удалить скан ${i+1}">×</button></td></tr>`).join("")
+    }</tbody></table>`:`<div class="empty">Пока ничего не отсканировано.</div>`;
+  }
+  $("tabNote").textContent=note; v.innerHTML=html;
+}
+function renderFiles(){
+  $("demoNote").hidden=!S.demo;
+  $("files").innerHTML=S.files.map(f=>`<div class="file"><div style="min-width:0"><b>${esc(f.owner)}</b><small>${esc(f.name)} · ${f.rows.length} марок${f.group?" · "+esc(f.group):""}${f.inn?" · ИНН "+esc(f.inn):""}</small></div><button type="button" data-rm="${esc(f.id)}" aria-label="Убрать файл">×</button></div>`).join("");
+  const owners=[...new Set(S.files.map(f=>f.owner))];
+  if(!owners.includes(S.owner)) S.owner=owners[0]||"";
+  $("ownerRow").hidden=owners.length<2;
+  $("owner").innerHTML=owners.map(o=>`<option ${o===S.owner?"selected":""}>${esc(o)}</option>`).join("");
+}
+function refresh(full){ if(full){buildIndex();renderFiles();} evaluate(); render(); save(); }
+
+/* ---------- storage ---------- */
+function save(){ if(S.demo) return; try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){} }
+function load(){ try{const t=localStorage.getItem(STORE); if(t){const o=JSON.parse(t); if(o&&Array.isArray(o.files)&&o.files.length){S=Object.assign(S,o);S.demo=false;return true;}}}catch(e){} return false; }
+
+/* ---------- file reading ---------- */
+function readFile(file){
+  return file.arrayBuffer().then(buf=>{
+    const wb=XLSX.read(buf,{type:"array"});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});
+    let h=aoa.findIndex(r=>r.some(c=>String(c).trim()==="Код"));
+    if(h<0) throw new Error("В файле не нашлась колонка «Код». Нужна выгрузка кодов из личного кабинета Честного знака.");
+    const head=aoa[h].map(c=>String(c).trim());
+    const col=n=>head.indexOf(n);
+    const iC=col("Код"),iG=col("GTIN"),iN=col("Наименование товара"),iP=col("Родительская упаковка"),iO=col("Наименование собственника товара"),iI=col("Владелец"),iT=col("Товарная группа"),iS=col("Статус кода");
+    const str=v=>typeof v==="number"?String(Math.round(v)):String(v??"").trim();
+    const rows=[]; let owner="",inn="",group="";
+    for(let r=h+1;r<aoa.length;r++){const x=aoa[r]; const code=str(x[iC]); if(!code) continue;
+      if(iS>=0&&str(x[iS])&&str(x[iS])!=="INTRODUCED") continue;
+      rows.push([code,iG>=0?str(x[iG]):"",iN>=0?str(x[iN]):"",iP>=0?str(x[iP]):""]);
+      if(!owner&&iO>=0) owner=str(x[iO]); if(!inn&&iI>=0) inn=str(x[iI]); if(!group&&iT>=0) group=str(x[iT]);
+    }
+    if(!rows.length) throw new Error("В файле нет марок в статусе «В обороте».");
+    return {id:Date.now()+"-"+Math.random().toString(36).slice(2,7),name:file.name,owner:owner||("Владелец "+(inn||file.name)),inn,group,rows};
+  });
+}
+async function addFiles(list){
+  const ok=[], errs=[];
+  for(const f of list){ try{ok.push(await readFile(f));}catch(e){errs.push(f.name+": "+e.message);} }
+  if(ok.length){ if(S.demo){S={files:[],owner:"",scans:[],sound:S.sound,demo:false};} S.files.push(...ok); if(!S.owner) S.owner=ok[0].owner; refresh(true); }
+  if(errs.length){ const el=$("last"); el.className="last s-bad"; el.innerHTML=`<div class="verdict">Файл не прочитан</div><div class="name">${esc(errs.join(" · "))}</div>`; }
+  else if(ok.length){ const el=$("last"); el.className="last s-idle"; el.innerHTML=`<div class="verdict">Выгрузка загружена</div><div class="name">${esc(ok.map(f=>f.owner+": "+f.rows.length+" марок").join(", "))}. Можно сканировать.</div>`; $("scan").focus(); }
+}
+
+/* ---------- sound ---------- */
+let actx=null;
+function beep(good){
+  if(!S.sound) return;
+  try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    const seq=good?[[880,.09]]:[[220,.14],[180,.18]]; let t=actx.currentTime;
+    for(const [f,d] of seq){const o=actx.createOscillator(),g=actx.createGain(); o.type=good?"sine":"square"; o.frequency.value=f;
+      g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(good?.25:.12,t+.01); g.gain.exponentialRampToValueAtTime(.0001,t+d);
+      o.connect(g).connect(actx.destination); o.start(t); o.stop(t+d+.02); t+=d+.04;}
+  }catch(e){}
+}
+
+/* ---------- scanning ---------- */
+function addScans(texts){
+  const items=texts.map(t=>String(t)).filter(t=>clean(t));
+  if(!items.length) return;
+  if(!S.files.length){ const el=$("last"); el.className="last s-bad"; el.innerHTML=`<div class="verdict">Сначала загрузите выгрузку</div><div class="name">Без неё не с чем сверять.</div>`; beep(false); return; }
+  items.forEach(t=>S.scans.push({raw:t,t:Date.now()}));
+  evaluate(); render(); save();
+  const last=R.rows[R.rows.length-1]; showLast(last); beep(last.st==="ok");
+}
+const scan=$("scan");
+scan.addEventListener("keydown",e=>{
+  if((e.key==="Enter"||(e.key==="Tab"&&scan.value))){ e.preventDefault(); const v=scan.value; scan.value=""; addScans([v]); }
+});
+scan.addEventListener("paste",e=>{
+  const t=(e.clipboardData||window.clipboardData)?.getData("text")||"";
+  if(/[\r\n]/.test(t.trim())){ e.preventDefault(); addScans(t.split(/\r?\n/)); }
+});
+// если фокус ушёл со сканера, а сканер продолжает «печатать» — перехватываем
+document.addEventListener("keydown",e=>{
+  const a=document.activeElement;
+  if(a===scan||(a&&/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(a.tagName))||e.ctrlKey||e.metaKey||e.altKey) return;
+  if(e.key.length===1){ e.preventDefault(); scan.focus(); scan.value+=e.key; }
+});
+
+/* ---------- controls ---------- */
+$("fileIn").addEventListener("change",e=>{ addFiles([...e.target.files]); e.target.value=""; });
+const drop=$("drop");
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",e=>{ if(e.dataTransfer?.files?.length) addFiles([...e.dataTransfer.files]); });
+$("files").addEventListener("click",e=>{ const id=e.target.dataset?.rm; if(!id) return; S.files=S.files.filter(f=>f.id!==id); refresh(true); });
+$("owner").addEventListener("change",e=>{ S.owner=e.target.value; refresh(false); });
+document.querySelector(".tabs").addEventListener("click",e=>{ const b=e.target.closest("button[data-tab]"); if(!b) return; tab=b.dataset.tab; render(); });
+$("view").addEventListener("click",e=>{ const i=e.target.dataset?.del; if(i===undefined) return; S.scans.splice(+i,1); refresh(false); });
+$("sound").addEventListener("click",()=>{ S.sound=!S.sound; $("sound").textContent="Звук: "+(S.sound?"вкл":"выкл"); $("sound").setAttribute("aria-pressed",String(S.sound)); save(); });
+function bindClear(){
+  $("clear").addEventListener("click",()=>{
+    $("clearBox").innerHTML=`<span class="hint">Удалить все сканы? Выгрузка останется.</span> <button id="clearYes" type="button" class="danger">Да, очистить</button> <button id="clearNo" type="button">Отмена</button>`;
+    $("clearYes").onclick=()=>{ S.scans=[]; resetClear(); refresh(false); const el=$("last"); el.className="last s-idle"; el.innerHTML=`<div class="verdict">Сканы очищены</div><div class="name">Можно начинать новую сверку.</div>`; scan.focus(); };
+    $("clearNo").onclick=resetClear;
+  });
+}
+function resetClear(){ $("clearBox").innerHTML=`<button id="clear" type="button">Новая сверка</button>`; bindClear(); }
+bindClear();
+$("copy").addEventListener("click",()=>{
+  let lines=[];
+  if(tab==="problems"){ lines.push("Статус\tТовар\tИП\tКод"); R.rows.filter(r=>["other","bad","ean","notcode"].includes(r.st)).forEach(r=>lines.push([VERD[r.st][3],r.name,r.owner,clean(r.sc.raw)].join("\t"))); }
+  else if(tab==="products"){ lines.push("Товар\tGTIN\tНа балансе\tНайдено\tНе найдено"); R.prod.forEach(p=>lines.push([p.name,p.gtin,p.bal,p.found,p.miss.length].join("\t"))); }
+  else if(tab==="missing"){ lines.push("Товар\tКод"); R.prod.forEach(p=>p.miss.forEach(c=>lines.push(p.name+"\t"+c))); }
+  else { lines.push("№\tСтатус\tТовар\tИП\tКод"); R.rows.forEach((r,i)=>lines.push([i+1,VERD[r.st][3],r.name,r.owner,clean(r.sc.raw)].join("\t"))); }
+  const text=lines.join("\n");
+  const done=m=>{ $("toast").textContent=m; setTimeout(()=>$("toast").textContent="",2500); };
+  try{ navigator.clipboard.writeText(text).then(()=>done("Скопировано, вставьте в Excel"),()=>fallback(text)); }catch(e){ fallback(text); }
+  function fallback(t){ const ta=document.createElement("textarea"); ta.value=t; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); let ok=false; try{ok=document.execCommand("copy");}catch(e){} ta.remove(); done(ok?"Скопировано":"Не удалось скопировать"); }
+});
+
+/* ---------- demo ---------- */
+function demo(){
+  const mk=(g,s)=>"01"+g+"21"+s;
+  const P=[["04600000000011","Пример: жевательный табак, мята"],["04600000000028","Пример: табак для кальяна, малина"],["04600000000035","Пример: жевательный табак, лёд"]];
+  const ser=["aB3x!Kq","Zp9&mLt","Qw2<eRt","Yu7%iOp","As4dF'g","Hj6kL;z","Xc8vBn,","Mn1bV.c"];
+  const rows=[]; P.forEach(([g,n],pi)=>ser.slice(0,6+pi).forEach((s,i)=>rows.push([mk(g,s.slice(0,6)+pi),g,n,""])));
+  S={files:[{id:"demo",name:"пример.xlsx",owner:"ИП Пример (демо)",inn:"",group:"OTP",rows}],owner:"ИП Пример (демо)",scans:[],sound:true,demo:true};
+  const take=[rows[0][0],rows[1][0]+"\u001d93AbCd",rows[2][0],rows[6][0],rows[7][0],rows[13][0],rows[1][0],"0104600000000028219999999","4601234567890"];
+  S.scans=take.map(raw=>({raw,t:0}));
+}
+
+/* ---------- start ---------- */
+if(!load()) demo();
+$("sound").textContent="Звук: "+(S.sound?"вкл":"выкл");
+buildIndex(); renderFiles(); evaluate(); render();
+if(S.demo){ const last=R.rows.find(r=>r.st==="bad"); if(last) showLast(last); }
+else if(S.scans.length){ showLast(R.rows[R.rows.length-1]); }
+})();
+</script>
+</body>
+</html>

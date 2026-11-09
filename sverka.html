@@ -129,6 +129,7 @@ td button{padding:2px 8px;font-size:13px}
         <div class="step" id="st2">2 · Сканирование</div>
         <input id="scan" type="text" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="Нажмите сюда и сканируйте марки подряд">
         <div class="hint">Сканер вводит код и сам жмёт Enter. Можно вставить сразу список кодов, по одному на строку. Раскладка и Caps Lock не мешают.</div>
+        <div class="hint">Правила сверки: у DZEN и других кодов с «01…21» всё после 93 (криптохвост) не учитывается; у Must Have и другого кальянного табака сверяются только первые 21 символ.</div>
         <div id="last" class="last s-idle" aria-live="polite">
           <div class="verdict">Ждём первый скан</div>
           <div class="name">Сканируйте квадратный код DataMatrix на пачке, не обычный штрихкод.</div>
@@ -234,7 +235,26 @@ function lookup(raw){
   for(const c of cands) for(const [g] of splitCode(c)){ if(IDX.names.has(g)){gtin=g;name=IDX.names.get(g);break;} }
   if(!gtin){const sp=splitCode(base)[0]; if(sp) gtin=sp[0];}
   if(base.length<20||!splitCode(base).length) return {type:"notcode",norm:"X:"+base};
-  return {type:"unknown",gtin,name,norm:"U:"+base.slice(0,31)};
+  const sc=shortCode(raw);
+  return {type:"unknown",gtin,name,short:sc,norm:"U:"+ruToEn(sc)};
+}
+/* Правила сканирования:
+   - код вида 01 + GTIN + 21 + серийник (DZEN, Corvus): всё, начиная с разделителя перед 93 (криптохвост), отбрасываем → 25 символов;
+   - код вида GTIN + серийник (Must Have и др. кальянный табак): считаем только первые 21 символ. */
+function shortCode(raw){
+  const s0=String(raw).trim().replace(/^\]d2|^\]C1|^\]Q3/,"");
+  const s=clean(s0);
+  if(s.length>=25&&s.startsWith("01")&&s.substr(16,2)==="21"){
+    const gs=s0.search(/[\x1d␝]/);
+    return gs>=25?clean(s0.slice(0,gs)):s.slice(0,25);
+  }
+  if(/^\d{14}/.test(s)) return s.slice(0,21);
+  return s;
+}
+function codeOf(res,raw){
+  if(res.type==="unit") return IDX.codes.get(res.key).code;
+  if(res.type==="pack") return shortCode(raw);
+  return res.short||clean(raw);
 }
 
 /* ---------- evaluation ---------- */
@@ -261,7 +281,7 @@ function evaluate(){
       else {st="bad"; name=res.name||"Товар не найден в выгрузке"; detail=res.gtin;}
     }
     if(st!=="dup"){cnt.all++; if(st==="ok")cnt.ok++; else if(st==="other")cnt.other++; else cnt.bad++;}
-    rows.push({sc,res,st,name,owner,detail});
+    rows.push({sc,res,st,name,owner,detail,code:codeOf(res,sc.raw)});
   }
   // products for selected owner
   const prod=new Map();
@@ -291,7 +311,7 @@ function showLast(r){
   else if(r.st==="notcode"){line="Сканер прочитал что-то другое. Попробуйте ещё раз.";}
   else if(r.st==="dup"){line=r.res.type==="unit"?(IDX.codes.get(r.res.key)?.name||""):"Эта марка уже есть в списке и второй раз не считается.";}
   el.className="last "+v[1];
-  el.innerHTML=`<div class="verdict">${esc(v[0])}</div><div class="name">${esc(line)}</div>${sub?`<div class="hint">${esc(sub)}</div>`:""}<code>${esc(clean(r.sc.raw))}</code>`;
+  el.innerHTML=`<div class="verdict">${esc(v[0])}</div><div class="name">${esc(line)}</div>${sub?`<div class="hint">${esc(sub)}</div>`:""}<code>${esc(r.code)}</code>`;
   void el.offsetWidth; el.classList.add("flash");
 }
 let tab="problems";
@@ -307,7 +327,7 @@ function render(){
   if(tab==="problems"){
     note="Марки, которые нельзя продать с кассы выбранного ИП. Их стоит проверить в приложении Честный знак.";
     html=problems.length?`<table><thead><tr><th>Статус</th><th>Товар</th><th>Код</th></tr></thead><tbody>${
-      problems.slice().reverse().map(r=>`<tr><td><span class="pill ${VERD[r.st][2]}">${VERD[r.st][3]}</span></td><td>${esc(r.name||"—")}${r.st==="other"?`<div class="hint">${esc(r.owner)}</div>`:""}</td><td><code>${esc(clean(r.sc.raw))}</code></td></tr>`).join("")
+      problems.slice().reverse().map(r=>`<tr><td><span class="pill ${VERD[r.st][2]}">${VERD[r.st][3]}</span></td><td>${esc(r.name||"—")}${r.st==="other"?`<div class="hint">${esc(r.owner)}</div>`:""}</td><td><code>${esc(r.code)}</code></td></tr>`).join("")
     }</tbody></table>`:`<div class="empty">${c.all?"Проблемных марок нет. Всё отсканированное числится на выбранном ИП.":"Пока ничего не отсканировано."}</div>`;
   }else if(tab==="products"){
     note="Сколько марок каждого товара числится на ИП и сколько из них нашли на полке. Если ИП работает на нескольких точках, «не найдено» включает товар других точек.";
@@ -327,7 +347,7 @@ function render(){
     note="Все сканы по порядку, последние сверху. Ошибочный скан можно удалить.";
     const list=R.rows.map((r,i)=>[r,i]).reverse().slice(0,800);
     html=list.length?`<table><thead><tr><th class="num">№</th><th>Статус</th><th>Товар</th><th>Код</th><th></th></tr></thead><tbody>${
-      list.map(([r,i])=>`<tr><td class="num">${i+1}</td><td><span class="pill ${VERD[r.st][2]}">${VERD[r.st][3]}</span></td><td>${esc(r.name||"—")}</td><td><code>${esc(clean(r.sc.raw))}</code></td><td><button type="button" data-del="${i}" aria-label="Удалить скан ${i+1}">×</button></td></tr>`).join("")
+      list.map(([r,i])=>`<tr><td class="num">${i+1}</td><td><span class="pill ${VERD[r.st][2]}">${VERD[r.st][3]}</span></td><td>${esc(r.name||"—")}</td><td><code>${esc(r.code)}</code></td><td><button type="button" data-del="${i}" aria-label="Удалить скан ${i+1}">×</button></td></tr>`).join("")
     }</tbody></table>`:`<div class="empty">Пока ничего не отсканировано.</div>`;
   }
   $("tabNote").textContent=note; v.innerHTML=html;
@@ -434,10 +454,10 @@ function resetClear(){ $("clearBox").innerHTML=`<button id="clear" type="button"
 bindClear();
 $("copy").addEventListener("click",()=>{
   let lines=[];
-  if(tab==="problems"){ lines.push("Статус\tТовар\tИП\tКод"); R.rows.filter(r=>["other","bad","ean","notcode"].includes(r.st)).forEach(r=>lines.push([VERD[r.st][3],r.name,r.owner,clean(r.sc.raw)].join("\t"))); }
+  if(tab==="problems"){ lines.push("Статус\tТовар\tИП\tКод"); R.rows.filter(r=>["other","bad","ean","notcode"].includes(r.st)).forEach(r=>lines.push([VERD[r.st][3],r.name,r.owner,r.code].join("\t"))); }
   else if(tab==="products"){ lines.push("Товар\tGTIN\tНа балансе\tНайдено\tНе найдено"); R.prod.forEach(p=>lines.push([p.name,p.gtin,p.bal,p.found,p.miss.length].join("\t"))); }
   else if(tab==="missing"){ lines.push("Товар\tКод"); R.prod.forEach(p=>p.miss.forEach(c=>lines.push(p.name+"\t"+c))); }
-  else { lines.push("№\tСтатус\tТовар\tИП\tКод"); R.rows.forEach((r,i)=>lines.push([i+1,VERD[r.st][3],r.name,r.owner,clean(r.sc.raw)].join("\t"))); }
+  else { lines.push("№\tСтатус\tТовар\tИП\tКод"); R.rows.forEach((r,i)=>lines.push([i+1,VERD[r.st][3],r.name,r.owner,r.code].join("\t"))); }
   const text=lines.join("\n");
   const done=m=>{ $("toast").textContent=m; setTimeout(()=>$("toast").textContent="",2500); };
   try{ navigator.clipboard.writeText(text).then(()=>done("Скопировано, вставьте в Excel"),()=>fallback(text)); }catch(e){ fallback(text); }

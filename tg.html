@@ -357,7 +357,6 @@ let planMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);  /
 let schedMonth = new Date(planMonth);
 let dayDate=null, dayShop=null;
 let subQuery='';
-let schedOnRedraw=null;
 let schedTarget=null;     // {id, shop} — куда нарисован график
 let salTarget=null;       // {id, shop} — куда нарисован расчёт ЗП
 let peopleShop=null;
@@ -570,7 +569,7 @@ function saveErr(e){ toast('⚠ НЕ сохранено в таблицу: '+(e.
    НАВИГАЦИЯ
    ══════════════════════════════════════════════════════════════════ */
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('sc-'+id).classList.add('active'); tgBack(id==='day'); }
-function tabOrder(){ return isBoss()?['owner','people','akcii','learn']:['main','salary','grafik','akcii','learn']; }
+function tabOrder(){ return isBoss()?['owner','people','grafik','akcii','learn']:['main','salary','grafik','akcii','learn']; }
 function applyRoleTabs(){
   const tabs=document.querySelectorAll('#tabbar .tab:not(#tab-net)');
   const map={main:0,salary:1,people:2,grafik:3,akcii:4,learn:5};
@@ -1179,7 +1178,6 @@ function redrawSched(){
   if(!schedTarget) return;
   const c=document.getElementById(schedTarget.id); if(!c) return;
   renderSchedule(c,schedTarget.shop,shopEmployees(schedTarget.shop));
-  if(schedTarget.id==='gr-cal'&&schedOnRedraw) schedOnRedraw();
 }
 function renderSchedule(card,shopId,emps){
   const y=schedMonth.getFullYear(), mo=schedMonth.getMonth();
@@ -1193,7 +1191,7 @@ function renderSchedule(card,shopId,emps){
     const dow=new Date(y,mo,d).getDay(); const we=dow===0||dow===6;
     const mainE=cell&&cell.main?(emps.find(e=>e.name===cell.main)||{name:cell.main,color:allEmpColor(cell.main)}):null;
     const subE=cell&&cell.sub?(emps.find(e=>e.name===cell.sub)||{name:cell.sub,color:allEmpColor(cell.sub)}):null;
-    cells+=`<div class="cell ${we?'weekend':''} ${iso===todayI?'today':''}" onclick="${isBoss()?'openSchedDay':'openSellerDay'}('${shopId}','${iso}')">
+    cells+=`<div class="cell ${we?'weekend':''} ${iso===todayI?'today':''}" onclick="openSchedDay('${shopId}','${iso}')">
       <span class="dn">${d}</span><div class="fillm">
       ${mainE?`<span class="tag" style="background:${mainE.color}">${firstName(mainE.name)}${(cell.mainH&&cell.mainH<FULL)?' '+cell.mainH+'ч':''}</span>`:''}
       ${subE?`<span class="tag sub" style="background:${subE.color}">↺${firstName(subE.name)}${(cell.subH&&cell.subH<FULL)?' '+cell.subH+'ч':''}</span>`:''}
@@ -1207,7 +1205,7 @@ function renderSchedule(card,shopId,emps){
     <div class="legend">${emps.slice(0,6).map(e=>`<span class="lg"><span class="sw" style="background:${e.color}"></span>${firstName(e.name)}</span>`).join('')}
       <span class="lg"><span class="sw sub"></span>подмена</span></div>
     <div class="cal-grid">${DOW_MON.map(d=>`<div class="dow">${d}</div>`).join('')}${cells}</div>
-    <div class="mono-hint">${isBoss()?'Нажми день, чтобы назначить смену. Подмена помечается штриховкой — выбираешь, кто подменяет.':'Нажми день, чтобы записаться на смену. Заполнять можно с сегодняшнего дня и наперёд, прошедшие дни меняет руководитель.'}</div></div>`;
+    <div class="mono-hint">Нажми день, чтобы назначить смену. Подмена помечается штриховкой — выбираешь, кто подменяет.</div></div>`;
 }
 function schedNav(n){
   schedMonth=new Date(schedMonth.getFullYear(),schedMonth.getMonth()+n,1);
@@ -1285,61 +1283,107 @@ function openSchedDay(shopId,iso){
   }
   draw();
 }
-/* ─── ГРАФИК ДЛЯ ПРОДАВЦА: запись наперёд ─── */
-function renderGrafik(){
+/* ─── ГРАФИК НАПЕРЁД ───
+   Будущие дни — запись продавцов (отдельная таблица «График наперёд», на ЗП не влияет).
+   Прошедшие дни — факт из отметок Кэпа (график смен, по нему считается ЗП). */
+const PLAN_URL='';   // ← URL веб-приложения скрипта «график наперёд» (…/exec)
+let planData={}, grafMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
+const MON_GEN=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+async function loadPlan(shopId,md){
+  if(!PLAN_URL) return;
+  const m=`${md.getFullYear()}-${pad(md.getMonth()+1)}`;
+  try{
+    const r=await fetch(PLAN_URL+'?action=getPlan&shop='+encodeURIComponent(shopId)+'&month='+m);
+    const j=JSON.parse(await r.text());
+    if(j.ok&&j.data){ Object.keys(planData).forEach(k=>{ if(k.startsWith(shopId+':'+m)) delete planData[k]; }); Object.assign(planData,j.data); }
+  }catch(e){ toast('⚠ Нет связи с графиком наперёд'); }
+}
+async function savePlan(shopId,iso,name){
+  if(!PLAN_URL){ toast('График наперёд ещё не подключён'); return false; }
+  try{
+    const r=await fetch(PLAN_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'savePlan',shop:shopId,shopName:shopName(shopId),date:iso,name:name||null,by:currentUser.name})});
+    const j=JSON.parse(await r.text()); if(!j.ok) throw new Error(j.error||'ошибка');
+    const k=shopId+':'+iso; if(name) planData[k]={main:name,by:currentUser.name}; else delete planData[k];
+    toast(name?'✓ Записано в график':'✓ День освобождён'); return true;
+  }catch(e){ toast('⚠ НЕ сохранено: '+(e.message||e),5000); return false; }
+}
+async function renderGrafik(){
   if(!currentUser) return;
   const shopId=activeShop();
-  document.getElementById('gr-sub').textContent=(shopName(shopId)||'')+' · заполняй наперёд';
-  schedOnRedraw=renderGrafikMine;
-  drawSchedule('gr-cal',shopId);
-  renderGrafikMine();
+  document.getElementById('gr-sub').textContent=(shopName(shopId)||'')+' · запись наперёд';
+  drawGrafik();
+  await Promise.all([loadPlan(shopId,grafMonth),loadSchedule(shopId,grafMonth)]);
+  drawGrafik();
 }
-function myEmpName(shopId){
+function grafNav(n){ grafMonth=new Date(grafMonth.getFullYear(),grafMonth.getMonth()+n,1); renderGrafik(); }
+function myEmpName(){
   const me=(currentUser.name||'').trim().toLowerCase();
   const e=allEmployees().find(x=>x.name.toLowerCase()===me)
         ||allEmployees().find(x=>x.name.toLowerCase().split(' ')[0]===me.split(' ')[0]);
   return e?e.name:currentUser.name;
 }
-function renderGrafikMine(){
-  const box=document.getElementById('gr-mine'); if(!box||!currentUser) return;
-  const shopId=activeShop(), me=myEmpName(shopId), t=todayISO();
-  const mine=Object.entries(appData.schedule||{})
-    .filter(([k,c])=>k.startsWith(shopId+':')&&k.slice(shopId.length+1)>=t&&c&&(c.main===me||c.sub===me))
-    .map(([k])=>k.slice(shopId.length+1)).sort().slice(0,8);
-  const chips=mine.map(iso=>{ const d=new Date(iso+'T12:00');
-    return `<span style="display:inline-flex;flex-direction:column;align-items:center;min-width:46px;padding:7px 6px;border-radius:10px;background:${iso===t?'var(--or)':'var(--s3)'};color:${iso===t?'#0C0C0C':'var(--t1)'}">
-      <span style="font-size:10px;font-weight:700;text-transform:uppercase;opacity:.8">${DOW[d.getDay()]}</span>
-      <span style="font-family:var(--font-head);font-weight:700;font-size:15px">${d.getDate()}</span></span>`; }).join('');
-  box.innerHTML=`<div class="card"><div class="card-title"><i class="ti ti-user-check"></i><span class="t">Мои ближайшие смены</span><span class="tail">${mine.length?mine.length+' шт.':''}</span></div>
-    ${mine.length?`<div style="display:flex;gap:6px;flex-wrap:wrap">${chips}</div>`:'<div style="font-size:13px;color:var(--t2)">Пока не записан(а). Нажми свободный день в календаре ниже.</div>'}</div>`;
+function grafCell(shopId,iso){
+  if(iso<todayISO()){ const c=(appData.schedule||{})[shopId+':'+iso]; return c&&(c.main||c.sub)?{name:c.main||c.sub,fact:true}:null; }
+  const p=planData[shopId+':'+iso]; return p&&p.main?{name:p.main,fact:false}:null;
 }
-function openSellerDay(shopId,iso){
-  if(iso<todayISO()){ toast('Прошедшие дни меняет руководитель'); return; }
-  const emps=shopEmployees(shopId), FULL=shopHours(shopId);
-  const cur=(appData.schedule||{})[shopId+':'+iso]||{};
-  const me=myEmpName(shopId);
-  const d=new Date(iso+'T12:00');
+function drawGrafik(){
+  const shopId=activeShop(), me=myEmpName(), t=todayISO();
+  const emps=shopEmployees(shopId);
+  const colorOf=n=>(emps.find(e=>e.name===n)||{color:allEmpColor(n)}).color;
+  // мои ближайшие
+  const mine=Object.entries(planData).filter(([k,p])=>k.startsWith(shopId+':')&&k.slice(shopId.length+1)>=t&&p.main===me)
+    .map(([k])=>k.slice(shopId.length+1)).sort().slice(0,8);
+  document.getElementById('gr-mine').innerHTML=`<div class="card"><div class="card-title"><i class="ti ti-user-check"></i><span class="t">Мои ближайшие смены</span><span class="tail">${mine.length?mine.length+' шт.':''}</span></div>
+    ${mine.length?`<div style="display:flex;gap:6px;flex-wrap:wrap">${mine.map(iso=>{const d=new Date(iso+'T12:00'),on=iso===t;
+      return `<span style="display:inline-flex;flex-direction:column;align-items:center;min-width:46px;padding:7px 6px;border-radius:10px;background:${on?'var(--or)':'var(--s3)'};color:${on?'#0C0C0C':'var(--t1)'}">
+      <span style="font-size:10px;font-weight:700;text-transform:uppercase;opacity:.8">${DOW[d.getDay()]}</span>
+      <span style="font-family:var(--font-head);font-weight:700;font-size:15px">${d.getDate()}</span></span>`;}).join('')}</div>`
+    :'<div style="font-size:13px;color:var(--t2)">Пока не записан(а). Нажми свободный день в календаре ниже.</div>'}</div>`;
+  // календарь
+  const y=grafMonth.getFullYear(), mo=grafMonth.getMonth();
+  const off=(new Date(y,mo,1).getDay()+6)%7, daysIn=new Date(y,mo+1,0).getDate();
+  let cells=''; for(let i=0;i<off;i++) cells+='<div class="cell empty"></div>';
+  for(let d=1;d<=daysIn;d++){
+    const iso=`${y}-${pad(mo+1)}-${pad(d)}`, dow=new Date(y,mo,d).getDay(), c=grafCell(shopId,iso), past=iso<t;
+    cells+=`<div class="cell ${dow===0||dow===6?'weekend':''} ${iso===t?'today':''}" style="${past?'opacity:.55':''}" onclick="openPlanDay('${shopId}','${iso}')">
+      <span class="dn">${d}</span><div class="fillm">${c?`<span class="tag" style="background:${colorOf(c.name)}">${firstName(c.name)}</span>`:''}</div></div>`;
+  }
+  document.getElementById('gr-cal').innerHTML=`<div class="card"><div class="card-title"><i class="ti ti-calendar-month"></i><span class="t">График точки</span></div>
+    <div style="display:flex;align-items:center;margin-bottom:12px">
+      <button class="qty-btn" onclick="grafNav(-1)">‹</button>
+      <span style="flex:1;text-align:center;font-family:var(--font-head);font-weight:700">${MON_NOM[mo]} ${y}</span>
+      <button class="qty-btn" onclick="grafNav(1)">›</button></div>
+    <div class="legend">${emps.slice(0,6).map(e=>`<span class="lg"><span class="sw" style="background:${e.color}"></span>${firstName(e.name)}</span>`).join('')}</div>
+    <div class="cal-grid">${DOW_MON.map(d=>`<div class="dow">${d}</div>`).join('')}${cells}</div>
+    <div class="mono-hint">Нажми будущий день, чтобы записаться. Прошедшие дни (бледные) — факт по отметкам Кэпа, по ним считается ЗП.</div></div>`;
+}
+function openPlanDay(shopId,iso){
+  const d=new Date(iso+'T12:00'), title=`${d.getDate()} ${MON_GEN[d.getMonth()]}, ${DOW[d.getDay()]}`;
+  if(iso<todayISO()){
+    const c=grafCell(shopId,iso);
+    openSheet(`<div class="sheet-title">${title}</div><div style="font-size:14px;color:var(--t2)">${c?'Работал(а) по отметке Кэпа: <b style="color:var(--t1)">'+c.name+'</b>':'Отметок Кэпа за этот день нет'}</div>
+      <div class="mono-hint">Прошедшие дни меняет руководитель в основной таблице.</div>`); return;
+  }
+  const emps=shopEmployees(shopId), me=myEmpName(), cur=planData[shopId+':'+iso]||{};
   let pick=cur.main||null;
+  const list=emps.some(e=>e.name===me)?emps:[{name:me,color:allEmpColor(me)},...emps];
   function draw(){
-    const list=emps.some(e=>e.name===me)?emps:[{name:me,color:allEmpColor(me)},...emps];
-    openSheet(`<div class="sheet-title">${d.getDate()} ${['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'][d.getMonth()]}, ${DOW[d.getDay()]}</div>
-      <div style="font-size:12px;color:var(--t3);margin:-8px 0 14px">${cur.main?'Сейчас в графике: <b style="color:var(--t1)">'+cur.main+'</b>':'День пока свободен'}</div>
-      <button class="btn" id="sl-me" style="margin-bottom:12px">${cur.main===me?'✓ Ты записан(а) на эту смену':'Я выйду в эту смену'}</button>
+    openSheet(`<div class="sheet-title">${title}</div>
+      <div style="font-size:12px;color:var(--t3);margin:-8px 0 14px">${cur.main?'Записан(а): <b style="color:var(--t1)">'+cur.main+'</b>':'День пока свободен'}</div>
+      <button class="btn" id="pl-me" style="margin-bottom:12px">${cur.main===me?'✓ Ты записан(а) на эту смену':'Я выйду в эту смену'}</button>
       <div style="font-size:12px;color:var(--t3);margin-bottom:6px">или выбери, кто работает</div>
       <div>${list.map(e=>`<button class="emp-opt ${pick===e.name?'sel':''}" data-p="${e.name}">
         <span class="sw" style="background:${e.color}"></span><span class="nm">${e.name}</span>${pick===e.name?'<span class="ck">✓</span>':''}</button>`).join('')}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px">
-        <button class="btn btn-gy" id="sl-clear">Освободить</button>
-        <button class="btn" id="sl-save">Сохранить</button></div>`);
+        <button class="btn btn-gy" id="pl-clear">Освободить</button>
+        <button class="btn" id="pl-save">Сохранить</button></div>`);
     const sc=document.getElementById('sheet-content');
-    sc.querySelector('#sl-me').onclick=()=>saveSchedDay(shopId,iso,{...cur,main:me,mainH:(cur.main===me&&cur.mainH)?cur.mainH:FULL,mainR:0,sub:cur.sub||null,subH:cur.sub?cur.subH:null,subR:0});
+    const go=async n=>{ if(await savePlan(shopId,iso,n)){ closeSheet(); drawGrafik(); } };
+    sc.querySelector('#pl-me').onclick=()=>go(me);
     sc.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{ pick=pick===b.dataset.p?null:b.dataset.p; draw(); });
-    sc.querySelector('#sl-clear').onclick=()=>saveSchedDay(shopId,iso,cur.sub?{...cur,main:null,mainH:null,mainR:0}:null);
-    sc.querySelector('#sl-save').onclick=()=>{
-      if(!pick){ toast('Выбери, кто работает'); return; }
-      saveSchedDay(shopId,iso,{...cur,main:pick,mainH:(cur.main===pick&&cur.mainH)?cur.mainH:FULL,mainR:0,
-        sub:cur.sub||null,subH:cur.sub?cur.subH:null,subR:0});
-    };
+    sc.querySelector('#pl-clear').onclick=()=>go(null);
+    sc.querySelector('#pl-save').onclick=()=>{ if(!pick){ toast('Выбери, кто работает'); return; } go(pick); };
   }
   draw();
 }

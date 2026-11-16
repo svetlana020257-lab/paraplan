@@ -192,7 +192,13 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--font-body);max-
 .promo-t{font-size:14px;font-weight:600}
 .promo-s{font-size:12.5px;color:var(--t2);margin-top:2px;line-height:1.45}
 .promo-warn{margin-top:8px;background:rgba(232,122,30,.13);color:var(--or-l);border-radius:10px;padding:8px 10px;font-size:12.5px;font-weight:600;line-height:1.45}
-.learn-frame{width:100%;height:calc(100vh - 150px);border:0;border-radius:14px;background:var(--s1)}
+.learn-frame{display:block;width:100%;height:calc(100vh - 70px);border:0;background:var(--bg)}
+#sc-learnview{min-height:0}
+.lrn{display:flex;gap:12px;align-items:center;padding:11px 0;border-top:1px solid var(--border);cursor:pointer;background:none;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left;color:var(--t1);font-family:var(--font-body)}
+.lrn:first-child{border-top:0}
+.lrn-ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--font-head);font-size:12px;font-weight:700}
+.lrn-t{font-size:14px;font-weight:600}
+.lrn-s{font-size:12px;color:var(--t2);margin-top:2px}
 </style>
 </head>
 <body>
@@ -303,9 +309,14 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--font-body);max-
 <div class="screen" id="sc-learn">
   <div class="hdr"><div class="hdr-logo">П</div>
     <div style="flex:1"><h1>Обучение</h1><p>Стажировочная тетрадь</p></div>
-    <button class="hdr-action" onclick="openLearnExternal()" title="Открыть отдельно"><i class="ti ti-external-link"></i></button>
+    <button class="hdr-action" onclick="openLearn('#/s')" title="Поиск"><i class="ti ti-search"></i></button>
   </div>
-  <div class="body" style="padding-bottom:84px"><iframe id="learn-frame" class="learn-frame" title="Обучение Параплан"></iframe></div>
+  <div class="body" id="learn-body"></div>
+</div>
+
+<!-- ═══════════ ТЕМА ОБУЧЕНИЯ (внутри) ═══════════ -->
+<div class="screen" id="sc-learnview">
+  <iframe id="learn-frame" class="learn-frame" title="Обучение Параплан"></iframe>
 </div>
 
 <!-- TAB BAR -->
@@ -569,7 +580,7 @@ function saveErr(e){ toast('⚠ НЕ сохранено в таблицу: '+(e.
 /* ══════════════════════════════════════════════════════════════════
    НАВИГАЦИЯ
    ══════════════════════════════════════════════════════════════════ */
-function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('sc-'+id).classList.add('active'); tgBack(id==='day'); }
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('sc-'+id).classList.add('active'); tgBack(id==='day'||id==='learnview'); }
 function tabOrder(){ return isBoss()?['owner','people','grafik','akcii','learn']:['main','salary','grafik','akcii','learn']; }
 function applyRoleTabs(){
   const tabs=document.querySelectorAll('#tabbar .tab:not(#tab-net)');
@@ -1081,12 +1092,7 @@ function renderSalary(){
     ${ratesCardHTML(shopId)}
     <div id="sal-calc"><div class="card"><div class="empty" style="padding:20px 0">Считаю зарплату…</div></div></div>
     ${isBoss()?'<div id="sched-card"></div>':''}
-    <div class="sec" style="margin:8px 2px 8px">Памятки</div>
-    <div>${Object.entries(HINTS).map(([k,h])=>`
-      <div class="list-item" onclick="openHint('${k}')" style="cursor:pointer;display:flex;align-items:center;gap:12px">
-        <span style="width:36px;height:36px;border-radius:10px;background:${h.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${h.icon}" style="color:${h.color};font-size:18px"></i></span>
-        <div style="flex:1"><div style="font-size:14px;font-weight:600">${h.title}</div><div style="font-size:12px;color:var(--t3)">${h.sub}</div></div>
-        <i class="ti ti-chevron-right" style="color:var(--t3)"></i></div>`).join('')}</div>`;
+    `;
   animateBars(body);
   if(isBoss()) drawSchedule('sched-card',shopId);
   loadSalaryInto(shopId,'sal-calc');
@@ -1809,14 +1815,63 @@ function doLogout(){
   else if(confirm('Выйти из аккаунта?')) go();
 }
 const LEARN_URL='https://svetlana020257-lab.github.io/obuchenie/';
-function loadLearn(){ const f=document.getElementById('learn-frame'); if(f&&!f.src) f.src=LEARN_URL; }
-function openLearnExternal(){ if(TG) TG.openLink(LEARN_URL); else window.open(LEARN_URL,'_blank'); }
+const LEARN_KEY='paraplan_learn_v1';
+let learnMeta=null;
+function learnState(){ try{ const s=JSON.parse(localStorage.getItem(LEARN_KEY)||'null'); return s&&typeof s==='object'?{read:s.read||{},quiz:s.quiz||{}}:{read:{},quiz:{}}; }catch(e){ return {read:{},quiz:{}}; } }
+async function loadLearn(){
+  const body=document.getElementById('learn-body'); if(!body) return;
+  if(!learnMeta){
+    body.innerHTML='<div class="card"><div class="empty" style="padding:20px 0">Загружаю темы…</div></div>';
+    try{ const r=await fetch(LEARN_URL+'lessons.json',{cache:'no-cache'}); learnMeta=await r.json(); }
+    catch(e){ body.innerHTML='<div class="card"><div class="empty" style="padding:20px 0">Нет связи с обучением</div></div>'; return; }
+  }
+  drawLearn();
+}
+function drawLearn(){
+  const body=document.getElementById('learn-body'); if(!body||!learnMeta) return;
+  const st=learnState(), L=learnMeta.lessons;
+  let passed=0, best=0, total=0, next=null;
+  const rows=L.map(l=>{
+    const q=st.quiz[l.id]; total+=l.questions; if(q) best+=Math.min(q.best||0,l.questions);
+    let ic,bg,col,sub;
+    if(q&&q.passed){ passed++; ic='<i class="ti ti-check" style="font-size:20px"></i>'; bg='rgba(76,175,80,.16)'; col='var(--green)'; sub=`Тест сдан · ${q.best} из ${q.total}`; }
+    else if(q){ ic=l.num; bg='rgba(226,75,74,.15)'; col='var(--red)'; sub=`Не сдан · ${q.best} из ${q.total} — пересдай`; if(!next) next=l; }
+    else if(st.read[l.id]){ ic=l.num; bg='rgba(232,122,30,.15)'; col='var(--or-l)'; sub='Прочитано · пройди тест'; if(!next) next=l; }
+    else { ic=l.num; bg='var(--s3)'; col='var(--t2)'; sub=`${l.short}`; if(!next) next=l; }
+    return `<button class="lrn" onclick="openLearn('#/l/${l.id}')"><span class="lrn-ic" style="background:${bg};color:${col}">${ic}</span>
+      <span style="flex:1;min-width:0"><span class="lrn-t" style="display:block">${l.title}</span><span class="lrn-s" style="display:block">${sub}</span></span>
+      <i class="ti ti-chevron-right" style="color:var(--t3)"></i></button>`;
+  }).join('');
+  const pct=L.length?Math.round(passed/L.length*100):0;
+  body.innerHTML=`
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span style="font-family:var(--font-head);font-size:17px;font-weight:700">${passed} из ${L.length} тем</span>
+        <span style="font-size:12px;color:var(--t2)">тесты: ${best} из ${total}</span></div>
+      <div style="height:8px;background:var(--s3);border-radius:4px;overflow:hidden;margin-top:10px"><div style="width:${pct}%;height:100%;background:var(--or);border-radius:4px"></div></div>
+      ${next?`<button class="btn" style="margin-top:12px" onclick="openLearn('#/l/${next.id}')">Продолжить: ${next.title}</button>`:'<div style="font-size:13px;color:var(--green);margin-top:10px;font-weight:600">Все темы сданы — имба!</div>'}
+    </div>
+    <div class="card" style="padding:4px 14px">${rows}</div>
+    <button class="btn btn-gy" onclick="openLearn('#/cheat')"><i class="ti ti-list-details" style="vertical-align:-2px;margin-right:6px"></i>Шпаргалка: сроки, поставщики, правила</button>`;
+}
+function openLearn(hash){
+  const f=document.getElementById('learn-frame');
+  const q=new URLSearchParams({embed:'1',name:(currentUser&&firstName(currentUser.name))||'',point:(currentUser&&shopName(currentUser.shop))||''});
+  f.src=LEARN_URL+'?'+q.toString()+hash;
+  showScreen('learnview');
+}
+function closeLearnView(){ switchTab('learn'); }
+window.addEventListener('message',e=>{
+  const d=e.data||{};
+  if(d.pp==='learn-saved') drawLearn();
+  if(d.pp==='learn-home'&&document.getElementById('sc-learnview').classList.contains('active')) closeLearnView();
+});
 if(TG){
   TG.ready(); TG.expand();
   try{ TG.setHeaderColor('#161616'); TG.setBackgroundColor('#0C0C0C'); }catch(e){}
   try{ TG.setBottomBarColor&&TG.setBottomBarColor('#161616'); }catch(e){}
   try{ TG.disableVerticalSwipes&&TG.disableVerticalSwipes(); }catch(e){}
-  try{ TG.BackButton.onClick(()=>closeDayDetail()); }catch(e){}
+  try{ TG.BackButton.onClick(()=>{ if(document.getElementById('sc-learnview').classList.contains('active')) closeLearnView(); else closeDayDetail(); }); }catch(e){}
   try{ TG.SettingsButton.show(); TG.SettingsButton.onClick(doLogout); }catch(e){}
 }
 

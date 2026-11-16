@@ -754,6 +754,32 @@ function shopHours(shopId){ const s=appData.shops.find(x=>x.id===shopId)||{}; re
 /* ══════════════════════════════════════════════════════════════════
    СМЕНА (главная продавца)
    ══════════════════════════════════════════════════════════════════ */
+/* ═══ ЗАДАЧИ НЕДЕЛИ (одинаковые для всех точек) ═══
+   Ключ — день недели: 1 пн … 6 сб, 0 вс. Поменять задачу — правь здесь. */
+const WEEK_TASKS={
+  2:{icon:'ti-truck-delivery', t:'Привоз перемещений', d:'Принять товар, сверить с накладной, выложить'},
+  3:{icon:'ti-tags',           t:'Заполнение прайсов', d:'Проверить и обновить ценники на витрине'},
+  4:{icon:'ti-package',        t:'Заказ со склада',    d:'Собрать заказ на неделю и отправить'},
+  5:{icon:'ti-camera',         t:'Расширенный фотоотчёт и уборка', d:'Уборка точки, фото витрин и зала в чат'},
+};
+const WD_SHORT=['вс','пн','вт','ср','чт','пт','сб'];
+function weekTasksHTML(){
+  const today=new Date().getDay(), cur=WEEK_TASKS[today];
+  const top=cur
+    ? `<div style="display:flex;gap:12px;align-items:center;background:rgba(232,122,30,.13);border:1px solid rgba(232,122,30,.35);border-radius:12px;padding:12px;margin-bottom:10px">
+        <div style="width:42px;height:42px;border-radius:12px;background:var(--or);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${cur.icon}" style="font-size:22px;color:#0C0C0C"></i></div>
+        <div style="flex:1;min-width:0"><div style="font-size:11px;color:var(--or-l);font-weight:700;letter-spacing:.04em;text-transform:uppercase">Сегодня</div>
+          <div style="font-family:var(--font-head);font-size:14px;font-weight:700;margin-top:2px">${cur.t}</div>
+          <div style="font-size:12px;color:var(--t2);margin-top:2px">${cur.d}</div></div></div>`
+    : `<div style="font-size:13px;color:var(--t2);margin-bottom:8px">Сегодня обычная смена — дополнительных задач нет</div>`;
+  const rows=[2,3,4,5].map(k=>{ const w=WEEK_TASKS[k], on=k===today;
+    return `<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border);${on?'':'opacity:.85'}">
+      <span style="width:28px;font-size:12px;font-weight:700;text-transform:uppercase;color:${on?'var(--or-l)':'var(--t3)'}">${WD_SHORT[k]}</span>
+      <i class="ti ${w.icon}" style="font-size:17px;color:${on?'var(--or)':'var(--t2)'}"></i>
+      <span style="font-size:13px;font-weight:${on?700:500};color:${on?'var(--t1)':'var(--t2)'}">${w.t}</span></div>`; }).join('');
+  return `<div class="card"><div class="card-title"><i class="ti ti-checklist"></i><span class="t">Задачи недели</span><span class="tail">все точки</span></div>${top}${rows}</div>`;
+}
+
 function renderMain(){
   if(!currentUser) return;
   const shopId=activeShop();
@@ -764,6 +790,7 @@ function renderMain(){
 
   const body=document.getElementById('main-body');
   body.innerHTML = freshPillHTML()
+    + weekTasksHTML()
     + dayPickerHTML(shopId)
     + dayStatsHTML(shopId,selectedDay)
     + monthPlanCard(shopId)

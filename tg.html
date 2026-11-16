@@ -293,6 +293,7 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--font-body);max-
       <div class="promo"><div class="promo-b std">−80 ₽</div><div><div class="promo-t">Картриджи Xros, Vmate, Argus</div><div class="promo-s">Скидка на второй картридж</div></div></div>
       <div class="promo"><div class="promo-b std">−10%</div><div><div class="promo-t">Постоянным</div><div class="promo-s">Только за наличные и только с номером телефона</div></div></div>
     </div>
+    <button class="btn" id="as-seller" onclick="viewAsSeller()" style="margin-top:4px;display:none"><i class="ti ti-eye" style="vertical-align:-2px;margin-right:6px"></i>Посмотреть глазами продавца</button>
     <button class="btn btn-gy" onclick="doLogout()" style="margin-top:4px"><i class="ti ti-logout" style="vertical-align:-2px;margin-right:6px"></i>Выйти из аккаунта</button>
     <div class="mono-hint" style="text-align:center">Продал по акции — отметь у Кэпа в чате точки: «Акции / Я красавчик»</div>
   </div>
@@ -659,6 +660,7 @@ function finishLogin(){
   }else ss.style.display='none';
   applyRoleTabs();
   switchTab(isBoss()?'owner':'main');
+  const asb=document.getElementById('as-seller'); if(asb) asb.style.display=isBoss()?'':'none';
   syncData();
 }
 function onOwnerShop(id){
@@ -680,6 +682,7 @@ async function syncData(){
   }catch(e){ toast('⚠ Нет связи. Показаны кэшированные данные.'); }
   await loadPlans();
   await loadSchedule(activeShop(),schedMonth);
+  try{ await loadPlan(activeShop(),new Date(new Date().getFullYear(),new Date().getMonth(),1)); }catch(e){}
   afterSync(); if(btn) btn.style.animation='';
 }
 function afterSync(){ if(!currentUser) return; normalizeData(); refreshScreen(); }
@@ -792,6 +795,98 @@ function weekTasksHTML(){
   return `<div class="card"><div class="card-title"><i class="ti ti-checklist"></i><span class="t">Задачи недели</span><span class="tail">все точки</span></div>${top}${rows}</div>`;
 }
 
+/* ═══ ГЛАВНАЯ ПРОДАВЦА (по макету) ═══ */
+const WD_FULL=['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+const MON_G=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+function kepLine(st){
+  if(!st.plan) return 'Салам! План на месяц ещё не задан — работаем как тигры.';
+  const left=st.plan-st.fact, daysLeft=st.days-new Date().getDate()+1;
+  if(left<=0) return 'План уже закрыт — имба! Всё сверху идёт в премию точке.';
+  const perDay=Math.ceil(left/Math.max(1,daysLeft)/100)*100;
+  if(st.fPct>=100) return `Идём выше плана, кайф! Держим темп — нужно ${fmt(perDay)} в день.`;
+  return `Газ! До плана ${fmt(perDay)} в день — предлагай акции месяца каждому.`;
+}
+function sellerHomeHTML(shopId){
+  const now=new Date(), st=monthStats(shopId,now);
+  const nm=firstName(currentUser.name);
+  const cell=(appData.schedule||{})[shopId+':'+todayISO()];
+  const onShift=cell&&(cell.sub||cell.main);
+  const meOn=onShift&&firstName(onShift).toLowerCase()===nm.toLowerCase();
+  const pct=Math.max(0,Math.min(100,st.pct)), C=276.5, dash=(C*pct/100).toFixed(1);
+  const t=WEEK_TASKS[now.getDay()];
+  return `
+  <div style="display:flex;align-items:center;gap:12px;padding:2px 2px 0">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:12.5px;color:var(--t2)">${WD_FULL[now.getDay()]}, ${now.getDate()} ${MON_G[now.getMonth()]} · ${shopName(shopId)}</div>
+      <div style="font-family:var(--font-head);font-size:22px;font-weight:900;margin-top:2px">Салам, ${nm}!</div>
+    </div></div>
+
+  <div style="display:flex;gap:10px;align-items:flex-start;background:rgba(232,122,30,.13);border:1px solid rgba(232,122,30,.3);border-radius:14px;padding:12px 13px">
+    <span style="font-family:var(--font-head);font-size:11px;font-weight:700;background:var(--or);color:#0C0C0C;border-radius:7px;padding:4px 8px;flex-shrink:0">Кэп</span>
+    <span style="font-size:13.5px;font-weight:600;color:var(--t1);line-height:1.45">${kepLine(st)}</span></div>
+
+  ${t?`<div class="card" style="display:flex;gap:12px;align-items:center;padding:12px 14px">
+    <div style="width:40px;height:40px;border-radius:11px;background:var(--or);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${t.icon}" style="font-size:21px;color:#0C0C0C"></i></div>
+    <div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--or-l);text-transform:uppercase;letter-spacing:.05em">Задача дня</div>
+      <div style="font-family:var(--font-head);font-size:14px;font-weight:700;margin-top:2px">${t.t}</div>
+      <div style="font-size:12px;color:var(--t2);margin-top:1px">${t.d}</div></div></div>`:''}
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span style="font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.06em">Смена сегодня</span>
+      <span class="badge ${onShift?'b-gr':'b-gy'}">${onShift?(meOn?'Ты на смене':'На смене: '+firstName(onShift)):'Нет отметки Кэпа'}</span></div>
+    <div style="font-family:var(--font-head);font-size:17px;font-weight:700">${shopName(shopId)}</div>
+    <div style="font-size:12.5px;color:var(--t2);margin-top:4px">Открытие, закрытие и пересменка — в чате точки у Кэпа</div>
+  </div>
+
+  <div class="card" style="display:flex;gap:16px;align-items:center">
+    <svg width="104" height="104" viewBox="0 0 104 104" role="img" aria-label="План выполнен на ${st.pct}%" style="flex-shrink:0">
+      <circle cx="52" cy="52" r="44" fill="none" stroke="var(--s3)" stroke-width="12"></circle>
+      <circle cx="52" cy="52" r="44" fill="none" stroke="${planColor(st.fPct)}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${dash} ${C}" transform="rotate(-90 52 52)"></circle>
+      <text x="52" y="59" text-anchor="middle" font-family="Unbounded,sans-serif" font-size="21" font-weight="700" fill="#F2EDE6">${st.pct}%</text></svg>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.06em">План точки · ${MON_NOM[now.getMonth()].toLowerCase()}</div>
+      <div style="font-family:var(--font-head);font-size:19px;font-weight:700;margin-top:4px">${fmt(st.fact)}</div>
+      <div style="font-size:12.5px;color:var(--t2)">из ${fmt(st.plan)}</div>
+      <div style="font-size:12.5px;font-weight:600;margin-top:5px;color:${planColor(st.fPct)}">Прогноз: ${st.fPct}% к концу месяца</div>
+    </div></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <button class="card" onclick="switchTab('salary')" style="text-align:left;cursor:pointer;color:var(--t1);font-family:var(--font-body)">
+      <div style="font-size:12px;color:var(--t2)" id="hp-lbl">Моя ЗП</div>
+      <div style="font-family:var(--font-head);font-size:19px;font-weight:700;margin:4px 0" id="hp-sum">…</div>
+      <div style="font-size:12px;font-weight:600;color:var(--or-l)" id="hp-sub">подробнее</div></button>
+    <button class="card" onclick="switchTab('grafik')" style="text-align:left;cursor:pointer;color:var(--t1);font-family:var(--font-body)">
+      <div style="font-size:12px;color:var(--t2)">Мои смены</div>
+      <div style="font-family:var(--font-head);font-size:19px;font-weight:700;margin:4px 0">${myPlanCount(shopId)}</div>
+      <div style="font-size:12px;font-weight:600;color:var(--or-l)">записаться наперёд</div></button>
+  </div>
+
+  <button onclick="switchTab('akcii')" style="display:flex;justify-content:space-between;align-items:center;width:100%;background:var(--or);color:#0C0C0C;border:0;border-radius:14px;padding:14px 16px;cursor:pointer;text-align:left;font-family:var(--font-body)">
+    <span><span style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.75">Акция месяца</span>
+      <span style="display:block;font-family:var(--font-head);font-size:15px;font-weight:700;margin-top:3px">6 жидкостей за 1500 ₽</span></span>
+    <span style="background:#0C0C0C;color:var(--t1);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700">Все акции</span></button>`;
+}
+function myPlanCount(shopId){
+  const t=todayISO(), me=(currentUser.name||'').toLowerCase();
+  const n=Object.entries(planData||{}).filter(([k,p])=>k.startsWith(shopId+':')&&k.slice(shopId.length+1)>=t&&p.main&&p.main.toLowerCase().split(' ')[0]===me.split(' ')[0]).length;
+  return n?n+' впереди':'—';
+}
+async function fillHomePay(shopId){
+  const day=new Date().getDate(), first=day<=15;
+  const lbl=document.getElementById('hp-lbl'); if(lbl) lbl.textContent='Моя ЗП · '+(first?'1–15':'16–'+new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate());
+  let total=null, shifts=null;
+  try{
+    const now=new Date();
+    const r=await gasGet({action:'getSalaryV2',shop:shopId,shopName:shopName(shopId),year:now.getFullYear(),month:now.getMonth()+1});
+    if(r.ok&&r.data){ const row=(r.data.rows||[]).map(x=>recalcRow(x,shopId)).find(x=>x.name===currentUser.name);
+      if(row){ const p=first?row.p1:row.p2; total=p?p.total:0; shifts=p?(p.shifts||0):0; } }
+  }catch(e){}
+  const s=document.getElementById('hp-sum'), sub=document.getElementById('hp-sub'); if(!s) return;
+  s.textContent=total==null?'—':fmt(total);
+  if(sub&&shifts!=null) sub.textContent=(Math.round(shifts*10)/10)+' смен · подробнее';
+}
+
 function renderMain(){
   if(!currentUser) return;
   const shopId=activeShop();
@@ -801,6 +896,18 @@ function renderMain(){
   const ss=document.getElementById('m-shopsel'); if(ss&&isBoss()) ss.value=shopId;
 
   const body=document.getElementById('main-body');
+  if(!isBoss()){
+    body.innerHTML = sellerHomeHTML(shopId)
+      + `<div class="sec" style="margin:10px 2px 0">По дням</div>`
+      + dayPickerHTML(shopId)
+      + dayStatsHTML(shopId,selectedDay);
+    animateBars(body); fillHomePay(shopId);
+    requestAnimationFrame(()=>{
+      const strip=document.getElementById('cal-strip'), act=strip&&strip.querySelector('.cal-day.active');
+      if(strip&&act) strip.scrollLeft=Math.max(0,act.offsetLeft-strip.clientWidth/2+act.clientWidth/2);
+    });
+    return;
+  }
   body.innerHTML = freshPillHTML()
     + weekTasksHTML()
     + dayPickerHTML(shopId)
@@ -1009,9 +1116,10 @@ async function loadSalaryInto(shopId,boxId){
       <div class="mono-hint">Выбери другой месяц в блоке «План» или заполни график смен.</div></div>`;
     return;
   }
+  const hero=(!isBoss()&&rows[0])?salHeroHTML(rows[0],shopId,now):'';
   const SRC={'график':['b-gr','из графика'],'выручка':['b-wn','из выручки'],'нет данных':['b-gy','нет смен']};
   const day=isCurMonth(now)?new Date().getDate():0;
-  box.innerHTML=`<div class="card">${head}
+  box.innerHTML=`${hero}<div class="card">${head}
     ${rows.map(r=>{
       const [cl,lbl]=SRC[r.source]||SRC['нет данных'];
       return `<div style="background:var(--s2);border-radius:12px;padding:13px;margin-bottom:10px">
@@ -1102,6 +1210,24 @@ function applyBonus(r,list){
   r.total+=sum; r.planBonus=sum;
 }
 const ADJ_ICO={'премия':'gift','нлк':'flame','доплата':'plus','аванс':'wallet','штраф':'alert-triangle','недостача':'package-off','вычет':'minus'};
+function salHeroHTML(r,shopId,now){
+  const cur=isCurMonth(now), day=new Date().getDate();
+  const first=cur?day<=15:false, p=(first?r.p1:r.p2)||{};
+  const last=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const per=first?`1–15 ${MON_G[now.getMonth()]}`:`16–${last} ${MON_G[now.getMonth()]}`;
+  const sh=Math.round((+p.shifts||0)*10)/10, adj=(+p.total||0)-(+p.earned||0);
+  const row=(a,b)=>`<div style="display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--border);font-size:13.5px"><span style="color:var(--t2)">${a}</span><span style="font-weight:700">${b}</span></div>`;
+  return `<div style="background:var(--or);color:#0C0C0C;border-radius:16px;padding:16px">
+      <div style="font-size:12px;font-weight:700;opacity:.75">Начислено · ${per}</div>
+      <div style="font-family:var(--font-head);font-size:30px;font-weight:900;margin:4px 0 2px">${fmt(p.total||0)}</div>
+      <div style="font-size:12px;font-weight:600;opacity:.8">Смена = ${fmt(r.rate)} + ${r.pct}% от выручки</div></div>
+    <div class="card" style="padding:4px 14px">
+      ${row(`Смены · ${sh}`,fmt(p.base||0))}
+      ${row(`${r.pct}% от выручки ${fmt(p.revenue||0)}`,fmt(p.pctSum||0))}
+      ${adj?row(adj>0?'Премии':'Вычеты',(adj>0?'+':'−')+fmt(Math.abs(adj))):''}
+      ${row('Премия за план точки',r.planBonus?'+'+fmt(r.planBonus):'в конце месяца')}
+    </div>`;
+}
 function salPeriod(title,p,pct,active){
   if(!p||(!p.shifts&&!p.adj&&!(p.bonusList||[]).length)) return `<div style="display:flex;font-size:12px;color:var(--t3);padding:5px 0"><span>${title}</span><span style="margin-left:auto">—</span></div>`;
   const adj=p.adjList||[];
@@ -1308,10 +1434,11 @@ async function savePlan(shopId,iso,name){
     toast(name?'✓ Записано в график':'✓ День освобождён'); return true;
   }catch(e){ toast('⚠ НЕ сохранено: '+(e.message||e),5000); return false; }
 }
+function grafShop(){ return isBoss()?(peopleShop||activeShop()||(appData.shops[0]||{}).id):activeShop(); }
 async function renderGrafik(){
   if(!currentUser) return;
-  const shopId=activeShop();
-  document.getElementById('gr-sub').textContent=(shopName(shopId)||'')+' · запись наперёд';
+  const shopId=grafShop();
+  document.getElementById('gr-sub').textContent=(shopName(shopId)||'')+(isBoss()?' · график и подмены':' · запись наперёд');
   drawGrafik();
   await Promise.all([loadPlan(shopId,grafMonth),loadSchedule(shopId,grafMonth)]);
   drawGrafik();
@@ -1325,16 +1452,18 @@ function myEmpName(){
 }
 function grafCell(shopId,iso){
   if(iso<todayISO()){ const c=(appData.schedule||{})[shopId+':'+iso]; return c&&(c.main||c.sub)?{name:c.main||c.sub,fact:true}:null; }
-  const p=planData[shopId+':'+iso]; return p&&p.main?{name:p.main,fact:false}:null;
+  const p=planData[shopId+':'+iso]; if(p&&p.main) return {name:p.main,fact:false};
+  const c=(appData.schedule||{})[shopId+':'+iso]; return c&&(c.main||c.sub)?{name:c.main||c.sub,fact:false}:null;
 }
 function drawGrafik(){
-  const shopId=activeShop(), me=myEmpName(), t=todayISO();
+  const shopId=grafShop(), me=myEmpName(), t=todayISO();
   const emps=shopEmployees(shopId);
   const colorOf=n=>(emps.find(e=>e.name===n)||{color:allEmpColor(n)}).color;
   // мои ближайшие
   const mine=Object.entries(planData).filter(([k,p])=>k.startsWith(shopId+':')&&k.slice(shopId.length+1)>=t&&p.main===me)
     .map(([k])=>k.slice(shopId.length+1)).sort().slice(0,8);
-  document.getElementById('gr-mine').innerHTML=`<div class="card"><div class="card-title"><i class="ti ti-user-check"></i><span class="t">Мои ближайшие смены</span><span class="tail">${mine.length?mine.length+' шт.':''}</span></div>
+  if(isBoss()){ document.getElementById('gr-mine').innerHTML=`<div class="card"><div class="card-title"><i class="ti ti-building-store"></i><span class="t">Точка</span></div><div class="filter-row">${appData.shops.map(s=>`<button class="flt-btn ${s.id===shopId?'active':''}" onclick="peopleShop='${s.id}';renderGrafik()">${s.name}</button>`).join('')}</div></div>`; }
+  else document.getElementById('gr-mine').innerHTML=`<div class="card"><div class="card-title"><i class="ti ti-user-check"></i><span class="t">Мои ближайшие смены</span><span class="tail">${mine.length?mine.length+' шт.':''}</span></div>
     ${mine.length?`<div style="display:flex;gap:6px;flex-wrap:wrap">${mine.map(iso=>{const d=new Date(iso+'T12:00'),on=iso===t;
       return `<span style="display:inline-flex;flex-direction:column;align-items:center;min-width:46px;padding:7px 6px;border-radius:10px;background:${on?'var(--or)':'var(--s3)'};color:${on?'#0C0C0C':'var(--t1)'}">
       <span style="font-size:10px;font-weight:700;text-transform:uppercase;opacity:.8">${DOW[d.getDay()]}</span>
@@ -1346,7 +1475,7 @@ function drawGrafik(){
   let cells=''; for(let i=0;i<off;i++) cells+='<div class="cell empty"></div>';
   for(let d=1;d<=daysIn;d++){
     const iso=`${y}-${pad(mo+1)}-${pad(d)}`, dow=new Date(y,mo,d).getDay(), c=grafCell(shopId,iso), past=iso<t;
-    cells+=`<div class="cell ${dow===0||dow===6?'weekend':''} ${iso===t?'today':''}" style="${past?'opacity:.55':''}" onclick="openPlanDay('${shopId}','${iso}')">
+    cells+=`<div class="cell ${dow===0||dow===6?'weekend':''} ${iso===t?'today':''}" style="${past?'opacity:.55':''}" onclick="${isBoss()?'openSchedDay':'openPlanDay'}('${shopId}','${iso}')">
       <span class="dn">${d}</span><div class="fillm">${c?`<span class="tag" style="background:${colorOf(c.name)}">${firstName(c.name)}</span>`:''}</div></div>`;
   }
   document.getElementById('gr-cal').innerHTML=`<div class="card"><div class="card-title"><i class="ti ti-calendar-month"></i><span class="t">График точки</span></div>
@@ -1356,7 +1485,7 @@ function drawGrafik(){
       <button class="qty-btn" onclick="grafNav(1)">›</button></div>
     <div class="legend">${emps.slice(0,6).map(e=>`<span class="lg"><span class="sw" style="background:${e.color}"></span>${firstName(e.name)}</span>`).join('')}</div>
     <div class="cal-grid">${DOW_MON.map(d=>`<div class="dow">${d}</div>`).join('')}${cells}</div>
-    <div class="mono-hint">Нажми будущий день, чтобы записаться. Прошедшие дни (бледные) — факт по отметкам Кэпа, по ним считается ЗП.</div></div>`;
+    <div class="mono-hint">${isBoss()?'Нажми день, чтобы назначить смену или подмену. Будущие дни показывают и запись продавцов из приложения.':'Нажми будущий день, чтобы записаться. Прошедшие дни (бледные) — факт по отметкам Кэпа, по ним считается ЗП.'}</div></div>`;
 }
 function openPlanDay(shopId,iso){
   const d=new Date(iso+'T12:00'), title=`${d.getDate()} ${MON_GEN[d.getMonth()]}, ${DOW[d.getDay()]}`;
@@ -1407,6 +1536,7 @@ async function saveSchedDay(shopId,iso,cell){
     catch(e){ failed=e; }
   }
   subQuery='';
+  if(document.getElementById('sc-grafik').classList.contains('active')) drawGrafik();
   if(failed) saveErr(failed); else toast('✓ Смена записана в таблицу');
   closeSheet();
   redrawSched();
@@ -1512,10 +1642,8 @@ function renderPeople(){
       <div class="filter-row">${appData.shops.map(s=>`<button class="flt-btn ${s.id===sid?'active':''}" onclick="peopleShop='${s.id}';renderPeople()">${s.name}</button>`).join('')}</div>
     </div>
     ${monthPlanCard(sid)}
-    <div id="pe-sal"><div class="card"><div class="empty" style="padding:20px 0">Считаю зарплату…</div></div></div>
-    <div id="pe-sched"></div>`;
+    <div id="pe-sal"><div class="card"><div class="empty" style="padding:20px 0">Считаю зарплату…</div></div></div>`;
   animateBars(body);
-  drawSchedule('pe-sched',sid);
   loadSalaryInto(sid,'pe-sal');
 }
 
@@ -1667,6 +1795,13 @@ async function tgAutoLogin(){
   }
   const u=TG&&TG.initDataUnsafe&&TG.initDataUnsafe.user;
   const n=document.getElementById('li-name'); if(u&&!n.value) n.value=u.first_name||'';
+}
+function viewAsSeller(){
+  const sid=peopleShop||viewShop||currentUser.shop||(appData.shops[0]||{}).id;
+  const emp=shopEmployees(sid)[0];
+  currentUser={...currentUser,role:'seller',shop:sid,shopName:shopName(sid),name:emp?emp.name:currentUser.name,_preview:true};
+  viewShop=sid; applyRoleTabs(); switchTab('main'); syncData();
+  toast('Режим продавца · '+shopName(sid)+'. Чтобы вернуться — закрой и открой приложение',5000);
 }
 function doLogout(){
   const go=()=>{ clearLogin(); location.reload(); };

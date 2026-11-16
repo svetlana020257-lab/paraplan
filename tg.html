@@ -301,6 +301,7 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--font-body);max-
     </div>
     <button class="btn" id="as-seller" onclick="viewAsSeller()" style="margin-top:4px;display:none"><i class="ti ti-eye" style="vertical-align:-2px;margin-right:6px"></i>Посмотреть глазами продавца</button>
     <button class="btn btn-gy" onclick="doLogout()" style="margin-top:4px"><i class="ti ti-logout" style="vertical-align:-2px;margin-right:6px"></i>Выйти из аккаунта</button>
+    <div class="mono-hint" style="text-align:center;opacity:.6">Версия приложения 16.11 · 3</div>
     <div class="mono-hint" style="text-align:center">Продал по акции — отметь у Кэпа в чате точки: «Акции / Я красавчик»</div>
   </div>
 </div>
@@ -1814,6 +1815,7 @@ function doLogout(){
   if(TG) TG.showConfirm('Выйти из аккаунта на этом устройстве?',ok=>{ if(ok) go(); });
   else if(confirm('Выйти из аккаунта?')) go();
 }
+const APP_VER='1611-3';
 const LEARN_URL='https://svetlana020257-lab.github.io/obuchenie/';
 const LEARN_KEY='paraplan_learn_v1';
 let learnMeta=null;
@@ -1822,7 +1824,7 @@ async function loadLearn(){
   const body=document.getElementById('learn-body'); if(!body) return;
   if(!learnMeta){
     body.innerHTML='<div class="card"><div class="empty" style="padding:20px 0">Загружаю темы…</div></div>';
-    try{ const r=await fetch(LEARN_URL+'lessons.json',{cache:'no-cache'}); learnMeta=await r.json(); }
+    try{ const r=await fetch(LEARN_URL+'lessons.json?v='+APP_VER+'-'+Date.now(),{cache:'no-store'}); learnMeta=await r.json(); }
     catch(e){ body.innerHTML='<div class="card"><div class="empty" style="padding:20px 0">Нет связи с обучением</div></div>'; return; }
   }
   drawLearn();
@@ -1856,7 +1858,7 @@ function drawLearn(){
 }
 function openLearn(hash){
   const f=document.getElementById('learn-frame');
-  const q=new URLSearchParams({embed:'1',name:(currentUser&&firstName(currentUser.name))||'',point:(currentUser&&shopName(currentUser.shop))||''});
+  const q=new URLSearchParams({v:APP_VER,embed:'1',name:(currentUser&&firstName(currentUser.name))||'',point:(currentUser&&shopName(currentUser.shop))||''});
   f.src=LEARN_URL+'?'+q.toString()+hash;
   showScreen('learnview');
 }

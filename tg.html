@@ -281,6 +281,16 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--font-body);max-
   <div class="body"><div id="gr-mine"></div><div id="gr-cal"></div></div>
 </div>
 
+<!-- ═══════════ КЛИЕНТЫ (заказы под клиента) ═══════════ -->
+<div class="screen" id="sc-clients">
+  <div class="hdr"><div class="hdr-logo">П</div>
+    <div style="flex:1"><h1>Клиенты</h1><p id="cl-sub">Заказы под клиента</p></div>
+    <button class="hdr-action" onclick="renderClients(true)" title="Обновить"><i class="ti ti-refresh"></i></button>
+  </div>
+  <div class="body" id="cl-body"></div>
+  <button onclick="openOrder(null)" aria-label="Новый заказ" style="position:fixed;right:18px;bottom:88px;z-index:21;width:56px;height:56px;border-radius:50%;border:0;background:var(--or);color:#0C0C0C;font-size:30px;font-weight:700;box-shadow:0 6px 20px rgba(232,122,30,.35);cursor:pointer">+</button>
+</div>
+
 <!-- ═══════════ АКЦИИ ═══════════ -->
 <div class="screen" id="sc-akcii">
   <div class="hdr"><div class="hdr-logo">П</div>
@@ -301,7 +311,7 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--font-body);max-
     </div>
     <button class="btn" id="as-seller" onclick="viewAsSeller()" style="margin-top:4px;display:none"><i class="ti ti-eye" style="vertical-align:-2px;margin-right:6px"></i>Посмотреть глазами продавца</button>
     <button class="btn btn-gy" onclick="doLogout()" style="margin-top:4px"><i class="ti ti-logout" style="vertical-align:-2px;margin-right:6px"></i>Выйти из аккаунта</button>
-    <div class="mono-hint" style="text-align:center;opacity:.6">Версия приложения 16.11 · 3</div>
+    <div class="mono-hint" style="text-align:center;opacity:.6">Версия приложения 16.11 · 4</div>
     <div class="mono-hint" style="text-align:center">Продал по акции — отметь у Кэпа в чате точки: «Акции / Я красавчик»</div>
   </div>
 </div>
@@ -326,6 +336,7 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--font-body);max-
   <button class="tab" onclick="switchTab('salary')"><i class="ti ti-cash"></i>ЗП<div class="tab-dot"></div></button>
   <button class="tab" onclick="switchTab('people')"><i class="ti ti-users"></i>Люди<div class="tab-dot"></div></button>
   <button class="tab" onclick="switchTab('grafik')"><i class="ti ti-calendar-month"></i>График<div class="tab-dot"></div></button>
+  <button class="tab" onclick="switchTab('clients')"><i class="ti ti-address-book"></i>Клиенты<div class="tab-dot"></div></button>
   <button class="tab" onclick="switchTab('akcii')"><i class="ti ti-discount"></i>Акции<div class="tab-dot"></div></button>
   <button class="tab" onclick="switchTab('learn')"><i class="ti ti-school"></i>Обучение<div class="tab-dot"></div></button>
 </div>
@@ -582,10 +593,11 @@ function saveErr(e){ toast('⚠ НЕ сохранено в таблицу: '+(e.
    НАВИГАЦИЯ
    ══════════════════════════════════════════════════════════════════ */
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('sc-'+id).classList.add('active'); tgBack(id==='day'||id==='learnview'); }
-function tabOrder(){ return isBoss()?['owner','people','grafik','akcii','learn']:['main','salary','grafik','akcii','learn']; }
+function clientsOn(){ return isBoss()||CLIENT_TEST_SHOPS.includes(shopName(activeShop())); }
+function tabOrder(){ const mid=clientsOn()?'clients':'akcii'; return isBoss()?['owner','people','grafik',mid,'learn']:['main','salary','grafik',mid,'learn']; }
 function applyRoleTabs(){
   const tabs=document.querySelectorAll('#tabbar .tab:not(#tab-net)');
-  const map={main:0,salary:1,people:2,grafik:3,akcii:4,learn:5};
+  const map={main:0,salary:1,people:2,grafik:3,clients:4,akcii:5,learn:6};
   tabs.forEach(t=>t.style.display='none');
   let net=document.getElementById('tab-net');
   if(isBoss() && !net){
@@ -611,6 +623,7 @@ function switchTab(tab){
   else if(tab==='salary') renderSalary();
   else if(tab==='learn') loadLearn();
   else if(tab==='grafik') renderGrafik();
+  else if(tab==='clients') renderClients();
   tgHaptic();
 }
 function refreshScreen(){
@@ -621,6 +634,7 @@ function refreshScreen(){
   else if(a==='sc-people') renderPeople();
   else if(a==='sc-owner') renderOwner();
   else if(a==='sc-grafik') renderGrafik();
+  else if(a==='sc-clients') renderClients();
   else if(a==='sc-day' && dayDate) renderDayDetail(dayDate,dayShop);
 }
 
@@ -1416,6 +1430,127 @@ function openSchedDay(shopId,iso){
   }
   draw();
 }
+/* ─── КЛИЕНТЫ: заказы под клиента (тест на Династии) ─── */
+const CLIENT_TEST_SHOPS=['Династия'];
+const OST=['Заказать','Заказали','Пришло','Написали','Забрал','Отказ'];
+const OST_STYLE={'Заказать':['var(--s3)','var(--t1)'],'Заказали':['rgba(74,158,226,.18)','#7DB9EE'],'Пришло':['rgba(232,122,30,.2)','var(--or-l)'],
+  'Написали':['rgba(239,160,39,.16)','#F2C26B'],'Забрал':['rgba(76,175,80,.16)','#7BCB7E'],'Отказ':['rgba(226,75,74,.14)','#EE8A89']};
+let orders=[], ordersLoaded=false, clFilter='active', clQuery='', clShop=null;
+function clShopName(){ return isBoss()?(clShop||CLIENT_TEST_SHOPS[0]):shopName(activeShop()); }
+function phoneFmt(p){ const d=String(p||'').replace(/\D/g,''); if(d.length!==11) return p||''; return `+7 ${d.slice(1,4)} ${d.slice(4,7)}-${d.slice(7,9)}-${d.slice(9)}`; }
+function phoneNorm(p){ let d=String(p||'').replace(/\D/g,''); if(d.length===11&&(d[0]==='8'||d[0]==='7')) d='7'+d.slice(1); else if(d.length===10) d='7'+d; return d; }
+function daysSince(iso){ if(!iso) return 0; const t=new Date(iso); return isNaN(t)?0:Math.floor((Date.now()-t)/864e5); }
+function orderLate(o){
+  if(o.status==='Заказали') return daysSince(o.updated)>7;
+  if(o.status==='Пришло'||o.status==='Написали') return daysSince(o.updated)>5;
+  return false;
+}
+async function loadOrders(){
+  if(!PLAN_URL) return;
+  const r=await fetch(PLAN_URL+'?action=getOrders&shopName='+encodeURIComponent(isBoss()?'':clShopName()));
+  const j=JSON.parse(await r.text()); if(!j.ok) throw new Error(j.error||'ошибка');
+  orders=j.data||[]; ordersLoaded=true;
+}
+async function renderClients(force){
+  if(!currentUser) return;
+  document.getElementById('cl-sub').textContent=clShopName()+' · заказы под клиента';
+  if(!ordersLoaded||force){
+    document.getElementById('cl-body').innerHTML='<div class="card"><div class="empty" style="padding:20px 0">Загружаю заказы…</div></div>';
+    try{ await loadOrders(); }catch(e){ document.getElementById('cl-body').innerHTML='<div class="card"><div class="empty" style="padding:20px 0">Нет связи с таблицей заказов</div></div>'; return; }
+  }
+  drawClients();
+}
+function drawClients(){
+  const sn=clShopName();
+  const mine=orders.filter(o=>o.shopName===sn);
+  const isActive=o=>o.status!=='Забрал'&&o.status!=='Отказ';
+  const cnt={active:mine.filter(isActive).length,late:mine.filter(o=>isActive(o)&&orderLate(o)).length,closed:mine.filter(o=>!isActive(o)).length};
+  OST.forEach(st=>cnt[st]=mine.filter(o=>o.status===st).length);
+  const chips=[['active','Активные'],['late','Зависли'],['Заказать','Заказать'],['Заказали','Заказали'],['Пришло','Пришло'],['Написали','Написали'],['closed','Закрытые']]
+    .map(([k,l])=>`<button class="flt-btn ${clFilter===k?'active':''}" style="white-space:nowrap;flex-shrink:0" onclick="clFilter='${k}';drawClients()">${l}${cnt[k]?` · ${cnt[k]}`:''}</button>`).join('');
+  const q=clQuery.trim().toLowerCase(), qd=q.replace(/\D/g,'');
+  let list=mine.filter(o=>clFilter==='active'?isActive(o):clFilter==='closed'?!isActive(o):clFilter==='late'?(isActive(o)&&orderLate(o)):o.status===clFilter);
+  if(q) list=list.filter(o=>(o.item+' '+o.name).toLowerCase().includes(q)||(qd.length>=3&&String(o.phone).includes(qd)));
+  list.sort((a,b)=>(orderLate(b)-orderLate(a))||OST.indexOf(a.status)-OST.indexOf(b.status)||String(b.updated).localeCompare(String(a.updated)));
+  const card=o=>{ const [bg,col]=OST_STYLE[o.status]||OST_STYLE['Заказать'], late=orderLate(o);
+    return `<button class="card" onclick="openOrder('${o.id}')" style="display:block;width:100%;text-align:left;cursor:pointer;color:var(--t1);font-family:var(--font-body);padding:12px 14px;${late?'border-color:rgba(226,75,74,.6)':''}">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <div style="flex:1;min-width:0;font-weight:700;font-size:14px;line-height:1.35">${escH(o.item)}${o.qty?` <span style="color:var(--or-l)">× ${escH(o.qty)}</span>`:''}</div>
+        <span style="flex-shrink:0;font-size:11px;font-weight:700;border-radius:999px;padding:4px 9px;background:${bg};color:${col}">${o.status}</span></div>
+      <div style="font-size:12.5px;color:var(--t2);margin-top:5px">${escH(o.name||'Без имени')}${o.phone?' · '+phoneFmt(o.phone):''}${o.contact?' · '+escH(o.contact):''}</div>
+      <div style="font-size:11.5px;margin-top:4px;color:${late?'#EE8A89':'var(--t3)'}">${late?'⚠ ':''}${o.status} ${daysSince(o.updated)?daysSince(o.updated)+' дн. назад':'сегодня'}${o.comment?' · '+escH(o.comment):''}</div>
+    </button>`; };
+  const boss=isBoss()?`<div class="card"><div class="card-title"><i class="ti ti-building-store"></i><span class="t">Точка</span><span class="tail">тест</span></div>
+      <div class="filter-row">${CLIENT_TEST_SHOPS.map(n=>`<button class="flt-btn ${n===sn?'active':''}" onclick="clShop='${n}';drawClients()">${n}</button>`).join('')}</div>
+      ${cnt['Заказать']?`<button class="btn btn-gy" style="margin-top:10px" onclick="openToOrder()"><i class="ti ti-clipboard-list" style="vertical-align:-2px;margin-right:6px"></i>Что заказать под клиентов · ${cnt['Заказать']}</button>`:''}</div>`:'';
+  document.getElementById('cl-body').innerHTML=`${boss}
+    <div style="display:flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:0 12px">
+      <i class="ti ti-search" style="color:var(--t3)"></i>
+      <input id="cl-q" type="search" placeholder="Телефон, имя или товар" value="${escH(clQuery)}" style="flex:1;background:transparent;border:0;outline:0;color:var(--t1);font-size:14px;padding:12px 0;font-family:var(--font-body)"></div>
+    <div class="filter-row" style="flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px">${chips}</div>
+    ${list.length?list.map(card).join(''):`<div class="card"><div class="empty" style="padding:18px 0">${q?'Ничего не нашлось':'Здесь пусто'}</div></div>`}
+    <div style="height:60px"></div>`;
+  const inp=document.getElementById('cl-q');
+  inp.oninput=e=>{ clQuery=e.target.value; const p=e.target.selectionStart; drawClients(); const n=document.getElementById('cl-q'); n.focus(); try{n.setSelectionRange(p,p);}catch(_){} };
+}
+function escH(x){ return String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function openToOrder(){
+  const sn=clShopName(), list=orders.filter(o=>o.shopName===sn&&o.status==='Заказать');
+  openSheet(`<div class="sheet-title">Что заказать под клиентов · ${sn}</div>
+    ${list.map(o=>`<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13.5px"><span style="flex:1">${escH(o.item)}</span><b>${escH(o.qty||'1')}</b></div>`).join('')}
+    <button class="btn" style="margin-top:14px" onclick="copyToOrder()">Скопировать список</button>
+    <div class="mono-hint">Когда закажешь — отметь эти заказы «Заказали».</div>`);
+}
+function copyToOrder(){
+  const sn=clShopName(), t=orders.filter(o=>o.shopName===sn&&o.status==='Заказать').map(o=>`${o.item} — ${o.qty||1}`).join('\n');
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('✓ Скопировано')).catch(()=>toast('Не получилось скопировать'));
+}
+function openOrder(id){
+  const cur=id?orders.find(o=>o.id===id):null;
+  const m=cur?{...cur}:{id:'',shopName:clShopName(),phone:'',name:'',item:'',qty:'',contact:'Макс',status:'Заказать',comment:''};
+  const isNew=!cur;
+  const contactBtns=['Звонок','Макс','Телеграм'].map(c=>`<button class="flt-btn ${m.contact===c?'active':''}" data-c="${c}">${c}</button>`).join('');
+  const stBtns=OST.map(st=>{ const [bg,col]=OST_STYLE[st]; const on=m.status===st;
+    return `<button data-s="${st}" style="border:1.5px solid ${on?col:'var(--border)'};background:${on?bg:'transparent'};color:${on?col:'var(--t2)'};border-radius:10px;padding:9px 4px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font-body)">${st}</button>`; }).join('');
+  const d=phoneNorm(m.phone);
+  openSheet(`<div class="sheet-title">${isNew?'Новый заказ клиента':'Заказ клиента'}</div>
+    ${!isNew&&d.length===11?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:-4px 0 14px">
+      <a class="btn" href="tel:+${d}" style="text-decoration:none;text-align:center;color:#0C0C0C"><i class="ti ti-phone" style="vertical-align:-2px;margin-right:4px"></i>Позвонить</a>
+      <button class="btn btn-gy" id="or-copy"><i class="ti ti-copy" style="vertical-align:-2px;margin-right:4px"></i>Номер</button></div>`:''}
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="inp-grp"><label>Что заказать *</label><input id="or-item" type="text" value="${escH(m.item)}" placeholder="Бренд, вкус, крепость, объём"></div>
+      <div style="display:grid;grid-template-columns:1fr 90px;gap:8px">
+        <div class="inp-grp"><label>Телефон *</label><input id="or-phone" type="tel" inputmode="tel" value="${escH(d?phoneFmt(d):m.phone)}" placeholder="+7 900 000-00-00"></div>
+        <div class="inp-grp"><label>Кол-во</label><input id="or-qty" type="text" inputmode="numeric" value="${escH(m.qty)}" placeholder="1"></div></div>
+      <div class="inp-grp"><label>Имя клиента</label><input id="or-name" type="text" value="${escH(m.name)}" placeholder="Как зовут"></div>
+      <div><div style="font-size:12px;color:var(--t3);margin-bottom:6px">Как связаться</div><div class="filter-row">${contactBtns}</div></div>
+      <div><div style="font-size:12px;color:var(--t3);margin-bottom:6px">Статус</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${stBtns}</div></div>
+      <div class="inp-grp"><label>Комментарий</label><input id="or-comm" type="text" value="${escH(m.comment)}" placeholder="Например: пришло частично"></div>
+    </div>
+    <button class="btn" id="or-save" style="margin-top:16px">${isNew?'Добавить заказ':'Сохранить'}</button>
+    ${!isNew?`<div class="mono-hint">Создан ${escH(String(m.created).slice(0,10))}${m.createdBy?' · '+escH(m.createdBy):''}${m.updatedBy?' · изменил(а) '+escH(m.updatedBy):''}</div>`:''}`);
+  const sc=document.getElementById('sheet-content');
+  const keep=()=>{ m.item=sc.querySelector('#or-item').value; m.phone=sc.querySelector('#or-phone').value; m.qty=sc.querySelector('#or-qty').value; m.name=sc.querySelector('#or-name').value; m.comment=sc.querySelector('#or-comm').value; };
+  sc.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ keep(); m.contact=b.dataset.c; sc.querySelectorAll('[data-c]').forEach(x=>x.classList.toggle('active',x===b)); });
+  sc.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{ m.status=b.dataset.s; sc.querySelectorAll('[data-s]').forEach(x=>{ const [bg,col]=OST_STYLE[x.dataset.s], on=x===b;
+    x.style.borderColor=on?col:'var(--border)'; x.style.background=on?bg:'transparent'; x.style.color=on?col:'var(--t2)'; }); });
+  const cp=sc.querySelector('#or-copy'); if(cp) cp.onclick=()=>{ (navigator.clipboard?navigator.clipboard.writeText('+'+d):Promise.reject()).then(()=>toast('✓ Номер скопирован')).catch(()=>toast('+'+d,4000)); };
+  sc.querySelector('#or-save').onclick=async()=>{
+    keep();
+    const ph=phoneNorm(m.phone);
+    if(!m.item.trim()){ toast('Напиши, что заказать'); return; }
+    if(isNew&&ph.length!==11){ toast('Нужен телефон клиента — 11 цифр'); return; }
+    const btn=sc.querySelector('#or-save'); btn.disabled=true; btn.textContent='Сохраняю…';
+    try{
+      const body={action:'saveOrder',by:currentUser.name,order:{id:m.id,shopName:m.shopName,phone:ph||m.phone,name:m.name.trim(),item:m.item.trim(),qty:m.qty.trim(),contact:m.contact,status:m.status,comment:m.comment.trim()}};
+      const r=await fetch(PLAN_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(body)});
+      const j=JSON.parse(await r.text()); if(!j.ok) throw new Error(j.error||'ошибка');
+      toast(isNew?'✓ Заказ добавлен':'✓ Сохранено'); tgHaptic(); closeSheet();
+      await renderClients(true);
+    }catch(e){ btn.disabled=false; btn.textContent=isNew?'Добавить заказ':'Сохранить'; toast('⚠ НЕ сохранено: '+(e.message||e),5000); }
+  };
+}
+
 /* ─── ГРАФИК НАПЕРЁД ───
    Будущие дни — запись продавцов (отдельная таблица «График наперёд», на ЗП не влияет).
    Прошедшие дни — факт из отметок Кэпа (график смен, по нему считается ЗП). */
@@ -1815,7 +1950,7 @@ function doLogout(){
   if(TG) TG.showConfirm('Выйти из аккаунта на этом устройстве?',ok=>{ if(ok) go(); });
   else if(confirm('Выйти из аккаунта?')) go();
 }
-const APP_VER='1611-3';
+const APP_VER='1611-4';
 const LEARN_URL='https://svetlana020257-lab.github.io/obuchenie/';
 const LEARN_KEY='paraplan_learn_v1';
 let learnMeta=null;
@@ -1854,7 +1989,8 @@ function drawLearn(){
       ${next?`<button class="btn" style="margin-top:12px" onclick="openLearn('#/l/${next.id}')">Продолжить: ${next.title}</button>`:'<div style="font-size:13px;color:var(--green);margin-top:10px;font-weight:600">Все темы сданы — имба!</div>'}
     </div>
     <div class="card" style="padding:4px 14px">${rows}</div>
-    <button class="btn btn-gy" onclick="openLearn('#/cheat')"><i class="ti ti-list-details" style="vertical-align:-2px;margin-right:6px"></i>Шпаргалка: сроки, поставщики, правила</button>`;
+    <button class="btn btn-gy" onclick="openLearn('#/cheat')"><i class="ti ti-list-details" style="vertical-align:-2px;margin-right:6px"></i>Шпаргалка: сроки, поставщики, правила</button>
+    ${isBoss()?`<button class="btn btn-gy" onclick="switchTab('akcii')"><i class="ti ti-discount" style="vertical-align:-2px;margin-right:6px"></i>Акции и настройки</button>`:''}`;
 }
 function openLearn(hash){
   const f=document.getElementById('learn-frame');

@@ -1286,7 +1286,7 @@ function openSchedDay(shopId,iso){
 /* ─── ГРАФИК НАПЕРЁД ───
    Будущие дни — запись продавцов (отдельная таблица «График наперёд», на ЗП не влияет).
    Прошедшие дни — факт из отметок Кэпа (график смен, по нему считается ЗП). */
-const PLAN_URL='';   // ← URL веб-приложения скрипта «график наперёд» (…/exec)
+const PLAN_URL='https://script.google.com/macros/s/AKfycbxSCaNihTycfRwXPmEUtb3r169KInpz3HFD_fXm19lCz8j38A00PgE6c4soyXhyTfXL/exec';   // ← URL веб-приложения скрипта «график наперёд» (…/exec)
 let planData={}, grafMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 const MON_GEN=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 async function loadPlan(shopId,md){

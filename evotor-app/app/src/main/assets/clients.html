@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Клиенты Параплан</title>
+<!--
+  «Клиенты» — заказы под клиента на кассе Эвотор.
+  Только ES5 (var, function, XMLHttpRequest), без CSS-переменных, без grid и flex-gap:
+  старые браузеры касс (Android 5–7) иначе показывают белый экран.
+  Данные — лист «Заказы клиентов» в таблице «Параплан — график наперёд» (тот же скрипт, что у мини-приложения в Кэпе).
+-->
+<script>
+window.onerror=function(m,src,l){var d=document.getElementById('fatal');if(!d){d=document.createElement('div');d.id='fatal';
+d.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#b4232c;color:#fff;padding:10px;border-radius:8px;font:13px sans-serif';
+(document.body||document.documentElement).appendChild(d)}d.innerHTML='Ошибка: '+m+' (строка '+l+')';};
+</script>
+<style>
+*{-webkit-box-sizing:border-box;box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:#f1efec;color:#1b1a19;font-family:Roboto,"Segoe UI",Arial,sans-serif;font-size:15px;line-height:1.35}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+[hidden],.hide{display:none!important}
+.wrap{max-width:760px;margin:0 auto;padding:0 12px 90px}
+
+.top{background:#1b1a19;color:#fff;padding:10px 12px}
+.top-in{max-width:760px;margin:0 auto;display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:center;-webkit-align-items:center;align-items:center}
+.logo{width:36px;height:36px;border-radius:50%;background:#E87A1E;color:#fff;font-weight:900;font-size:18px;text-align:center;line-height:36px;margin-right:10px;-webkit-flex-shrink:0;flex-shrink:0}
+.ttl{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0}
+.ttl b{display:block;font-size:17px}
+.ttl span{display:block;font-size:12px;color:#c9c3bc}
+.ibtn{border:0;background:#2e2c2a;color:#fff;border-radius:10px;min-width:44px;height:44px;padding:0 12px;margin-left:6px;font-size:14px;font-weight:700}
+
+.search{margin:12px 0 8px;position:relative}
+.search input{width:100%;height:52px;border:2px solid #d8d2cb;border-radius:12px;background:#fff;padding:0 46px 0 14px;font-size:18px;outline:0}
+.search input:focus{border-color:#E87A1E}
+.search .x{position:absolute;right:6px;top:6px;width:40px;height:40px;border:0;background:transparent;font-size:22px;color:#8a837c}
+
+.tabs{display:-webkit-box;display:-webkit-flex;display:flex;overflow-x:auto;margin:0 -12px 10px;padding:0 12px;white-space:nowrap}
+.tab{-webkit-flex-shrink:0;flex-shrink:0;border:1.5px solid #d8d2cb;background:#fff;border-radius:999px;padding:9px 14px;margin-right:6px;font-size:14px;font-weight:700;color:#5b5550}
+.tab.on{background:#1b1a19;border-color:#1b1a19;color:#fff}
+.tab i{font-style:normal;color:#B85C0A;margin-left:4px}
+.tab.on i{color:#F5A04A}
+
+.client{background:#1b1a19;color:#fff;border-radius:14px;padding:14px;margin-bottom:10px}
+.client .nm{font-size:18px;font-weight:700}
+.client .ph{font-size:15px;color:#c9c3bc;margin-top:2px}
+.client .meta{font-size:13px;color:#F5A04A;margin-top:6px}
+.btn{display:block;width:100%;border:0;border-radius:12px;min-height:50px;padding:12px;font-size:16px;font-weight:700;background:#B85C0A;color:#fff;text-align:center}
+.btn.gy{background:#e4dfd9;color:#1b1a19}
+.btn.sm{min-height:44px;font-size:15px}
+.client .btn{margin-top:12px}
+.newc{margin:4px 0 10px}
+
+.ord{display:block;width:100%;text-align:left;background:#fff;border:1.5px solid #e4dfd9;border-radius:12px;padding:12px;margin-bottom:8px}
+.ord.late{border-color:#d9534f}
+.row{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-box-align:start;-webkit-align-items:flex-start;align-items:flex-start}
+.grow{-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0}
+.it{font-weight:700;font-size:15px}
+.it .q{color:#B85C0A}
+.who{font-size:13.5px;color:#5b5550;margin-top:4px}
+.when{font-size:12.5px;color:#8a837c;margin-top:3px}
+.ord.late .when{color:#c0392b;font-weight:700}
+.pill{-webkit-flex-shrink:0;flex-shrink:0;margin-left:8px;font-size:12px;font-weight:700;border-radius:999px;padding:4px 10px}
+.s-Заказать{background:#ebe7e2;color:#3d3935}
+.s-Заказали{background:#dfeefa;color:#1d5f93}
+.s-Пришло{background:#fde6d2;color:#9a4b07}
+.s-Написали{background:#fbf0d4;color:#7d5b06}
+.s-Забрал{background:#dff1e0;color:#256b2a}
+.s-Отказ{background:#f8dcdc;color:#9b2c2c}
+.empty{text-align:center;color:#8a837c;padding:28px 10px}
+
+.scrim{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:40;overflow-y:auto;padding:16px 10px}
+.sheet{max-width:560px;margin:0 auto;background:#fff;border-radius:16px;padding:16px}
+.sheet h2{margin:0 0 4px;font-size:19px}
+.sheet .sub{color:#8a837c;font-size:13px;margin-bottom:12px}
+.fld{margin-bottom:10px}
+.fld label{display:block;font-size:13px;color:#5b5550;margin-bottom:4px}
+.fld input,.fld select{width:100%;height:48px;border:1.5px solid #d8d2cb;border-radius:10px;padding:0 12px;font-size:16px;background:#fff;outline:0}
+.fld input:focus{border-color:#E87A1E}
+.two{display:-webkit-box;display:-webkit-flex;display:flex}
+.two .fld{-webkit-box-flex:1;-webkit-flex:1;flex:1}
+.two .fld.qty{-webkit-box-flex:0;-webkit-flex:0 0 96px;flex:0 0 96px;margin-left:8px}
+.chips{display:-webkit-box;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap}
+.chip{border:1.5px solid #d8d2cb;background:#fff;border-radius:10px;padding:10px 12px;margin:0 6px 6px 0;font-size:14px;font-weight:700;color:#5b5550;min-width:30%}
+.chip.on{border-color:#B85C0A;background:#fde6d2;color:#7a3c05}
+.sts .chip{width:31%;min-width:0;margin-right:2%;text-align:center;padding:10px 2px}
+.bigph{font-size:22px;font-weight:700;margin:2px 0 10px;letter-spacing:.5px}
+.actions{display:-webkit-box;display:-webkit-flex;display:flex;margin-top:12px}
+.actions .btn{-webkit-box-flex:1;-webkit-flex:1;flex:1}
+.actions .btn+.btn{margin-left:8px}
+.note{font-size:12.5px;color:#8a837c;margin-top:10px}
+.toast{position:fixed;left:12px;right:12px;bottom:16px;z-index:60;background:#1b1a19;color:#fff;border-radius:12px;padding:12px 14px;text-align:center;font-size:15px}
+.sync{font-size:12px;color:#8a837c;text-align:center;margin:6px 0 0}
+</style>
+</head>
+<body>
+
+<div class="top"><div class="top-in">
+  <div class="logo">П</div>
+  <div class="ttl"><b>Клиенты</b><span id="tPoint">Точка не выбрана</span></div>
+  <button class="ibtn" id="bRefresh" aria-label="Обновить">↻</button>
+  <button class="ibtn" id="bSet" aria-label="Настройки">⚙</button>
+</div></div>
+
+<div class="wrap">
+  <div class="search">
+    <input id="q" type="text" placeholder="Телефон или имя клиента" autocomplete="off" aria-label="Поиск клиента">
+    <button class="x hide" id="qx" aria-label="Очистить">×</button>
+  </div>
+  <div id="client"></div>
+  <div class="tabs" id="tabs"></div>
+  <div id="list"></div>
+  <p class="sync" id="sync"></p>
+</div>
+
+<div class="scrim" id="mOrder" hidden><div class="sheet" id="mOrderIn"></div></div>
+<div class="scrim" id="mSet" hidden><div class="sheet">
+  <h2>Точка этой кассы</h2>
+  <div class="sub">Заказы показываются и записываются для выбранной точки.</div>
+  <div class="fld"><select id="sPoint"></select></div>
+  <button class="btn" id="sSave">Сохранить</button>
+  <button class="btn gy" style="margin-top:8px" id="sClose">Закрыть</button>
+</div></div>
+<div class="toast hide" id="toast"><span id="toastT"></span></div>
+
+<script>
+var API='https://script.google.com/macros/s/AKfycbxSCaNihTycfRwXPmEUtb3r169KInpz3HFD_fXm19lCz8j38A00PgE6c4soyXhyTfXL/exec';
+var POINTS=['Богаткова','Горский','Громова','Династия','Зорге','Коротаева','Москва','Никитина','Петухова','Планировочная','Титова','Шлюз'];
+var ST=['Заказать','Заказали','Пришло','Написали','Забрал','Отказ'];
+var NEXT={'Заказать':'Заказали','Заказали':'Пришло','Пришло':'Написали','Написали':'Забрал'};
+
+function $(id){return document.getElementById(id)}
+function show(el,on){if(typeof el==='string')el=$(el);var c=' '+el.className+' ';
+  if(on){el.className=c.replace(' hide ',' ').replace(/^\s+|\s+$/g,'')}else if(c.indexOf(' hide ')<0){el.className=(el.className+' hide').replace(/^\s+/,'')}}
+function up(el,test){while(el&&el!==document){if(test(el))return el;el=el.parentNode}return null}
+function attrUp(el,a){return up(el,function(n){return n.getAttribute&&n.getAttribute(a)!=null})}
+var LS={get:function(k,d){try{var v=localStorage.getItem('clients_'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+        set:function(k,v){try{localStorage.setItem('clients_'+k,JSON.stringify(v))}catch(e){}}};
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function digits(s){return String(s||'').replace(/\D/g,'')}
+function phoneNorm(p){var d=digits(p);if(d.length===11&&(d.charAt(0)==='8'||d.charAt(0)==='7'))d='7'+d.slice(1);else if(d.length===10)d='7'+d;return d}
+function phoneFmt(p){var d=phoneNorm(p);if(d.length!==11)return p||'';return '+7 '+d.slice(1,4)+' '+d.slice(4,7)+'-'+d.slice(7,9)+'-'+d.slice(9)}
+function parseD(s){if(!s)return null;var m=String(s).match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);if(!m)return null;
+  return new Date(+m[1],+m[2]-1,+m[3],+(m[4]||0),+(m[5]||0))}
+function days(s){var d=parseD(s);if(!d)return 0;return Math.floor((new Date().getTime()-d.getTime())/864e5)}
+function dmy(s){var d=parseD(s);if(!d)return '';var p=function(n){return n<10?'0'+n:''+n};return p(d.getDate())+'.'+p(d.getMonth()+1)+'.'+String(d.getFullYear()).slice(2)}
+function ago(s){var n=days(s);return n<=0?'сегодня':n===1?'вчера':n+' дн. назад'}
+// номер ищется по любой части; «8…» в начале = «+7…»
+function phoneHas(p,qd){if(!p||!qd)return false;if(p.indexOf(qd)>-1)return true;
+  if(qd.charAt(0)==='8'&&p.indexOf('7'+qd.slice(1))===0)return true;if(qd.length===10&&p==='7'+qd)return true;return false}
+function active(o){return o.status!=='Забрал'&&o.status!=='Отказ'}
+function late(o){if(o.status==='Заказали')return days(o.updated)>7;if(o.status==='Пришло'||o.status==='Написали')return days(o.updated)>5;return false}
+var toastTimer;
+function toast(m){$('toastT').innerHTML=esc(m);show('toast',true);clearTimeout(toastTimer);toastTimer=setTimeout(function(){show('toast',false)},3000)}
+
+function ajax(method,url,body,ok,fail){
+  var x=new XMLHttpRequest();
+  x.open(method,url,true);
+  x.timeout=30000;
+  if(body!=null)x.setRequestHeader('Content-Type','text/plain;charset=utf-8');
+  x.onreadystatechange=function(){
+    if(x.readyState!==4)return;
+    var d=null;try{d=JSON.parse(x.responseText)}catch(e){}
+    if(x.status>=200&&x.status<300&&d&&d.ok)ok(d);else fail((d&&d.error)||('нет связи с таблицей ('+x.status+')'));
+  };
+  x.ontimeout=function(){};
+  x.send(body==null?null:JSON.stringify(body));
+}
+
+/* ---------- состояние ---------- */
+var point=LS.get('point','');
+var orders=LS.get('orders_'+point,[]);
+var syncedAt=LS.get('synced_'+point,'');
+var tab='need', query='';
+
+function load(silent){
+  if(!point){openSet();return}
+  if(!silent)$('sync').innerHTML='Обновляю…';
+  ajax('GET',API+'?action=getOrders&shopName='+encodeURIComponent(point),null,function(d){
+    orders=d.data||[];LS.set('orders_'+point,orders);
+    var n=new Date();syncedAt=(n.getHours()<10?'0':'')+n.getHours()+':'+(n.getMinutes()<10?'0':'')+n.getMinutes();
+    LS.set('synced_'+point,syncedAt);render();
+  },function(err){$('sync').innerHTML=esc('Нет связи: '+err+(syncedAt?' · показаны данные на '+syncedAt:''));});
+}
+
+/* ---------- отрисовка ---------- */
+function render(){
+  $('tPoint').innerHTML=point?esc(point)+' · заказы под клиента':'Точка не выбрана';
+  var mine=orders.filter(function(o){return o.shopName===point});
+  var q=query.toLowerCase().replace(/^\s+|\s+$/g,''), qd=digits(q);
+  // карточка клиента: телефон введён полностью или нашёлся ровно один клиент
+  var hit=null;
+  if(q){
+    var phones={};
+    mine.forEach(function(o){var p=phoneNorm(o.phone);
+      var okP=qd.length>=4&&phoneHas(p,qd), okN=!qd&&o.name&&o.name.toLowerCase().indexOf(q)>-1;
+      if(okP||okN){if(!phones[p||('n:'+o.name)])phones[p||('n:'+o.name)]=[];phones[p||('n:'+o.name)].push(o)}});
+    var keys=Object.keys(phones);
+    if(keys.length===1)hit={key:keys[0],list:phones[keys[0]]};
+  }
+  var ch='';
+  if(hit){
+    var L=hit.list.slice().sort(function(a,b){return String(a.created)<String(b.created)?-1:1});
+    var nm='';for(var i=L.length-1;i>=0;i--)if(L[i].name){nm=L[i].name;break}
+    var ph=hit.key.indexOf('n:')===0?'':hit.key;
+    var act=L.filter(active).length;
+    ch='<div class="client"><div class="nm">'+esc(nm||'Без имени')+'</div>'+
+      (ph?'<div class="ph">'+esc(phoneFmt(ph))+'</div>':'')+
+      '<div class="meta">Заказов: '+L.length+(act?' · в работе: '+act:'')+' · с '+esc(dmy(L[0].created))+'</div>'+
+      '<button class="btn" data-new="'+esc(ph)+'" data-nm="'+esc(nm)+'">+ Новый заказ этому клиенту</button></div>';
+  }else if(qd.length>=10){
+    ch='<div class="newc"><button class="btn" data-new="'+esc(phoneNorm(qd))+'">+ Новый клиент: '+esc(phoneFmt(qd))+'</button></div>';
+  }
+  $('client').innerHTML=ch;
+
+  var cnt={need:0,act:0,Заказать:0,Пришло:0,closed:0};
+  mine.forEach(function(o){
+    if(active(o)){cnt.act++;if(o.status==='Пришло'||o.status==='Заказать'||late(o))cnt.need++}else cnt.closed++;
+    if(o.status==='Заказать')cnt['Заказать']++;if(o.status==='Пришло')cnt['Пришло']++;
+  });
+  var T=[['need','Нужно сделать'],['act','Все в работе'],['Пришло','Пришло'],['Заказать','Заказать'],['closed','Закрытые']];
+  $('tabs').innerHTML=hit?'':T.map(function(t){return '<button class="tab'+(tab===t[0]?' on':'')+'" data-tab="'+t[0]+'">'+t[1]+(cnt[t[0]]?'<i>'+cnt[t[0]]+'</i>':'')+'</button>'}).join('');
+
+  var list;
+  if(hit)list=hit.list.slice();
+  else{
+    list=mine.filter(function(o){
+      if(tab==='need')return active(o)&&(o.status==='Пришло'||o.status==='Заказать'||late(o));
+      if(tab==='act')return active(o);
+      if(tab==='closed')return !active(o);
+      return o.status===tab;
+    });
+    if(q)list=list.filter(function(o){return (o.item+' '+o.name).toLowerCase().indexOf(q)>-1||(qd.length>=3&&phoneHas(phoneNorm(o.phone),qd))});
+  }
+  list.sort(function(a,b){var la=late(a)?0:1, lb=late(b)?0:1;if(la!==lb)return la-lb;
+    var sa=ST.indexOf(a.status), sb=ST.indexOf(b.status);if(hit){sa=active(a)?0:1;sb=active(b)?0:1}
+    if(sa!==sb)return sa-sb;return String(a.updated)<String(b.updated)?1:-1});
+  $('list').innerHTML=list.length?list.map(row).join(''):'<div class="empty">'+(q?'Ничего не нашлось. Введите номер полностью, чтобы добавить клиента.':(point?'Здесь пусто':'Выберите точку в настройках ⚙'))+'</div>';
+  $('sync').innerHTML=syncedAt?'Обновлено в '+esc(syncedAt):'';
+}
+function row(o){
+  var lt=late(o);
+  return '<button class="ord'+(lt?' late':'')+'" data-id="'+esc(o.id)+'"><div class="row"><div class="grow">'+
+    '<div class="it">'+esc(o.item)+(o.qty?' <span class="q">× '+esc(o.qty)+'</span>':'')+'</div>'+
+    '<div class="who">'+esc(o.name||'Без имени')+(o.phone?' · '+esc(phoneFmt(o.phone)):'')+(o.contact?' · '+esc(o.contact):'')+'</div>'+
+    '<div class="when">'+(lt?'⚠ ':'')+esc(o.status)+' '+ago(o.updated)+(o.comment?' · '+esc(o.comment):'')+'</div>'+
+    '</div><span class="pill s-'+esc(o.status)+'">'+esc(o.status)+'</span></div></button>';
+}
+
+/* ---------- заказ ---------- */
+var cur=null;
+function openOrder(o,preset){
+  var isNew=!o;
+  cur=o?JSON.parse(JSON.stringify(o)):{id:'',shopName:point,phone:preset&&preset.phone||'',name:preset&&preset.name||'',item:'',qty:'',contact:'Макс',status:'Заказать',comment:''};
+  var h='<h2>'+(isNew?'Новый заказ клиента':'Заказ клиента')+'</h2>';
+  if(!isNew){
+    h+='<div class="sub">'+esc(cur.name||'Без имени')+' · создан '+esc(dmy(cur.created))+(cur.createdBy?' · '+esc(cur.createdBy):'')+'</div>';
+    if(cur.phone)h+='<div class="bigph">'+esc(phoneFmt(cur.phone))+(cur.contact?' <span style="font-size:14px;color:#8a837c">· '+esc(cur.contact)+'</span>':'')+'</div>';
+    if(NEXT[cur.status])h+='<button class="btn" data-next="1">→ '+esc(NEXT[cur.status])+'</button><div style="height:10px"></div>';
+  }else h+='<div class="sub">Телефон и товар — обязательно</div>';
+  h+='<div class="fld"><label>Что заказать</label><input id="oItem" value="'+esc(cur.item)+'" placeholder="Бренд, вкус, крепость, объём"></div>'+
+    '<div class="two"><div class="fld"><label>Телефон</label><input id="oPhone" type="tel" value="'+esc(cur.phone?phoneFmt(cur.phone):'')+'" placeholder="+7 900 000-00-00"></div>'+
+    '<div class="fld qty"><label>Кол-во</label><input id="oQty" type="tel" value="'+esc(cur.qty)+'" placeholder="1"></div></div>'+
+    '<div class="fld"><label>Имя клиента</label><input id="oName" value="'+esc(cur.name)+'" placeholder="Как зовут"></div>'+
+    '<div class="fld"><label>Как связаться</label><div class="chips">'+['Звонок','Макс','Телеграм'].map(function(c){return '<button class="chip'+(cur.contact===c?' on':'')+'" data-contact="'+c+'">'+c+'</button>'}).join('')+'</div></div>'+
+    '<div class="fld"><label>Статус</label><div class="chips sts">'+ST.map(function(s){return '<button class="chip'+(cur.status===s?' on':'')+'" data-st="'+s+'">'+s+'</button>'}).join('')+'</div></div>'+
+    '<div class="fld"><label>Комментарий</label><input id="oComm" value="'+esc(cur.comment)+'" placeholder="Например: пришло частично"></div>'+
+    '<div class="actions"><button class="btn gy" data-close="1">Отмена</button><button class="btn" id="oSave">'+(isNew?'Добавить':'Сохранить')+'</button></div>';
+  $('mOrderIn').innerHTML=h;
+  $('mOrder').hidden=false;
+  $('mOrder').scrollTop=0;
+  if(isNew)setTimeout(function(){var f=cur.phone?$('oItem'):$('oPhone');if(f)f.focus()},80);
+}
+function keep(){cur.item=$('oItem').value;cur.phone=$('oPhone').value;cur.qty=$('oQty').value;cur.name=$('oName').value;cur.comment=$('oComm').value}
+function saveOrder(){
+  keep();
+  var item=cur.item.replace(/^\s+|\s+$/g,''), ph=phoneNorm(cur.phone);
+  if(!item){toast('Напишите, что заказать');return}
+  if(!cur.id&&ph.length!==11){toast('Нужен телефон клиента — 11 цифр');return}
+  var b=$('oSave');b.disabled=true;b.innerHTML='Сохраняю…';
+  var o={id:cur.id,shopName:point,phone:ph.length===11?ph:digits(cur.phone),name:cur.name.replace(/^\s+|\s+$/g,''),item:item,
+    qty:cur.qty.replace(/^\s+|\s+$/g,''),contact:cur.contact,status:cur.status,comment:cur.comment.replace(/^\s+|\s+$/g,'')};
+  ajax('POST',API,{action:'saveOrder',by:'Касса '+point,order:o},function(){
+    $('mOrder').hidden=true;toast(cur.id?'Сохранено':'Заказ добавлен');
+    if(!cur.id){query=phoneFmt(o.phone);$('q').value=query;show('qx',true)}
+    load(true);
+  },function(err){b.disabled=false;b.innerHTML=cur.id?'Сохранить':'Добавить';toast('НЕ сохранено: '+err)});
+}
+
+/* ---------- настройки ---------- */
+function openSet(){
+  $('sPoint').innerHTML='<option value="">— выберите точку —</option>'+POINTS.map(function(p){return '<option'+(p===point?' selected':'')+'>'+esc(p)+'</option>'}).join('');
+  $('mSet').hidden=false;
+}
+
+/* ---------- события ---------- */
+document.addEventListener('click',function(e){
+  var t=e.target;
+  var tb=attrUp(t,'data-tab');if(tb){tab=tb.getAttribute('data-tab');render();return}
+  var nw=attrUp(t,'data-new');if(nw){openOrder(null,{phone:nw.getAttribute('data-new'),name:nw.getAttribute('data-nm')||''});return}
+  var od=attrUp(t,'data-id');if(od&&!up(t,function(n){return n.id==='mOrder'})){
+    var id=od.getAttribute('data-id');for(var i=0;i<orders.length;i++)if(orders[i].id===id){openOrder(orders[i]);break}return}
+  var c=attrUp(t,'data-contact');if(c){keep();cur.contact=c.getAttribute('data-contact');
+    var cs=document.querySelectorAll('[data-contact]');for(var j=0;j<cs.length;j++)cs[j].className='chip'+(cs[j]===c?' on':'');return}
+  var s=attrUp(t,'data-st');if(s){keep();cur.status=s.getAttribute('data-st');
+    var ss=document.querySelectorAll('[data-st]');for(var k=0;k<ss.length;k++)ss[k].className='chip'+(ss[k]===s?' on':'');return}
+  if(attrUp(t,'data-next')){keep();cur.status=NEXT[cur.status];saveOrder();return}
+  if(attrUp(t,'data-close')){$('mOrder').hidden=true;return}
+  if(t.id==='oSave'){saveOrder();return}
+  if(t.id==='mOrder'||t.id==='mSet'){t.hidden=true;return}
+});
+$('q').addEventListener('input',function(){query=this.value;show('qx',!!query);render()});
+$('qx').addEventListener('click',function(){query='';$('q').value='';show('qx',false);render();$('q').focus()});
+$('bRefresh').addEventListener('click',function(){load(false)});
+$('bSet').addEventListener('click',openSet);
+$('sClose').addEventListener('click',function(){$('mSet').hidden=true});
+$('sSave').addEventListener('click',function(){
+  var p=$('sPoint').value;if(!p){toast('Выберите точку');return}
+  point=p;LS.set('point',p);orders=LS.get('orders_'+p,[]);syncedAt=LS.get('synced_'+p,'');
+  $('mSet').hidden=true;render();load(false);
+});
+// раз в минуту подтягиваем изменения (если окно заказа не открыто)
+setInterval(function(){if($('mOrder').hidden&&$('mSet').hidden)load(true)},60000);
+
+render();
+load(false);
+</script>
+</body>
+</html>

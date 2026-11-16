@@ -32,5 +32,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- вторая плитка: заказы под клиента -->
+        <activity
+            android:name=".ClientsActivity"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/clients_name"
+            android:configChanges="orientation|screenSize|keyboardHidden|keyboard"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data android:name="ru.evotor.launcher.BACKGROUND_COLOR" android:value="#E87A1E" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.EVOTOR" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>

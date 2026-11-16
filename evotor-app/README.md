@@ -5,6 +5,9 @@ Android-приложение для смарт-терминалов Эвотор
 `https://svetlana020257-lab.github.io/paraplan/kassa.html`.
 Если при запуске нет интернета — открывается копия кассы, вшитая в приложение.
 
+Вторая плитка — «Клиенты» (`ClientsActivity`): заказы под клиента,
+`https://svetlana020257-lab.github.io/paraplan/clients.html`. Точку выбирают один раз в ⚙.
+
 APK собирается автоматически (GitHub Actions → «Касса для Эвотора (APK)»)
 при каждом изменении `kassa.html` или этой папки и выкладывается в релиз
 `kassa-apk`: https://github.com/svetlana020257-lab/paraplan/releases/tag/kassa-apk

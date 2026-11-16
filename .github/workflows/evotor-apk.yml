@@ -5,7 +5,7 @@ name: Касса для Эвотора (APK)
 on:
   push:
     branches: [main]
-    paths: ['evotor-app/**', 'kassa.html', '.github/workflows/evotor-apk.yml']
+    paths: ['evotor-app/**', 'kassa.html', 'clients.html', '.github/workflows/evotor-apk.yml']
   workflow_dispatch:
 
 permissions:
@@ -29,7 +29,9 @@ jobs:
           gradle-version: '8.7'
 
       - name: Вшить свежую копию кассы в приложение
-        run: cp kassa.html evotor-app/app/src/main/assets/kassa.html
+        run: |
+          cp kassa.html evotor-app/app/src/main/assets/kassa.html
+          cp clients.html evotor-app/app/src/main/assets/clients.html
 
       - name: Собрать APK
         run: gradle -p evotor-app :app:assembleRelease --no-daemon
@@ -48,5 +50,5 @@ jobs:
         run: |
           gh release delete kassa-apk --yes --cleanup-tag || true
           gh release create kassa-apk paraplan-kassa.apk \
-            --title "Параплан Касса — сборка ${GITHUB_RUN_NUMBER}" \
+            --title "Параплан Касса + Клиенты — сборка ${GITHUB_RUN_NUMBER}" \
             --notes "APK для смарт-терминалов Эвотор. Загрузите его в dev.evotor.ru → приложение → Версии → APK."

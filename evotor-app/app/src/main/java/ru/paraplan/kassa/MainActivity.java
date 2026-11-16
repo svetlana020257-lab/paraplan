@@ -26,6 +26,10 @@ public class MainActivity extends Activity {
 
     private static final String ONLINE = "https://svetlana020257-lab.github.io/paraplan/kassa.html";
     private static final String OFFLINE = "file:///android_asset/kassa.html";
+
+    /** Адрес страницы — у плитки «Клиенты» свой (см. ClientsActivity). */
+    protected String onlineUrl() { return ONLINE; }
+    protected String offlineUrl() { return OFFLINE; }
     private static final long TIMEOUT_MS = 8000;
 
     private WebView web;
@@ -59,7 +63,7 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
-                if (url != null && url.startsWith(ONLINE)) onlineLoaded = true;
+                if (url != null && url.startsWith(onlineUrl())) onlineLoaded = true;
             }
 
             @Override
@@ -77,12 +81,12 @@ public class MainActivity extends Activity {
             @SuppressWarnings("deprecation")
             @Override
             public void onReceivedError(WebView view, int code, String desc, String url) {
-                if (url != null && url.startsWith(ONLINE)) fallback();
+                if (url != null && url.startsWith(onlineUrl())) fallback();
             }
         });
 
         setContentView(web);
-        web.loadUrl(ONLINE);
+        web.loadUrl(onlineUrl());
         handler.postDelayed(() -> { if (!onlineLoaded) fallback(); }, TIMEOUT_MS);
     }
 
@@ -90,7 +94,7 @@ public class MainActivity extends Activity {
         if (fellBack || onlineLoaded) return;
         fellBack = true;
         web.stopLoading();
-        web.loadUrl(OFFLINE);
+        web.loadUrl(offlineUrl());
     }
 
     private boolean backAnswered;

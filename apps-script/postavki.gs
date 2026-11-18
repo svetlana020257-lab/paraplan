@@ -620,8 +620,9 @@ function saveTgPhoto_(no, fileId, by, point) {
 function prop_(k) { return PropertiesService.getScriptProperties().getProperty(k) || ''; }
 
 function tgSend_(chatId, text, replyTo) {
-  const token = prop_('BOT_TOKEN');
-  if (!token || !chatId) return null;
+  const token = prop_('BOT_TOKEN').trim().replace(/^['"]|['"]$/g, '');
+  if (!token) { log_('Не отправлено', 'нет свойства BOT_TOKEN в настройках проекта'); return null; }
+  if (!chatId) return null;
   const parts = String(chatId).split('_');                       // «-100…_1172» → чат + тема форума
   const payload = { chat_id: parts[0], text: text, parse_mode: 'HTML', disable_web_page_preview: true };
   if (parts[1]) payload.message_thread_id = Number(parts[1]);
@@ -629,6 +630,7 @@ function tgSend_(chatId, text, replyTo) {
   try {
     const r = JSON.parse(UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendMessage',
       { method: 'post', contentType: 'application/json', payload: JSON.stringify(payload), muteHttpExceptions: true }).getContentText());
+    if (!r.ok) log_('Не отправлено', chatId + ' — Telegram: ' + (r.error_code || '') + ' ' + (r.description || ''));
     return r.ok ? r.result.message_id : null;
   } catch (e) { log_('Не отправлено', chatId + ' ' + e); return null; }
 }

@@ -648,6 +648,49 @@ function itemsText_(no) {
   return d.lines.map(l => '• ' + esc_(l.name || l.raw) + ' — ' + l.qty + ' ' + l.unit + (l.name ? '' : ' ⚠️')).join('\n');
 }
 
+/** Фото документа из листа «Фото» (stages — какие этапы брать; пусто = все). */
+function docPhotos_(no, stages) {
+  const v = sheet_('photos').getDataRange().getValues();
+  const out = [];
+  for (let i = 1; i < v.length; i++) {
+    if (String(v[i][0]) !== no) continue;
+    if (stages && stages.indexOf(String(v[i][1])) < 0) continue;
+    const m = String(v[i][4]).match(/\/d\/([^/]+)/);
+    if (m) try { out.push(DriveApp.getFileById(m[1]).getBlob()); } catch (e) {}
+  }
+  return out;
+}
+
+/** Отправить фото в чат альбомом (по 10). chatId может быть «чат_тема». */
+function tgPhotos_(chatId, blobs, caption) {
+  const token = prop_('BOT_TOKEN').trim().replace(/^['"]|['"]$/g, '');
+  if (!token || !chatId || !blobs.length) return;
+  const parts = String(chatId).split('_');
+  for (let i = 0; i < blobs.length; i += 10) {
+    const chunk = blobs.slice(i, i + 10);
+    const payload = { chat_id: parts[0] };
+    if (parts[1]) payload.message_thread_id = parts[1];
+    let method;
+    if (chunk.length === 1) {
+      method = 'sendPhoto'; payload.photo = chunk[0];
+      if (i === 0 && caption) payload.caption = caption;
+    } else {
+      method = 'sendMediaGroup';
+      payload.media = JSON.stringify(chunk.map((b, k) => {
+        const m = { type: 'photo', media: 'attach://p' + k };
+        if (i === 0 && k === 0 && caption) m.caption = caption;
+        return m;
+      }));
+      chunk.forEach((b, k) => payload['p' + k] = b);
+    }
+    try {
+      const r = JSON.parse(UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/' + method,
+        { method: 'post', payload: payload, muteHttpExceptions: true }).getContentText());
+      if (!r.ok) log_('Фото не отправлены', chatId + ' — Telegram: ' + (r.error_code || '') + ' ' + (r.description || ''));
+    } catch (e) { log_('Фото не отправлены', chatId + ' ' + e); }
+  }
+}
+
 function notifyCreated_(no, fromApp, chatId, msgId) {
   const d = getDocs_('', true).find(x => x.no === no);
   if (!d) return;
@@ -675,6 +718,13 @@ function notifyCreated_(no, fromApp, chatId, msgId) {
       itemsText_(no) + '\nКогда приедет — открой приложение → «Поставки» → «Принять». Фото товара — ответом на это сообщение.');
     rememberBotMsg_(no, to.chat, id);
   }
+  // фото к документу — альбомом в те же чаты
+  const ph = docPhotos_(no, ['отправка', 'доп.', 'чат']);
+  if (ph.length) {
+    const cap = '📷 Фото к ' + no;
+    if (srcChat) tgPhotos_(srcChat, ph, cap);
+    if (to && to.chat && String(to.chat) !== String(srcChat)) tgPhotos_(to.chat, ph, cap);
+  }
 }
 
 function notifyAccepted_(no, status, diffs, by) {
@@ -685,6 +735,8 @@ function notifyAccepted_(no, status, diffs, by) {
     (ok ? 'Всё сходится 👌' : 'Расхождение:\n' + diffs.map(x => '• ' + esc_(x)).join('\n')) + '\n👤 ' + esc_(by);
   const sent = {};
   [from && from.chat, to && to.chat].forEach(c => { if (c && !sent[c]) { sent[c] = 1; tgSend_(c, txt); } });
+  const ph = docPhotos_(no, ['приёмка']);
+  if (ph.length) Object.keys(sent).forEach(c => tgPhotos_(c, ph, '📷 Приёмка ' + no));
   if (!ok && prop_('BOSS_CHAT')) tgSend_(prop_('BOSS_CHAT'), '📋 ' + txt);
 }
 

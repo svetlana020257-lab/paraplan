@@ -134,11 +134,12 @@ function doPost(e) {
 
 /* ════════════════════════ ТОЧКИ ════════════════════════ */
 
-/** Chat ID чатов точек — те же, что в Кэпе (Синхронизация_смен → POINTS). Склад своего чата не имеет → BOSS_CHAT. */
+/** Chat ID чатов точек — те же, что в Кэпе (Синхронизация_смен → POINTS). Склад → чат поставок (тема). */
 const CHATS_DEFAULT = {
   dynasty: '-1001927226002', gromova: '-1002066972660', nikitina: '-1003964020686', korotaeva: '-1002028479449',
   titova: '-1001985155814', gorsky: '-1003868197974', moskva: '-1001874958730', zorge: '-1001713321916',
-  petukhova: '-1002559299199', shluz: '-1003785547674', bogatk: '-1003897843810', plan: '-1004402832347'
+  petukhova: '-1002559299199', shluz: '-1003785547674', bogatk: '-1003897843810', plan: '-1004402832347',
+  sklad: '-1003975907264_1172'   // чат поставок, тема 1172 (формат «чат_тема»)
 };
 
 function shops_() {
@@ -621,7 +622,9 @@ function prop_(k) { return PropertiesService.getScriptProperties().getProperty(k
 function tgSend_(chatId, text, replyTo) {
   const token = prop_('BOT_TOKEN');
   if (!token || !chatId) return null;
-  const payload = { chat_id: String(chatId), text: text, parse_mode: 'HTML', disable_web_page_preview: true };
+  const parts = String(chatId).split('_');                       // «-100…_1172» → чат + тема форума
+  const payload = { chat_id: parts[0], text: text, parse_mode: 'HTML', disable_web_page_preview: true };
+  if (parts[1]) payload.message_thread_id = Number(parts[1]);
   if (replyTo) { payload.reply_to_message_id = replyTo; payload.allow_sending_without_reply = true; }
   try {
     const r = JSON.parse(UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendMessage',

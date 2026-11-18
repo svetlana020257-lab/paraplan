@@ -119,7 +119,7 @@ function doPost(e) {
   try {
     const d = JSON.parse(e.postData.contents);
     if (d.action === 'tg')          return out_(handleTg_(d.message || {}));
-    if (d.action === 'chat')        { const sh = shopByChat_(d.chat || {}); return out_({ ok: true, shop: sh ? sh.name : '' }); }
+    if (d.action === 'chat')        { const c = d.chat || {}; const sh = shopByChat_(c); if (!sh) log_('Чат без точки', (c.title || '') + ' = ' + c.id); return out_({ ok: true, shop: sh ? sh.name : '' }); }
     if (d.action === 'create')      return out_(createFromApp_(d));
     if (d.action === 'accept')      return out_(accept_(d));
     if (d.action === 'resolveItem') return out_(resolveItem_(d));

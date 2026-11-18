@@ -108,6 +108,7 @@ function doGet(e) {
     if (p.action === 'ping') return out_({ ok: true });
     if (p.action === 'getDocs') { const me = resolveShop_(p.shop, p.shopName); return out_({ ok: true, me: me ? me.id : '', data: getDocs_(me ? me.id : '', p.all === '1') }); }
     if (p.action === 'getCatalog') return out_({ ok: true, data: catalogNames_() });
+    if (p.action === 'learnGet') return out_({ ok: true, data: learnGet_(p.user) });
     if (p.action === 'getShops') return out_({ ok: true, data: shops_().map(s => ({ id: s.id, name: s.name })) });
     return out_({ ok: false, error: 'Неизвестное действие' });
   } catch (err) { return out_({ ok: false, error: String(err) }); }
@@ -120,6 +121,7 @@ function doPost(e) {
     const d = JSON.parse(e.postData.contents);
     if (d.action === 'tg')          return out_(handleTg_(d.message || {}));
     if (d.action === 'chat')        { const c = d.chat || {}; const sh = shopByChat_(c); if (!sh) log_('Чат без точки', (c.title || '') + ' = ' + c.id); return out_({ ok: true, shop: sh ? sh.name : '' }); }
+    if (d.action === 'learnSave')   return out_({ ok: true, data: learnSave_(d.user, d.name, d.point, d.state) });
     if (d.action === 'create')      return out_(createFromApp_(d));
     if (d.action === 'accept')      return out_(accept_(d));
     if (d.action === 'resolveItem') return out_(resolveItem_(d));
@@ -774,4 +776,52 @@ function povtoritUvedomlenie() {
   if (!no) return;
   notifyCreated_(no, true);
   log_('Повтор уведомления', no);
+}
+
+
+/* ════════════════════════ ОБУЧЕНИЕ: прогресс каждого продавца ════════════════════════ */
+// Лист «Обучение»: Продавец (ключ точка|имя) | Имя | Точка | Прочитано | Тесты сданы | Прогресс (JSON) | Обновлено
+function learnSheet_() {
+  const ss = getSS_();
+  let sh = ss.getSheetByName('Обучение');
+  if (!sh) {
+    sh = ss.insertSheet('Обучение');
+    sh.getRange(1, 1, 1, 7).setValues([['Продавец', 'Имя', 'Точка', 'Прочитано тем', 'Тестов сдано', 'Прогресс (не трогать)', 'Обновлено']])
+      .setFontWeight('bold').setBackground('#E87A1E').setFontColor('#FFFFFF');
+    sh.setFrozenRows(1); sh.setColumnWidths(1, 7, 140); sh.setColumnWidth(6, 60);
+  }
+  return sh;
+}
+function learnRow_(sh, user) {
+  const v = sh.getDataRange().getValues();
+  for (let i = 1; i < v.length; i++) if (String(v[i][0]) === user) return { row: i + 1, v: v[i] };
+  return null;
+}
+function learnParse_(x) { try { const s = JSON.parse(x || '{}'); return { read: s.read || {}, quiz: s.quiz || {} }; } catch (e) { return { read: {}, quiz: {} }; } }
+/** Слить два прогресса: прочитанное — объединение, тест — лучший результат, «сдан» — если сдан хоть раз. */
+function learnMerge_(a, b) {
+  const out = { read: Object.assign({}, a.read, b.read), quiz: Object.assign({}, a.quiz) };
+  Object.keys(b.quiz || {}).forEach(k => {
+    const x = out.quiz[k], y = b.quiz[k];
+    if (!x) { out.quiz[k] = y; return; }
+    out.quiz[k] = Object.assign({}, x, y, { best: Math.max(+x.best || 0, +y.best || 0), passed: !!(x.passed || y.passed) });
+  });
+  return out;
+}
+function learnGet_(user) {
+  user = String(user || '').trim(); if (!user) return null;
+  const r = learnRow_(learnSheet_(), user);
+  return r ? learnParse_(r.v[5]) : null;
+}
+function learnSave_(user, name, point, state) {
+  user = String(user || '').trim(); if (!user) return null;
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const sh = learnSheet_(), r = learnRow_(sh, user);
+    const merged = learnMerge_(r ? learnParse_(r.v[5]) : { read: {}, quiz: {} }, learnParse_(JSON.stringify(state || {})));
+    const row = [user, name || '', point || '', Object.keys(merged.read).length,
+      Object.keys(merged.quiz).filter(k => merged.quiz[k].passed).length, JSON.stringify(merged), now_()];
+    if (r) sh.getRange(r.row, 1, 1, 7).setValues([row]); else sh.appendRow(row);
+    return merged;
+  } finally { lock.releaseLock(); }
 }

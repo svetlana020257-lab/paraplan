@@ -2207,11 +2207,45 @@ function doLogout(){
   if(TG) TG.showConfirm('Выйти из аккаунта на этом устройстве?',ok=>{ if(ok) go(); });
   else if(confirm('Выйти из аккаунта?')) go();
 }
-const APP_VER='1811-1';
+const APP_VER='1811-2';
 const LEARN_URL='https://svetlana020257-lab.github.io/obuchenie/';
 const LEARN_KEY='paraplan_learn_v1';
 let learnMeta=null;
-function learnState(){ try{ const s=JSON.parse(localStorage.getItem(LEARN_KEY)||'null'); return s&&typeof s==='object'?{read:s.read||{},quiz:s.quiz||{}}:{read:{},quiz:{}}; }catch(e){ return {read:{},quiz:{}}; } }
+// прогресс обучения — отдельно у каждого продавца (точка|имя), копия на сервере («Поставки» → лист «Обучение»)
+function learnUser(){ return currentUser?(shopName(currentUser.shop)+'|'+String(currentUser.name||'').trim()):''; }
+function learnKey(){ const u=learnUser(); return u?LEARN_KEY+':'+u:LEARN_KEY; }
+function learnParse(x){ try{ const s=JSON.parse(x||'null'); return s&&typeof s==='object'?{read:s.read||{},quiz:s.quiz||{}}:{read:{},quiz:{}}; }catch(e){ return {read:{},quiz:{}}; } }
+function learnState(){ try{ return learnParse(localStorage.getItem(learnKey())); }catch(e){ return {read:{},quiz:{}}; } }
+function learnMerge(a,b){
+  const out={read:Object.assign({},a.read,b.read),quiz:Object.assign({},a.quiz)};
+  Object.keys(b.quiz||{}).forEach(k=>{ const x=out.quiz[k],y=b.quiz[k];
+    out.quiz[k]=!x?y:Object.assign({},x,y,{best:Math.max(+x.best||0,+y.best||0),passed:!!(x.passed||y.passed)}); });
+  return out;
+}
+function learnWrite(st){ try{ const k=learnKey(); const old=JSON.parse(localStorage.getItem(k)||'{}')||{};
+  localStorage.setItem(k,JSON.stringify(Object.assign(old,{read:st.read,quiz:st.quiz}))); }catch(e){} }
+// перенос старого общего прогресса (до раздельного хранения) — только если он был записан на этого же человека
+function learnMigrate(){
+  try{ if(localStorage.getItem(learnKey())) return;
+    const old=JSON.parse(localStorage.getItem(LEARN_KEY)||'null'); if(!old||!old.me) return;
+    if(firstName(old.me.name).toLowerCase()===firstName(currentUser.name).toLowerCase()&&old.me.point===shopName(currentUser.shop))
+      learnWrite({read:old.read||{},quiz:old.quiz||{}});
+  }catch(e){}
+}
+let learnSyncedFor='';
+async function learnPull(){
+  const u=learnUser(); if(!u||!POSTAVKI_URL||learnSyncedFor===u) return;
+  try{ const r=await pvGet({action:'learnGet',user:u}); learnSyncedFor=u;
+    const merged=learnMerge(learnState(),r.data||{read:{},quiz:{}}); learnWrite(merged);
+    if(r.data===null||JSON.stringify(merged)!==JSON.stringify(learnMerge(r.data||{read:{},quiz:{}},{read:{},quiz:{}}))) learnPush();
+  }catch(e){}
+}
+let learnPushT=null;
+function learnPush(){
+  const u=learnUser(); if(!u||!POSTAVKI_URL) return;
+  clearTimeout(learnPushT);
+  learnPushT=setTimeout(()=>{ pvPost({action:'learnSave',user:u,name:currentUser.name,point:shopName(currentUser.shop),state:learnState()}).catch(()=>{}); },800);
+}
 async function loadLearn(){
   const body=document.getElementById('learn-body'); if(!body) return;
   if(!learnMeta){
@@ -2219,7 +2253,8 @@ async function loadLearn(){
     try{ const r=await fetch(LEARN_URL+'lessons.json?v='+APP_VER+'-'+Date.now(),{cache:'no-store'}); learnMeta=await r.json(); }
     catch(e){ body.innerHTML='<div class="card"><div class="empty" style="padding:20px 0">Нет связи с обучением</div></div>'; return; }
   }
-  drawLearn();
+  learnMigrate(); drawLearn();
+  learnPull().then(drawLearn);
 }
 function drawLearn(){
   const body=document.getElementById('learn-body'); if(!body||!learnMeta) return;
@@ -2251,14 +2286,14 @@ function drawLearn(){
 }
 function openLearn(hash){
   const f=document.getElementById('learn-frame');
-  const q=new URLSearchParams({v:APP_VER,embed:'1',name:(currentUser&&firstName(currentUser.name))||'',point:(currentUser&&shopName(currentUser.shop))||''});
+  const q=new URLSearchParams({v:APP_VER,embed:'1',name:(currentUser&&firstName(currentUser.name))||'',point:(currentUser&&shopName(currentUser.shop))||'',k:learnUser()});
   f.src=LEARN_URL+'?'+q.toString()+hash;
   showScreen('learnview');
 }
 function closeLearnView(){ switchTab('learn'); }
 window.addEventListener('message',e=>{
   const d=e.data||{};
-  if(d.pp==='learn-saved') drawLearn();
+  if(d.pp==='learn-saved'){ drawLearn(); learnPush(); }
   if(d.pp==='learn-home'&&document.getElementById('sc-learnview').classList.contains('active')) closeLearnView();
 });
 if(TG){

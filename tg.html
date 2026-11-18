@@ -2028,12 +2028,17 @@ async function pvPickerHTML(q){
   const hits=(words.length?cat.filter(c=>{ const n=c.n.toLowerCase().replace(/ё/g,'е'); return words.every(w=>n.includes(w)); }):cat).slice(0,40);
   return hits.map(c=>`<button class="lrn" data-n="${escH(c.n)}"><div style="flex:1"><div class="lrn-t">${escH(c.n)}</div><div class="lrn-s">${escH(c.g||'')}</div></div></button>`).join('')||'<div class="empty">Ничего не нашлось — попробуй другое слово</div>';
 }
-function pvPicker(title,initial,onPick){
+function pvPicker(title,initial,onPick,allowFree){
   openSheet(`<div class="sheet-title">${escH(title)}</div>
     <div class="inp-grp"><input id="pv-q" type="text" placeholder="Начни писать: argus 0.4, монашка…" value="${escH(initial||'')}" autocomplete="off"></div>
     <div id="pv-res" style="margin-top:10px;max-height:55vh;overflow-y:auto"><div class="empty">Загружаю справочник…</div></div>`);
   const sc=document.getElementById('sheet-content'), inp=sc.querySelector('#pv-q'), res=sc.querySelector('#pv-res');
-  const draw=async()=>{ try{ res.innerHTML=await pvPickerHTML(inp.value); res.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>onPick(b.dataset.n)); }catch(e){ res.innerHTML=`<div class="empty">${escH(e.message)}</div>`; } };
+  const draw=async()=>{ try{
+      const q=inp.value.trim();
+      res.innerHTML=(allowFree&&q?`<button class="btn btn-gy" id="pv-free" style="margin-bottom:8px">Нет в списке — записать «${escH(q)}» как есть</button>`:'')+await pvPickerHTML(q);
+      res.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>onPick(b.dataset.n));
+      const fb=res.querySelector('#pv-free'); if(fb) fb.onclick=()=>onPick(q,true);
+    }catch(e){ res.innerHTML=`<div class="empty">${escH(e.message)}</div>`; } };
   let t; inp.oninput=()=>{ clearTimeout(t); t=setTimeout(draw,200); }; draw(); setTimeout(()=>inp.focus(),300);
 }
 function pvPick(no,row){
@@ -2055,7 +2060,7 @@ function pvPick(no,row){
 /* ── приёмка ── */
 function openPvAccept(no){
   const d=pvDocs.find(x=>x.no===no); if(!d) return;
-  const st={lines:d.lines.map(l=>({row:l.row,name:l.name||l.raw,qty:+l.qty||0,fact:+l.qty||0,ok:true,comment:''})),photos:[],comment:''};
+  const st={lines:d.lines.map(l=>({row:l.row,name:l.name||l.raw,qty:+l.qty||0,fact:+l.qty||0,ok:true,comment:''})),extra:[],photos:[],comment:''};
   const draw=()=>{
     const rows=st.lines.map((l,i)=>`<div style="padding:10px 0;border-top:1px solid var(--border)">
       <div style="font-size:14px;font-weight:600">${escH(l.name)}</div>
@@ -2068,10 +2073,19 @@ function openPvAccept(no){
       </div>
       ${!(l.ok&&l.fact===l.qty)?`<input data-c="${i}" type="text" placeholder="Что не так? (брак, другой вкус, не доехало…)" value="${escH(l.comment)}" style="margin-top:7px;width:100%;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t1);padding:8px 10px;font-size:13px">`:''}
     </div>`).join('');
-    const mism=st.lines.filter(l=>!(l.ok&&l.fact===l.qty)).length;
+    const extraRows=st.extra.map((x,i)=>`<div style="padding:10px 0;border-top:1px solid var(--border)">
+      <div style="font-size:14px;font-weight:600">${escH(x.name)} <span class="badge b-wn" style="font-size:11px">лишнее</span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:7px">
+        <span style="font-size:12px;color:var(--t2)">не было в списке</span>
+        <div class="qty-ctrl" style="margin-left:auto"><button class="qty-btn" data-xm="${i}">−</button>
+          <span style="min-width:30px;text-align:center;font-size:15px;font-weight:600">${x.fact}</span>
+          <button class="qty-btn" data-xp="${i}">+</button></div>
+      </div></div>`).join('');
+    const mism=st.lines.filter(l=>!(l.ok&&l.fact===l.qty)).length+st.extra.length;
     openSheet(`<div class="sheet-title">Приёмка ${escH(d.no)}</div>
       <div style="font-size:13px;color:var(--t2);margin:-8px 0 8px">${escH(d.supplier||d.from)} → ${escH(d.to)} · пересчитай товар и отметь</div>
-      <div>${rows}</div>
+      <div>${rows}${extraRows}</div>
+      <button class="btn btn-gy" id="pv-acc-extra" style="margin-top:10px"><i class="ti ti-plus" style="vertical-align:-2px;margin-right:6px"></i>Приехало то, чего нет в списке</button>
       <div class="inp-grp" style="margin-top:12px"><label>Комментарий</label><input id="pv-acc-comm" type="text" value="${escH(st.comment)}" placeholder="Например: коробка мятая"></div>
       <label class="btn btn-gy" style="display:block;text-align:center;margin-top:10px;cursor:pointer"><i class="ti ti-camera" style="vertical-align:-2px;margin-right:6px"></i>${st.photos.length?'Фото: '+st.photos.length+' · добавить ещё':'Сфотографировать товар'}<input id="pv-acc-ph" type="file" accept="image/*" multiple style="display:none"></label>
       <button class="btn ${mism?'btn-re':'btn-gr'}" id="pv-acc-go" style="margin-top:12px">${mism?'Принять с расхождением ('+mism+')':'Всё сходится — принять'}</button>
@@ -2082,12 +2096,17 @@ function openPvAccept(no){
     sc.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{ keep(); const l=st.lines[+b.dataset.p]; l.fact++; l.ok=l.fact===l.qty; draw(); });
     sc.querySelectorAll('[data-f]').forEach(x=>x.onchange=()=>{ keep(); const l=st.lines[+x.dataset.f]; l.fact=Math.max(0,parseInt(x.value)||0); l.ok=l.fact===l.qty; draw(); });
     sc.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>{ keep(); const l=st.lines[+b.dataset.ok]; if(l.ok&&l.fact===l.qty){ l.ok=false; } else { l.ok=true; l.fact=l.qty; } draw(); });
+    sc.querySelectorAll('[data-xm]').forEach(b=>b.onclick=()=>{ keep(); const x=st.extra[+b.dataset.xm]; x.fact--; if(x.fact<=0) st.extra.splice(+b.dataset.xm,1); draw(); });
+    sc.querySelectorAll('[data-xp]').forEach(b=>b.onclick=()=>{ keep(); st.extra[+b.dataset.xp].fact++; draw(); });
+    sc.querySelector('#pv-acc-extra').onclick=()=>{ keep();
+      pvPicker('Что приехало сверх списка?','',(name,free)=>{ st.extra.push({name,catalog:free?'':name,raw:name,fact:1}); draw(); },true); };
     sc.querySelector('#pv-acc-ph').onchange=async e=>{ keep(); toast('Сжимаю фото…'); for(const f of e.target.files) st.photos.push(await pvShrink(f)); draw(); };
     sc.querySelector('#pv-acc-go').onclick=async e=>{
       keep(); const b=e.currentTarget; b.disabled=true; b.textContent='Сохраняю…';
       try{
         const r=await pvPost({action:'accept',no:d.no,by:currentUser.name,comment:st.comment,photos:st.photos,
-          lines:st.lines.map(l=>({row:l.row,fact:l.fact,ok:l.ok&&l.fact===l.qty,comment:l.comment}))});
+          lines:st.lines.map(l=>({row:l.row,fact:l.fact,ok:l.ok&&l.fact===l.qty,comment:l.comment})),
+          extra:st.extra.map(x=>({catalog:x.catalog,raw:x.raw,fact:x.fact}))});
         closeSheet(); toast(r.status==='Принято'?'✅ Принято, всё сходится':'⚠ Принято с расхождением — штаб увидит',4000);
         renderPostavki(true);
       }catch(err){ b.disabled=false; b.textContent='Попробовать ещё раз'; saveErr(err); }

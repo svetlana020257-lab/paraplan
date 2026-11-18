@@ -291,6 +291,16 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--font-body);max-
   <button onclick="openOrder(null)" aria-label="Новый заказ" style="position:fixed;right:18px;bottom:88px;z-index:21;width:56px;height:56px;border-radius:50%;border:0;background:var(--or);color:#0C0C0C;font-size:30px;font-weight:700;box-shadow:0 6px 20px rgba(232,122,30,.35);cursor:pointer">+</button>
 </div>
 
+<!-- ═══════════ ПОСТАВКИ ═══════════ -->
+<div class="screen" id="sc-postavki">
+  <div class="hdr"><div class="hdr-logo">П</div>
+    <div style="flex:1"><h1>Поставки</h1><p id="pv-sub">Перемещения и поставки</p></div>
+    <button class="hdr-action" onclick="renderPostavki(true)" title="Обновить"><i class="ti ti-refresh"></i></button>
+  </div>
+  <div class="body" id="pv-body"></div>
+  <button onclick="openPvCreate()" aria-label="Новое перемещение" style="position:fixed;right:18px;bottom:88px;z-index:21;width:56px;height:56px;border-radius:50%;border:0;background:var(--or);color:#0C0C0C;font-size:30px;font-weight:700;box-shadow:0 6px 20px rgba(232,122,30,.35);cursor:pointer">+</button>
+</div>
+
 <!-- ═══════════ АКЦИИ ═══════════ -->
 <div class="screen" id="sc-akcii">
   <div class="hdr"><div class="hdr-logo">П</div>
@@ -339,6 +349,7 @@ html,body{background:var(--bg);color:var(--t1);font-family:var(--font-body);max-
   <button class="tab" onclick="switchTab('clients')"><i class="ti ti-address-book"></i>Клиенты<div class="tab-dot"></div></button>
   <button class="tab" onclick="switchTab('akcii')"><i class="ti ti-discount"></i>Акции<div class="tab-dot"></div></button>
   <button class="tab" onclick="switchTab('learn')"><i class="ti ti-school"></i>Обучение<div class="tab-dot"></div></button>
+  <button class="tab" onclick="switchTab('postavki')"><i class="ti ti-truck-delivery"></i>Поставки<div class="tab-dot"></div></button>
 </div>
 
 <script>
@@ -594,10 +605,10 @@ function saveErr(e){ toast('⚠ НЕ сохранено в таблицу: '+(e.
    ══════════════════════════════════════════════════════════════════ */
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('sc-'+id).classList.add('active'); tgBack(id==='day'||id==='learnview'); }
 function clientsOn(){ return isBoss()||CLIENT_TEST_SHOPS.includes(shopName(activeShop())); }
-function tabOrder(){ const mid=clientsOn()?'clients':'akcii'; return isBoss()?['owner','people','grafik',mid,'learn']:['main','salary','grafik',mid,'learn']; }
+function tabOrder(){ const mid=clientsOn()?'clients':'akcii'; const pv=POSTAVKI_URL?['postavki']:[]; return isBoss()?['owner','people','grafik',mid,...pv,'learn']:['main','salary','grafik',mid,...pv,'learn']; }
 function applyRoleTabs(){
   const tabs=document.querySelectorAll('#tabbar .tab:not(#tab-net)');
-  const map={main:0,salary:1,people:2,grafik:3,clients:4,akcii:5,learn:6};
+  const map={main:0,salary:1,people:2,grafik:3,clients:4,akcii:5,learn:6,postavki:7};
   tabs.forEach(t=>t.style.display='none');
   let net=document.getElementById('tab-net');
   if(isBoss() && !net){
@@ -624,6 +635,7 @@ function switchTab(tab){
   else if(tab==='learn') loadLearn();
   else if(tab==='grafik') renderGrafik();
   else if(tab==='clients') renderClients();
+  else if(tab==='postavki') renderPostavki();
   tgHaptic();
 }
 function refreshScreen(){
@@ -635,6 +647,7 @@ function refreshScreen(){
   else if(a==='sc-owner') renderOwner();
   else if(a==='sc-grafik') renderGrafik();
   else if(a==='sc-clients') renderClients();
+  else if(a==='sc-postavki') renderPostavki(true);
   else if(a==='sc-day' && dayDate) renderDayDetail(dayDate,dayShop);
 }
 
@@ -1900,6 +1913,251 @@ function closeSheet(){ document.getElementById('sheet-overlay').classList.remove
    СТАРТ
    ══════════════════════════════════════════════════════════════════ */
 /* ══════════════════════════════════════════════════════════════════
+   ПОСТАВКИ И ПЕРЕМЕЩЕНИЯ — отдельный скрипт «Параплан — Поставки»
+   Кэп создаёт документы по сообщениям «Перемещение…» в чатах точек,
+   здесь — список, создание, приёмка (сходится / не сходится, факт, фото).
+   ══════════════════════════════════════════════════════════════════ */
+const POSTAVKI_URL='';   // ← URL веб-приложения скрипта «Параплан — Поставки» (…/exec)
+let pvMe='', pvDocs=[], pvLoaded=false, pvFilter='in', pvCatalog=null, pvCatalogShop=null, pvAllShops=false;
+const PV_ACTIVE=['В пути','Ожидается','Черновик'];
+const PV_STYLE={'В пути':'b-or','Ожидается':'b-or','Черновик':'b-wn','Принято':'b-gr','Принято с расхождением':'b-re','Отменено':'b-gy'};
+
+function pvShop(){ return activeShop(); }
+async function pvGet(params){
+  if(!POSTAVKI_URL) throw new Error('Блок «Поставки» ещё не подключён (нет адреса скрипта)');
+  const qs=Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
+  const r=await fetch(POSTAVKI_URL+'?'+qs); const j=await r.json();
+  if(j&&j.ok===false) throw new Error(j.error||'Ошибка сервера'); return j;
+}
+async function pvPost(data){
+  if(!POSTAVKI_URL) throw new Error('Блок «Поставки» ещё не подключён (нет адреса скрипта)');
+  const r=await fetch(POSTAVKI_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(data)});
+  const j=await r.json(); if(j&&j.ok===false) throw new Error(j.error||'Сервер отклонил запись'); return j;
+}
+async function loadPv(){
+  const all=isBoss()&&pvAllShops;
+  const r=await pvGet({action:'getDocs',shop:pvShop(),shopName:shopName(pvShop()),all:all?'1':'0'});
+  pvDocs=r.data||[]; pvMe=r.me||pvShop(); pvLoaded=true;
+}
+async function pvLoadCatalog(){
+  const sh=pvShop();
+  if(pvCatalog&&pvCatalogShop===sh) return pvCatalog;
+  const r=await pvGet({action:'getCatalog',shop:sh,shopName:shopName(sh)}); pvCatalog=r.data||[]; pvCatalogShop=sh; return pvCatalog;
+}
+async function renderPostavki(force){
+  if(!currentUser) return;
+  document.getElementById('pv-sub').textContent=(isBoss()&&pvAllShops?'Все точки':shopName(pvShop()))+' · перемещения и поставки';
+  const body=document.getElementById('pv-body');
+  if(!pvLoaded||force){
+    body.innerHTML='<div class="card"><div class="empty" style="padding:20px 0">Загружаю…</div></div>';
+    try{ await loadPv(); }catch(e){ body.innerHTML=`<div class="card"><div class="empty" style="padding:20px 0"><i class="ti ti-plug-connected-x"></i>${escH(e.message||'Нет связи с таблицей поставок')}</div></div>`; return; }
+  }
+  drawPv();
+}
+function pvIsIn(d){ return d.toId===pvMe; }
+function pvIsOut(d){ return d.fromId===pvMe; }
+function pvNeedsCheck(d){ return d.status==='Черновик'||d.lines.some(l=>!l.name); }
+function drawPv(){
+  const all=isBoss()&&pvAllShops;
+  const docs=pvDocs;
+  const inn=docs.filter(d=>(all||pvIsIn(d))&&PV_ACTIVE.includes(d.status)&&d.status!=='Черновик');
+  const out=docs.filter(d=>(all||pvIsOut(d))&&PV_ACTIVE.includes(d.status));
+  const chk=docs.filter(d=>(all||pvIsOut(d)||pvIsIn(d))&&PV_ACTIVE.includes(d.status)&&pvNeedsCheck(d));
+  const bad=docs.filter(d=>d.status==='Принято с расхождением');
+  const F=[['in',all?'В пути':'К нам едет',inn],['out',all?'Все активные':'От нас',out],['chk','Проверить',chk],['bad','Расхождения',bad],['hist','История',docs]];
+  let list=(F.find(f=>f[0]===pvFilter)||F[0])[2];
+  const chips=F.map(([k,l,a])=>`<button class="flt-btn ${pvFilter===k?'active':''}" style="white-space:nowrap;flex-shrink:0" onclick="pvFilter='${k}';drawPv()">${l}${a.length&&k!=='hist'?' · '+a.length:''}</button>`).join('');
+  const bossBar=isBoss()?`<div style="display:flex;gap:8px;align-items:center">
+      <button class="flt-btn ${pvAllShops?'active':''}" onclick="pvAllShops=!pvAllShops;renderPostavki(true)"><i class="ti ti-building-store" style="vertical-align:-2px"></i> ${pvAllShops?'Все точки':'Только '+escH(shopName(pvShop()))}</button></div>`:'';
+  const card=d=>{
+    const pcs=d.lines.reduce((a,l)=>a+(+l.qty||0),0), unk=d.lines.filter(l=>!l.name).length;
+    const route=`${escH(d.supplier||d.from||'?')} → ${escH(d.to||'?')}`;
+    const dir=pvIsIn(d)&&!all?'<i class="ti ti-arrow-down-left" style="color:var(--green)"></i>':pvIsOut(d)&&!all?'<i class="ti ti-arrow-up-right" style="color:var(--or)"></i>':'<i class="ti ti-arrows-exchange" style="color:var(--t3)"></i>';
+    return `<button class="list-item" onclick="openPvDoc('${d.no}')" style="width:100%;text-align:left;color:var(--t1);font-family:var(--font-body);cursor:pointer;display:block">
+      <div class="li-row">${dir}<b style="font-size:14px">${route}</b><span class="badge ${PV_STYLE[d.status]||'b-gy'}" style="margin-left:auto">${escH(d.status)}</span></div>
+      <div style="font-size:12px;color:var(--t2)">${escH(d.no)} · ${escH(d.type)} · ${escH(String(d.created).slice(0,5))} · ${d.lines.length} поз., ${pcs} шт${unk?` · <span style="color:var(--warn)">⚠ ${unk} не узнал</span>`:''}</div>
+    </button>`;
+  };
+  document.getElementById('pv-body').innerHTML=`${bossBar}
+    <div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:2px">${chips}</div>
+    ${list.length?list.slice(0,80).map(card).join(''):`<div class="card"><div class="empty"><i class="ti ti-truck-delivery"></i>${pvFilter==='in'?'Сейчас к вам ничего не едет':'Пусто'}</div></div>`}
+    <div class="mono-hint">Перемещение можно создать здесь (кнопка +) или просто написать в чат точки «Перемещение / откуда – куда / товар – кол-во» — Кэп запишет сам.</div>`;
+}
+
+/* ── карточка документа ── */
+function openPvDoc(no){
+  const d=pvDocs.find(x=>x.no===no); if(!d) return;
+  const canAccept=(pvIsIn(d)||isBoss())&&(d.status==='В пути'||d.status==='Ожидается');
+  const canCancel=(pvIsOut(d)||isBoss())&&PV_ACTIVE.includes(d.status);
+  const rows=d.lines.map(l=>{
+    const fact=l.fact==null?'':` · факт <b style="color:${l.ok==='да'?'var(--green)':'var(--red)'}">${l.fact}</b>`;
+    const fix=!l.name&&PV_ACTIVE.includes(d.status)?`<button class="btn btn-sm btn-gy" style="margin-top:6px" onclick="pvPick('${d.no}',${l.row})"><i class="ti ti-search" style="vertical-align:-2px"></i> Выбрать товар</button>`:'';
+    return `<div style="padding:9px 0;border-top:1px solid var(--border)">
+      <div style="font-size:14px;font-weight:600">${l.name?escH(l.name):`<span style="color:var(--warn)">⚠ ${escH(l.raw)}</span>`}</div>
+      <div style="font-size:12px;color:var(--t2);margin-top:2px">${l.name&&l.raw&&l.raw.toLowerCase()!==l.name.toLowerCase()?'написали: «'+escH(l.raw)+'» · ':''}отправлено <b>${l.qty}</b> ${escH(l.unit)}${fact}${l.note?' · '+escH(l.note):''}</div>${fix}</div>`;
+  }).join('');
+  openSheet(`<div class="sheet-title">${escH(d.type)} ${escH(d.no)}</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:-6px 0 10px">
+      <b>${escH(d.supplier||d.from||'?')} → ${escH(d.to||'?')}</b><span class="badge ${PV_STYLE[d.status]||'b-gy'}">${escH(d.status)}</span></div>
+    <div style="font-size:12px;color:var(--t3);margin-bottom:6px">Создал(а) ${escH(d.by||'—')} · ${escH(d.created)} · ${d.source==='чат'?'из чата':'в приложении'}${d.acceptedBy?`<br>Принял(а) ${escH(d.acceptedBy)} · ${escH(d.accepted)}`:''}</div>
+    ${d.comment?`<div class="promo-warn" style="margin-bottom:8px">${escH(d.comment)}</div>`:''}
+    <div>${rows||'<div class="empty">Товаров нет — дополни</div>'}</div>
+    ${d.status==='Черновик'||!d.lines.length?`<button class="btn btn-gy" style="margin-top:12px" onclick="openPvCreate('${d.no}')"><i class="ti ti-pencil" style="vertical-align:-2px;margin-right:6px"></i>Дополнить (создать заново)</button>`:''}
+    ${canAccept?`<button class="btn btn-gr" style="margin-top:14px" onclick="openPvAccept('${d.no}')"><i class="ti ti-checklist" style="vertical-align:-2px;margin-right:6px"></i>Принять</button>`:''}
+    ${d.folder?`<a class="btn btn-gy" href="${escH(d.folder)}" target="_blank" style="display:block;text-align:center;text-decoration:none;margin-top:8px"><i class="ti ti-photo" style="vertical-align:-2px;margin-right:6px"></i>Фото</a>`:''}
+    <label class="btn btn-gy" style="display:block;text-align:center;margin-top:8px;cursor:pointer"><i class="ti ti-camera-plus" style="vertical-align:-2px;margin-right:6px"></i>Добавить фото<input type="file" accept="image/*" multiple style="display:none" onchange="pvAddPhotos('${d.no}',this)"></label>
+    ${canCancel?`<button class="btn btn-sm btn-gy" style="margin-top:12px" onclick="pvCancel('${d.no}')">Отменить документ</button>`:''}
+    ${d.text?`<div class="mono-hint" style="white-space:pre-wrap">Сообщение в чате:\n${escH(d.text)}</div>`:''}`);
+}
+
+/* ── выбор товара из справочника (для нераспознанных строк и для создания) ── */
+async function pvPickerHTML(q){
+  const cat=await pvLoadCatalog();
+  const words=String(q||'').toLowerCase().replace(/ё/g,'е').split(/\s+/).filter(Boolean);
+  const hits=(words.length?cat.filter(c=>{ const n=c.n.toLowerCase().replace(/ё/g,'е'); return words.every(w=>n.includes(w)); }):cat).slice(0,40);
+  return hits.map(c=>`<button class="lrn" data-n="${escH(c.n)}"><div style="flex:1"><div class="lrn-t">${escH(c.n)}</div><div class="lrn-s">${escH(c.g||'')}${c.st!=null?' · остаток '+c.st:''}</div></div></button>`).join('')||'<div class="empty">Ничего не нашлось — попробуй другое слово</div>';
+}
+function pvPicker(title,initial,onPick){
+  openSheet(`<div class="sheet-title">${escH(title)}</div>
+    <div class="inp-grp"><input id="pv-q" type="text" placeholder="Начни писать: argus 0.4, монашка…" value="${escH(initial||'')}" autocomplete="off"></div>
+    <div id="pv-res" style="margin-top:10px;max-height:55vh;overflow-y:auto"><div class="empty">Загружаю справочник…</div></div>`);
+  const sc=document.getElementById('sheet-content'), inp=sc.querySelector('#pv-q'), res=sc.querySelector('#pv-res');
+  const draw=async()=>{ try{ res.innerHTML=await pvPickerHTML(inp.value); res.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>onPick(b.dataset.n)); }catch(e){ res.innerHTML=`<div class="empty">${escH(e.message)}</div>`; } };
+  let t; inp.oninput=()=>{ clearTimeout(t); t=setTimeout(draw,200); }; draw(); setTimeout(()=>inp.focus(),300);
+}
+function pvPick(no,row){
+  const d=pvDocs.find(x=>x.no===no), l=d&&d.lines.find(x=>x.row===row); if(!l) return;
+  const first=(l.options&&l.options[0])?'':l.raw.split(/\s+/)[0];
+  pvPicker('Что это: «'+l.raw+'»?',first,async name=>{
+    try{ await pvPost({action:'resolveItem',row,catalog:name,by:currentUser.name}); l.name=name; toast('✓ Запомнил: «'+l.raw+'» = '+name); openPvDoc(no); drawPv(); }
+    catch(e){ saveErr(e); }
+  });
+  if(l.options&&l.options.length){   // сначала — подсказки Кэпа
+    const res=document.getElementById('pv-res');
+    setTimeout(()=>{ const box=document.createElement('div'); box.innerHTML='<div class="sec" style="margin:4px 0 6px">Кэп думает, что это:</div>'+
+      l.options.map(o=>`<button class="lrn" data-o="${escH(o)}"><div style="flex:1"><div class="lrn-t">${escH(o)}</div></div><i class="ti ti-check" style="color:var(--or)"></i></button>`).join('')+'<div class="sec" style="margin:10px 0 6px">Или найди в справочнике:</div>';
+      res.parentNode.insertBefore(box,res); box.querySelectorAll('[data-o]').forEach(b=>b.onclick=async()=>{
+        try{ await pvPost({action:'resolveItem',row,catalog:b.dataset.o,by:currentUser.name}); l.name=b.dataset.o; toast('✓ Запомнил'); openPvDoc(no); drawPv(); }catch(e){ saveErr(e); } }); },50);
+  }
+}
+
+/* ── приёмка ── */
+function openPvAccept(no){
+  const d=pvDocs.find(x=>x.no===no); if(!d) return;
+  const st={lines:d.lines.map(l=>({row:l.row,name:l.name||l.raw,qty:+l.qty||0,fact:+l.qty||0,ok:true,comment:''})),photos:[],comment:''};
+  const draw=()=>{
+    const rows=st.lines.map((l,i)=>`<div style="padding:10px 0;border-top:1px solid var(--border)">
+      <div style="font-size:14px;font-weight:600">${escH(l.name)}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--t2)">отправили <b>${l.qty}</b></span>
+        <div class="qty-ctrl" style="margin-left:auto"><button class="qty-btn" data-m="${i}">−</button>
+          <input data-f="${i}" type="number" inputmode="numeric" value="${l.fact}" style="width:54px;text-align:center;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t1);padding:6px;font-size:15px">
+          <button class="qty-btn" data-p="${i}">+</button></div>
+        <button data-ok="${i}" class="badge ${l.ok&&l.fact===l.qty?'b-gr':'b-re'}" style="border:0;cursor:pointer;padding:6px 10px;font-size:12px">${l.ok&&l.fact===l.qty?'✅ сходится':'❌ не сходится'}</button>
+      </div>
+      ${!(l.ok&&l.fact===l.qty)?`<input data-c="${i}" type="text" placeholder="Что не так? (брак, другой вкус, не доехало…)" value="${escH(l.comment)}" style="margin-top:7px;width:100%;background:var(--s2);border:1px solid var(--border);border-radius:8px;color:var(--t1);padding:8px 10px;font-size:13px">`:''}
+    </div>`).join('');
+    const mism=st.lines.filter(l=>!(l.ok&&l.fact===l.qty)).length;
+    openSheet(`<div class="sheet-title">Приёмка ${escH(d.no)}</div>
+      <div style="font-size:13px;color:var(--t2);margin:-8px 0 8px">${escH(d.supplier||d.from)} → ${escH(d.to)} · пересчитай товар и отметь</div>
+      <div>${rows}</div>
+      <div class="inp-grp" style="margin-top:12px"><label>Комментарий</label><input id="pv-acc-comm" type="text" value="${escH(st.comment)}" placeholder="Например: коробка мятая"></div>
+      <label class="btn btn-gy" style="display:block;text-align:center;margin-top:10px;cursor:pointer"><i class="ti ti-camera" style="vertical-align:-2px;margin-right:6px"></i>${st.photos.length?'Фото: '+st.photos.length+' · добавить ещё':'Сфотографировать товар'}<input id="pv-acc-ph" type="file" accept="image/*" multiple style="display:none"></label>
+      <button class="btn ${mism?'btn-re':'btn-gr'}" id="pv-acc-go" style="margin-top:12px">${mism?'Принять с расхождением ('+mism+')':'Всё сходится — принять'}</button>
+      <div class="mono-hint">Без фото принять можно, но лучше с фото — так видно, что приехало.</div>`);
+    const sc=document.getElementById('sheet-content');
+    const keep=()=>{ st.comment=sc.querySelector('#pv-acc-comm').value; sc.querySelectorAll('[data-c]').forEach(x=>st.lines[+x.dataset.c].comment=x.value); };
+    sc.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{ keep(); const l=st.lines[+b.dataset.m]; l.fact=Math.max(0,l.fact-1); l.ok=l.fact===l.qty; draw(); });
+    sc.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{ keep(); const l=st.lines[+b.dataset.p]; l.fact++; l.ok=l.fact===l.qty; draw(); });
+    sc.querySelectorAll('[data-f]').forEach(x=>x.onchange=()=>{ keep(); const l=st.lines[+x.dataset.f]; l.fact=Math.max(0,parseInt(x.value)||0); l.ok=l.fact===l.qty; draw(); });
+    sc.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>{ keep(); const l=st.lines[+b.dataset.ok]; if(l.ok&&l.fact===l.qty){ l.ok=false; } else { l.ok=true; l.fact=l.qty; } draw(); });
+    sc.querySelector('#pv-acc-ph').onchange=async e=>{ keep(); toast('Сжимаю фото…'); for(const f of e.target.files) st.photos.push(await pvShrink(f)); draw(); };
+    sc.querySelector('#pv-acc-go').onclick=async e=>{
+      keep(); const b=e.currentTarget; b.disabled=true; b.textContent='Сохраняю…';
+      try{
+        const r=await pvPost({action:'accept',no:d.no,by:currentUser.name,comment:st.comment,photos:st.photos,
+          lines:st.lines.map(l=>({row:l.row,fact:l.fact,ok:l.ok&&l.fact===l.qty,comment:l.comment}))});
+        closeSheet(); toast(r.status==='Принято'?'✅ Принято, всё сходится':'⚠ Принято с расхождением — штаб увидит',4000);
+        renderPostavki(true);
+      }catch(err){ b.disabled=false; b.textContent='Попробовать ещё раз'; saveErr(err); }
+    };
+  };
+  draw();
+}
+
+/* ── создание перемещения в приложении ── */
+function openPvCreate(fromDraftNo){
+  const draft=fromDraftNo?pvDocs.find(x=>x.no===fromDraftNo):null;
+  const st={type:'Перемещение',from:(draft&&draft.fromId)||pvShop(),to:(draft&&draft.toId)||'',items:[],photos:[],comment:'',supplier:''};
+  if(draft) st.items=draft.lines.filter(l=>l.name).map(l=>({catalog:l.name,raw:l.raw,qty:+l.qty||1}));
+  const pvShops=appData.shops.some(s=>s.id==='sklad')?appData.shops:[...appData.shops,{id:'sklad',name:'Склад'}];
+  const shopsOpt=(sel,ex)=>pvShops.filter(s=>s.id!==ex).map(s=>`<option value="${s.id}" ${s.id===sel?'selected':''}>${escH(s.name)}</option>`).join('');
+  const draw=()=>{
+    const items=st.items.map((it,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--border)">
+      <div style="flex:1;font-size:13.5px;font-weight:600">${escH(it.catalog)}</div>
+      <div class="qty-ctrl"><button class="qty-btn" data-m="${i}">−</button><b style="min-width:22px;text-align:center">${it.qty}</b><button class="qty-btn" data-p="${i}">+</button></div>
+      <button class="qty-btn" data-x="${i}" title="Убрать"><i class="ti ti-x"></i></button></div>`).join('');
+    openSheet(`<div class="sheet-title">${draft?'Дополнить '+escH(draft.no):'Новое перемещение'}</div>
+      ${isBoss()?`<div class="filter-row" style="margin:-6px 0 10px"><button class="flt-btn ${st.type==='Перемещение'?'active':''}" data-t="Перемещение">Перемещение</button><button class="flt-btn ${st.type==='Поставка'?'active':''}" data-t="Поставка">Поставка от поставщика</button></div>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${st.type==='Поставка'?`<div class="inp-grp"><label>Поставщик</label><input id="pv-sup" type="text" value="${escH(st.supplier)}" placeholder="ПУ, Вип вейп…"></div>`:
+        `<div class="inp-grp"><label>Откуда</label>${isBoss()?`<select id="pv-from">${shopsOpt(st.from,'')}</select>`:`<input type="text" value="${escH(shopName(st.from))}" disabled>`}</div>`}
+        <div class="inp-grp"><label>Куда *</label><select id="pv-to"><option value="">— точка —</option>${shopsOpt(st.to,st.type==='Поставка'?'':st.from)}</select></div>
+      </div>
+      <div style="margin-top:12px">${items||'<div class="empty" style="padding:14px 0">Добавь товары</div>'}</div>
+      <button class="btn btn-gy" id="pv-add" style="margin-top:8px"><i class="ti ti-plus" style="vertical-align:-2px;margin-right:6px"></i>Добавить товар</button>
+      <div class="inp-grp" style="margin-top:10px"><label>Комментарий</label><input id="pv-comm" type="text" value="${escH(st.comment)}" placeholder="Необязательно"></div>
+      <label class="btn btn-gy" style="display:block;text-align:center;margin-top:8px;cursor:pointer"><i class="ti ti-camera" style="vertical-align:-2px;margin-right:6px"></i>${st.photos.length?'Фото: '+st.photos.length:'Фото (необязательно)'}<input id="pv-ph" type="file" accept="image/*" multiple style="display:none"></label>
+      <button class="btn" id="pv-go" style="margin-top:12px">${st.type==='Поставка'?'Записать поставку':'Отправить перемещение'}</button>
+      <div class="mono-hint">Кэп напишет в чат обеих точек: что и куда едет. Получатель отметит приёмку здесь же.</div>`);
+    const sc=document.getElementById('sheet-content');
+    const keep=()=>{ const f=sc.querySelector('#pv-from'); if(f) st.from=f.value; st.to=sc.querySelector('#pv-to').value; st.comment=sc.querySelector('#pv-comm').value; const s=sc.querySelector('#pv-sup'); if(s) st.supplier=s.value; };
+    sc.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{ keep(); st.type=b.dataset.t; if(st.type==='Поставка'&&!st.to) st.to='sklad'; draw(); });
+    sc.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{ keep(); const it=st.items[+b.dataset.m]; it.qty=Math.max(1,it.qty-1); draw(); });
+    sc.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{ keep(); st.items[+b.dataset.p].qty++; draw(); });
+    sc.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{ keep(); st.items.splice(+b.dataset.x,1); draw(); });
+    sc.querySelector('#pv-ph').onchange=async e=>{ keep(); toast('Сжимаю фото…'); for(const f of e.target.files) st.photos.push(await pvShrink(f)); draw(); };
+    sc.querySelector('#pv-add').onclick=()=>{ keep(); pvPicker('Какой товар?','',name=>{ const ex=st.items.find(x=>x.catalog===name); if(ex) ex.qty++; else st.items.push({catalog:name,raw:name,qty:1}); draw(); }); };
+    sc.querySelector('#pv-go').onclick=async e=>{
+      keep();
+      if(!st.to){ toast('Выбери, куда'); return; }
+      if(st.type!=='Поставка'&&st.to===st.from){ toast('Откуда и куда — одна точка'); return; }
+      if(!st.items.length){ toast('Добавь хотя бы один товар'); return; }
+      const b=e.currentTarget; b.disabled=true; b.textContent='Отправляю…';
+      try{
+        const r=await pvPost({action:'create',type:st.type,from:st.type==='Поставка'?'':st.from,to:st.to,
+          fromName:st.type==='Поставка'?'':shopName(st.from),toName:st.to==='sklad'?'Склад':shopName(st.to),supplier:st.supplier,expected:st.type==='Поставка',
+          items:st.items,comment:st.comment+(draft?' (вместо черновика '+draft.no+')':''),photos:st.photos,by:currentUser.name});
+        if(draft) try{ await pvPost({action:'cancel',no:draft.no,by:currentUser.name}); }catch(_){}
+        closeSheet(); toast('✓ '+r.no+' создано, Кэп написал в чаты',4000); pvFilter=st.type==='Поставка'?'in':'out'; renderPostavki(true);
+      }catch(err){ b.disabled=false; b.textContent='Попробовать ещё раз'; saveErr(err); }
+    };
+  };
+  draw();
+}
+
+async function pvAddPhotos(no,inp){
+  try{ const ph=[]; toast('Сжимаю фото…'); for(const f of inp.files) ph.push(await pvShrink(f));
+    await pvPost({action:'addPhotos',no,photos:ph,by:currentUser.name,shopName:shopName(pvShop())}); toast('✓ Фото сохранены'); renderPostavki(true); }
+  catch(e){ saveErr(e); }
+}
+function pvCancel(no){
+  const go=async()=>{ try{ await pvPost({action:'cancel',no,by:currentUser.name}); closeSheet(); toast('Документ отменён'); renderPostavki(true); }catch(e){ saveErr(e); } };
+  if(TG) TG.showConfirm('Отменить '+no+'?',ok=>{ if(ok) go(); }); else if(confirm('Отменить '+no+'?')) go();
+}
+/** Сжать фото до ~1600px, JPEG 0.8 — чтобы быстро уходило и не забивало Диск */
+function pvShrink(file){
+  return new Promise((res,rej)=>{
+    const fr=new FileReader();
+    fr.onload=()=>{ const img=new Image(); img.onload=()=>{
+      const k=Math.min(1,1600/Math.max(img.width,img.height)); const c=document.createElement('canvas');
+      c.width=Math.round(img.width*k); c.height=Math.round(img.height*k); c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      res({mime:'image/jpeg',data:c.toDataURL('image/jpeg',0.8)}); }; img.onerror=rej; img.src=fr.result; };
+    fr.onerror=rej; fr.readAsDataURL(file);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════
    TELEGRAM
    ══════════════════════════════════════════════════════════════════ */
 const TG=(window.Telegram&&Telegram.WebApp&&Telegram.WebApp.initData)?Telegram.WebApp:null;
@@ -1950,7 +2208,7 @@ function doLogout(){
   if(TG) TG.showConfirm('Выйти из аккаунта на этом устройстве?',ok=>{ if(ok) go(); });
   else if(confirm('Выйти из аккаунта?')) go();
 }
-const APP_VER='1611-4';
+const APP_VER='1811-1';
 const LEARN_URL='https://svetlana020257-lab.github.io/obuchenie/';
 const LEARN_KEY='paraplan_learn_v1';
 let learnMeta=null;

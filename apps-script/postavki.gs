@@ -134,14 +134,26 @@ function doPost(e) {
 
 /* ════════════════════════ ТОЧКИ ════════════════════════ */
 
+/** Chat ID чатов точек — те же, что в Кэпе (Синхронизация_смен → POINTS). Склад своего чата не имеет → BOSS_CHAT. */
+const CHATS_DEFAULT = {
+  dynasty: '-1001927226002', gromova: '-1002066972660', nikitina: '-1003964020686', korotaeva: '-1002028479449',
+  titova: '-1001985155814', gorsky: '-1003868197974', moskva: '-1001874958730', zorge: '-1001713321916',
+  petukhova: '-1002559299199', shluz: '-1003785547674', bogatk: '-1003897843810', plan: '-1004402832347'
+};
+
 function shops_() {
-  const v = sheet_('shops').getDataRange().getValues();
+  const sh = sheet_('shops');
+  const v = sh.getDataRange().getValues();
   const out = [];
   for (let i = 1; i < v.length; i++) {
     if (!v[i][0]) continue;
+    const id = String(v[i][0]);
     const syn = String(v[i][2] || '').split(',').map(s => norm_(s)).filter(Boolean);
     syn.push(norm_(v[i][1]));
-    out.push({ row: i + 1, id: String(v[i][0]), name: String(v[i][1]), syn: syn, chat: String(v[i][3] || ''), title: String(v[i][4] || '') });
+    let chat = String(v[i][3] || '').trim();
+    if (!chat && CHATS_DEFAULT[id]) { chat = CHATS_DEFAULT[id]; sh.getRange(i + 1, 4).setValue(chat); }   // дописываем один раз
+    if (!chat && id === 'sklad') chat = prop_('BOSS_CHAT');                                                // склад → чат управляющих
+    out.push({ row: i + 1, id: id, name: String(v[i][1]), syn: syn, chat: chat, title: String(v[i][4] || '') });
   }
   return out;
 }
@@ -695,4 +707,13 @@ function testParse() {
   const p = parseText_(t, null, shops_());
   Logger.log(JSON.stringify({ from: p.from && p.from.name, to: p.to && p.to.name, items: p.items, notes: p.notes }));
   p.items.forEach(it => Logger.log(it.raw + ' → ' + JSON.stringify(matchItem_(it.raw, p.from && p.from.name))));
+}
+
+/** Вручную: ещё раз отправить в чаты уведомление о последнем созданном документе (▶ Выполнить). */
+function povtoritUvedomlenie() {
+  const v = sheet_('docs').getDataRange().getValues();
+  const no = String(v[v.length - 1][0] || '');
+  if (!no) return;
+  notifyCreated_(no, true);
+  log_('Повтор уведомления', no);
 }

@@ -1940,9 +1940,8 @@ async function loadPv(){
   pvDocs=r.data||[]; pvMe=r.me||pvShop(); pvLoaded=true;
 }
 async function pvLoadCatalog(){
-  const sh=pvShop();
-  if(pvCatalog&&pvCatalogShop===sh) return pvCatalog;
-  const r=await pvGet({action:'getCatalog',shop:sh,shopName:shopName(sh)}); pvCatalog=r.data||[]; pvCatalogShop=sh; return pvCatalog;
+  if(pvCatalog) return pvCatalog;   // единая номенклатура для всех точек, без остатков
+  const r=await pvGet({action:'getCatalog'}); pvCatalog=r.data||[]; return pvCatalog;
 }
 async function renderPostavki(force){
   if(!currentUser) return;
@@ -2015,7 +2014,7 @@ async function pvPickerHTML(q){
   const cat=await pvLoadCatalog();
   const words=String(q||'').toLowerCase().replace(/ё/g,'е').split(/\s+/).filter(Boolean);
   const hits=(words.length?cat.filter(c=>{ const n=c.n.toLowerCase().replace(/ё/g,'е'); return words.every(w=>n.includes(w)); }):cat).slice(0,40);
-  return hits.map(c=>`<button class="lrn" data-n="${escH(c.n)}"><div style="flex:1"><div class="lrn-t">${escH(c.n)}</div><div class="lrn-s">${escH(c.g||'')}${c.st!=null?' · остаток '+c.st:''}</div></div></button>`).join('')||'<div class="empty">Ничего не нашлось — попробуй другое слово</div>';
+  return hits.map(c=>`<button class="lrn" data-n="${escH(c.n)}"><div style="flex:1"><div class="lrn-t">${escH(c.n)}</div><div class="lrn-s">${escH(c.g||'')}</div></div></button>`).join('')||'<div class="empty">Ничего не нашлось — попробуй другое слово</div>';
 }
 function pvPicker(title,initial,onPick){
   openSheet(`<div class="sheet-title">${escH(title)}</div>

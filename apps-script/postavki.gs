@@ -107,7 +107,7 @@ function doGet(e) {
     const p = e.parameter || {};
     if (p.action === 'ping') return out_({ ok: true });
     if (p.action === 'getDocs') { const me = resolveShop_(p.shop, p.shopName); return out_({ ok: true, me: me ? me.id : '', data: getDocs_(me ? me.id : '', p.all === '1') }); }
-    if (p.action === 'getCatalog') { const me = resolveShop_(p.shop, p.shopName); return out_({ ok: true, data: catalogNames_(me ? me.id : '') }); }
+    if (p.action === 'getCatalog') return out_({ ok: true, data: catalogNames_() });
     if (p.action === 'getShops') return out_({ ok: true, data: shops_().map(s => ({ id: s.id, name: s.name })) });
     return out_({ ok: false, error: 'Неизвестное действие' });
   } catch (err) { return out_({ ok: false, error: String(err) }); }
@@ -202,6 +202,7 @@ function shopByChat_(chat) {
 
 /* ════════════════════════ СПРАВОЧНИК ТОВАРОВ ════════════════════════ */
 
+/** Единая номенклатура для всех точек: уникальные названия товаров из «Эвотор_Остатки» (остатки не берём). */
 function catalog_() {
   const c = CacheService.getScriptCache();
   const hit = c.get('catalog');
@@ -210,20 +211,15 @@ function catalog_() {
   const byName = {};
   for (let i = 1; i < v.length; i++) {
     const name = String(v[i][3] || '').trim();
-    if (!name) continue;
-    const shop = String(v[i][0] || '');
-    if (!byName[name]) byName[name] = { n: name, g: String(v[i][4] || ''), st: {} };
-    byName[name].st[shop] = Number(v[i][5]) || 0;
+    if (name && !byName[name]) byName[name] = { n: name, g: String(v[i][4] || '').trim() };
   }
-  const list = Object.keys(byName).map(k => byName[k]);
+  const list = Object.keys(byName).map(k => byName[k])
+    .sort((a, b) => a.g.localeCompare(b.g, 'ru') || a.n.localeCompare(b.n, 'ru'));
   try { c.put('catalog', JSON.stringify(list), 3600); } catch (e) {}   // кэш на час (если влезает)
   return list;
 }
 
-function catalogNames_(shopId) {
-  const s = shopId ? shopById_(shopId) : null;
-  return catalog_().map(x => ({ n: x.n, g: x.g, st: s ? (x.st[s.name] || 0) : null }));
-}
+function catalogNames_() { return catalog_(); }
 
 function synonyms_() {
   const v = sheet_('syn').getDataRange().getValues();
@@ -282,7 +278,7 @@ function matchItem_(raw, shopName) {
     const extra = t.filter(z => CAT_WORDS.indexOf(z) < 0 && !q.some(w => same(w, z))).length;
     const cover = hit / q.length;
     let score = cover * 3 - extra * 0.4;
-    if (shopName && x.st[shopName] > 0) score += 0.3;            // есть на остатке у отправителя
+    if (shopName && x.st && x.st[shopName] > 0) score += 0.3;            // есть на остатке у отправителя
     scored.push({ n: x.n, s: score, cover: cover, extra: extra });
   });
   if (!scored.length) return { name: '', ok: false, options: [] };

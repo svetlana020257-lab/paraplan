@@ -1981,7 +1981,7 @@ function drawPv(){
   document.getElementById('pv-body').innerHTML=`${bossBar}
     <div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:2px">${chips}</div>
     ${list.length?list.slice(0,80).map(card).join(''):`<div class="card"><div class="empty"><i class="ti ti-truck-delivery"></i>${pvFilter==='in'?'Сейчас к вам ничего не едет':'Пусто'}</div></div>`}
-    <div class="mono-hint">Перемещение можно создать здесь (кнопка +) или просто написать в чат точки «Перемещение / откуда – куда / товар – кол-во» — Кэп запишет сам.</div>`;
+    <div class="mono-hint">Новое перемещение — кнопка «+». Кэп сам напишет в чаты обеих точек, что и куда едет.</div>`;
 }
 
 /* ── карточка документа ── */

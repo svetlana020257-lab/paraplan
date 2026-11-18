@@ -151,7 +151,7 @@ function shops_() {
     const syn = String(v[i][2] || '').split(',').map(s => norm_(s)).filter(Boolean);
     syn.push(norm_(v[i][1]));
     let chat = String(v[i][3] || '').trim();
-    if (!chat && CHATS_DEFAULT[id]) { chat = CHATS_DEFAULT[id]; sh.getRange(i + 1, 4).setValue(chat); }   // дописываем один раз
+    if (CHATS_DEFAULT[id] && chat !== CHATS_DEFAULT[id]) { chat = CHATS_DEFAULT[id]; sh.getRange(i + 1, 4).setValue(chat); }   // чат точки — всегда как в Кэпе
     if (!chat && id === 'sklad') chat = prop_('BOSS_CHAT');                                                // склад → чат управляющих
     out.push({ row: i + 1, id: id, name: String(v[i][1]), syn: syn, chat: chat, title: String(v[i][4] || '') });
   }
@@ -204,6 +204,7 @@ function shopByChat_(chat) {
   const id = String(chat.id || '');
   let s = shops.find(x => x.chat === id);
   if (s) return s;
+  if (/ozon|озон|\bwb\b|вб|яндекс|пвз/i.test(String(chat.title || ''))) return null;   // чаты ПВЗ — не точки Параплан
   s = findShop_(String(chat.title || ''), shops);
   if (s && id) {
     const sh = sheet_('shops');

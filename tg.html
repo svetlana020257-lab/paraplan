@@ -605,7 +605,7 @@ function saveErr(e){ toast('⚠ НЕ сохранено в таблицу: '+(e.
    ══════════════════════════════════════════════════════════════════ */
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('sc-'+id).classList.add('active'); tgBack(id==='day'||id==='learnview'); }
 function clientsOn(){ return isBoss()||CLIENT_TEST_SHOPS.includes(shopName(activeShop())); }
-function tabOrder(){ const mid=clientsOn()?'clients':'akcii'; const pv=POSTAVKI_URL?['postavki']:[]; return isBoss()?['owner','people','grafik',mid,...pv,'learn']:['main','salary','grafik',mid,...pv,'learn']; }
+function tabOrder(){ const mid=clientsOn()?'clients':'akcii'; const pv=POSTAVKI_URL?['postavki']:[]; return isBoss()?['owner','people','grafik',mid,'learn',...pv]:['main','salary','grafik',mid,'learn',...pv]; }
 function applyRoleTabs(){
   const tabs=document.querySelectorAll('#tabbar .tab:not(#tab-net)');
   const map={main:0,salary:1,people:2,grafik:3,clients:4,akcii:5,learn:6,postavki:7};

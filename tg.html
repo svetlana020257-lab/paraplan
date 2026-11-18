@@ -791,7 +791,7 @@ function normalizeData(){
 function shopEmployees(shopId){
   const set=[];
   (appData.employees||[]).filter(e=>resolveShopId(e.shop)===shopId).forEach(e=>{ if(!set.includes(e.name)) set.push(e.name); });
-  if(currentUser&&currentUser.shop===shopId&&!set.includes(currentUser.name)) set.push(currentUser.name);
+  if(currentUser&&currentUser.shop===shopId&&!set.includes(currentUser.name)&&!set.includes(myEmpName())) set.push(currentUser.name);
   return set.map((name,i)=>({name,color:EMP_COLORS[i%EMP_COLORS.length]}));
 }
 function allEmployees(){
@@ -918,7 +918,7 @@ async function fillHomePay(shopId){
   try{
     const now=new Date();
     const r=await gasGet({action:'getSalaryV2',shop:shopId,shopName:shopName(shopId),year:now.getFullYear(),month:now.getMonth()+1});
-    if(r.ok&&r.data){ const row=(r.data.rows||[]).map(x=>recalcRow(x,shopId)).find(x=>x.name===currentUser.name);
+    if(r.ok&&r.data){ const row=(r.data.rows||[]).map(x=>recalcRow(x,shopId)).find(x=>x.name===currentUser.name||x.name===myEmpName());
       if(row){ const p=first?row.p1:row.p2; total=p?p.total:0; shifts=p?(p.shifts||0):0; } }
   }catch(e){}
   const s=document.getElementById('hp-sum'), sub=document.getElementById('hp-sub'); if(!s) return;
@@ -1142,7 +1142,7 @@ async function loadSalaryInto(shopId,boxId){
   const bonus=await planBonuses(shopId,now,rows);
   if(!document.getElementById(boxId)) return;
   rows.forEach(r=>applyBonus(r,bonus[r.name]));
-  if(currentUser.role==='seller') rows=rows.filter(r=>r.name===currentUser.name);
+  if(currentUser.role==='seller') rows=rows.filter(r=>r.name===currentUser.name||r.name===myEmpName());
   const head=`<div class="card-title"><i class="ti ti-calculator"></i><span class="t">Расчёт по сотрудникам</span><span class="tail">${monthLbl}</span></div>`;
   if(!rows.length){ box.innerHTML=`<div class="card">${head}<div class="empty" style="padding:18px 0">Нет сотрудников на этой точке</div></div>`; return; }
   if(rows.every(r=>!r.shifts)){
@@ -1600,10 +1600,22 @@ async function renderGrafik(){
 }
 function grafNav(n){ grafMonth=new Date(grafMonth.getFullYear(),grafMonth.getMonth()+n,1); renderGrafik(); }
 function myEmpName(){
-  const me=(currentUser.name||'').trim().toLowerCase();
-  const e=allEmployees().find(x=>x.name.toLowerCase()===me)
-        ||allEmployees().find(x=>x.name.toLowerCase().split(' ')[0]===me.split(' ')[0]);
-  return e?e.name:currentUser.name;
+  if(!currentUser) return '';
+  const norm=x=>String(x||'').trim().toLowerCase().replace(/ё/g,'е');
+  const me=norm(currentUser.name), f=me.split(' ')[0];
+  const all=(appData.employees||[]).filter(x=>x&&x.name);
+  const names=a=>a.map(x=>x.name).filter((n,i,arr)=>arr.indexOf(n)===i);
+  const mine=all.filter(x=>resolveShopId(x.shop)===currentUser.shop);
+  for(const pool of [names(mine),names(all)]){
+    let hit=pool.find(n=>norm(n)===me)||pool.find(n=>norm(n).split(' ')[0]===f);
+    if(hit) return hit;
+  }
+  // «Алекс» = «Алексей»: одно имя начинается с другого — если на точке такой человек один
+  if(f.length>=3){
+    const same=names(mine).filter(n=>{ const g=norm(n).split(' ')[0]; return g.startsWith(f)||f.startsWith(g); });
+    if(same.length===1) return same[0];
+  }
+  return currentUser.name;
 }
 function grafCell(shopId,iso){
   if(iso<todayISO()){ const c=(appData.schedule||{})[shopId+':'+iso]; return c&&(c.main||c.sub)?{name:c.main||c.sub,fact:true}:null; }

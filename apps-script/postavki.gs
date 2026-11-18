@@ -716,8 +716,12 @@ function notifyCreated_(no, fromApp, chatId, msgId) {
   if (srcChat) rememberBotMsg_(no, srcChat, tgSend_(srcChat, (fromApp ? '' : '✅ Записал. ') + body, msgId));
   // в чат получателя — «к вам едет»
   if (to && to.chat && String(to.chat) !== String(srcChat)) {
-    const id = tgSend_(to.chat, '🚚 <b>К вам едет ' + d.type.toLowerCase() + ' ' + no + '</b> от ' + esc_(d.supplier || d.from) + '\n' +
-      itemsText_(no) + '\nКогда приедет — открой приложение → «Поставки» → «Принять». Фото товара — ответом на это сообщение.');
+    const id = d.type === 'Поставка'
+      // поставка от поставщика — коротко, список товаров только в приложении
+      ? tgSend_(to.chat, '📦 <b>Поставка ' + no + '</b> от ' + esc_(d.supplier || '?') + '\n' + d.lines.length + ' поз., ' + pcs + ' шт/уп' +
+          '\nСписок и приёмка — в приложении → «Поставки».')
+      : tgSend_(to.chat, '🚚 <b>К вам едет ' + d.type.toLowerCase() + ' ' + no + '</b> от ' + esc_(d.supplier || d.from) + '\n' +
+          itemsText_(no) + '\nКогда приедет — открой приложение → «Поставки» → «Принять». Фото товара — ответом на это сообщение.');
     rememberBotMsg_(no, to.chat, id);
   }
   // фото к документу — альбомом в те же чаты

@@ -829,3 +829,23 @@ function learnSave_(user, name, point, state) {
     return merged;
   } finally { lock.releaseLock(); }
 }
+
+/**
+ * Вручную (▶ Выполнить): разослать уведомления по всем поставкам/перемещениям,
+ * которые попали в таблицу, но о которых Кэп ещё не писал в чаты (пустой столбец «msg Кэпа»).
+ * Нужна, если документы записали прямо в таблицу, минуя приложение.
+ */
+function uvedomitNeotpravlennye() {
+  const v = sheet_('docs').getDataRange().getValues();
+  const head = v[0].map(String);
+  const cNo = 0, cSt = head.indexOf('Статус'), cMsg = head.indexOf('msg Кэпа');
+  const done = [];
+  for (let i = 1; i < v.length; i++) {
+    const no = String(v[i][cNo] || ''), st = String(v[i][cSt] || ''), msg = String(v[i][cMsg] || '');
+    if (!no || msg || !/Ожидается|В пути/.test(st)) continue;
+    notifyCreated_(no, true);
+    done.push(no);
+  }
+  log_('Разослал неотправленные', done.join(', ') || 'нечего');
+  Logger.log(done.length ? 'Отправлено: ' + done.join(', ') : 'Все уведомления уже были отправлены');
+}
